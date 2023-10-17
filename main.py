@@ -1,4 +1,4 @@
 import ageml
 
 if __name__ == '__main__':
-    ageml
+    ageml.ui.CLI().run()
