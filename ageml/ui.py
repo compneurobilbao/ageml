@@ -11,6 +11,13 @@ CLI - reads and parsers user commands via command line.
 
 import argparse
 import pandas as pd
+import os
+import warnings
+
+from datetime import datetime
+
+from .visualizer import Visualizer
+from .utils import create_directory, log
 
 class Interface:
 
@@ -34,21 +41,70 @@ class Interface:
         # Arguments with which to run modelling
         self.args = None
 
+        # Initialise objects form library
+        self.visualizer = Visualizer()
+
+    def _setup(self):
+        """Create required directories and files to store results."""
+
+        # Create directories
+        dir_path = os.path.join(self.args.output, 'ageml')
+        if os.path.exists(dir_path):
+            warnings.warn("Directory %s already exists files may be overwritten." %
+                          dir_path)
+        create_directory(dir_path)
+        create_directory(os.path.join(dir_path,'figures'))
+
+        # Set visualizer directory path
+        self.visualizer.set_directory(dir_path)
+
+        # Create .txt log file and log time
+        self.log_path = os.path.join(dir_path, 'log.txt')
+        with open(self.log_path, "a") as f:
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(current_time + '\n')
+
     def _load_csv(self, file):
-        """Use panda to load csv into dataframe."""
+        """Use panda to load csv into dataframe.
+
+        Parameters
+        ----------
+        file: path to file; must be .csv
+        """
+
         if file is not None:
-            return pd.read_csv(file, header=0, index_col=None)
+            df = pd.read_csv(file, header=0, index_col=None)
+            df.columns = df.columns.str.lower() # ensure lower case
+            return df
         else:
             return None
 
-    def run(self):
-        """Read the command enterend and call the corresponding functions"""
+    @log
+    def _features_vs_age(self):
+        """Use visualizer to explore relationship between features and age."""
 
-        # Load data
+        # Select data to visualize
+        feature_names = self.df_features.columns[2:]
+        X = self.df_features[feature_names].to_numpy()
+        Y = self.df_features['age'].to_numpy()
+
+        # Use visualizer to show 
+        self.visualizer.featuresvsage(X, Y, feature_names)
+
+    def run(self):
+        """Read the command entered and call the corresponding functions"""
+
+        # Set up directory for storage of results
+        self._setup()
+
+        # Load data 
         self.df_features = self._load_csv(self.args.features)
         self.df_covariates = self._load_csv(self.args.covariates)
         self.df_factors = self._load_csv(self.args.factors)
         self.df_clinical = self._load_csv(self.args.clinical)
+
+        # Relationship between features and age
+        self._features_vs_age()
 
 class CLI(Interface):
 
@@ -56,6 +112,7 @@ class CLI(Interface):
 
     def __init__(self):
         """Initialise variables."""
+        super().__init__()
         self.parser = argparse.ArgumentParser(description="Age Modelling using python.",
                                               formatter_class=argparse.RawTextHelpFormatter)
         self._configure_parser()
