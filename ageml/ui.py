@@ -18,6 +18,7 @@ from datetime import datetime
 
 from .visualizer import Visualizer
 from .utils import create_directory, log
+from .modelling import AgeML
 
 class Interface:
 
@@ -43,6 +44,7 @@ class Interface:
 
         # Initialise objects form library
         self.visualizer = Visualizer()
+        self.ageml = AgeML()
 
     def _setup(self):
         """Create required directories and files to store results."""
@@ -91,6 +93,28 @@ class Interface:
         # Use visualizer to show 
         self.visualizer.featuresvsage(X, Y, feature_names)
 
+    @log
+    def _model_age(self):
+        """Use AgeML to fit age model with data."""
+
+        print('-----------------------------------')
+        print('Training Age Model')
+
+        # Set up pipeline
+        self.ageml.set_CV_params(10)
+        self.ageml.set_scaler('standard')
+        self.ageml.set_model('linear', fit_intercept=True)
+        self.ageml.set_pipeline()
+        print(self.ageml.pipeline)
+
+        # Select data to model
+        feature_names = self.df_features.columns[2:]
+        X = self.df_features[feature_names].to_numpy()
+        y = self.df_features['age'].to_numpy()
+
+        # Fit model
+        ypred = self.ageml.fit_age(X, y)
+
     def run(self):
         """Read the command entered and call the corresponding functions"""
 
@@ -105,6 +129,9 @@ class Interface:
 
         # Relationship between features and age
         self._features_vs_age()
+
+        # Model age
+        self._model_age()
 
 class CLI(Interface):
 

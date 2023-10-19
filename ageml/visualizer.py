@@ -43,7 +43,7 @@ class Visualizer:
         ----------
         X: 2D-Array with features; shape=(n,m)
         Y: 1D-Array with age; shape=n
-        feature_names: list of names of features"""
+        feature_names: list of names of features, shape=n"""
 
         # Calculate correlation between features and age
         corr, order = find_correlations(X, Y)
@@ -51,6 +51,7 @@ class Visualizer:
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14,3*math.ceil(nplots/4)))
+        print('-----------------------------------')
         print('Features by correlation with Age')
         for i, o in enumerate(order):
             print('%d. %s: %.2f' % (i+1, feature_names[o], corr[o]))

@@ -17,20 +17,20 @@ def create_directory(path):
 
 def log(func):
     """Decorator function to log stdout to log.txt."""
-        def wrapper(instance, *args, **kwargs):
-            # Redirect the standard output to capture print statements
-            original_stdout = sys.stdout
-            sys.stdout = io.StringIO()
+    def wrapper(instance, *args, **kwargs):
+        # Redirect the standard output to capture print statements
+        original_stdout = sys.stdout
+        sys.stdout = io.StringIO()
 
-            try:
-                # Call the function without displaying print statements
-                with open(instance.log_path, 'a') as log_file:
-                    sys.stdout = log_file  # Redirect to log file
-                    result = func(instance, *args, **kwargs)
-            finally:
-                # Restore the original standard output
-                sys.stdout = original_stdout
+        try:
+            # Call the function without displaying print statements
+            with open(instance.log_path, 'a') as log_file:
+                sys.stdout = log_file  # Redirect to log file
+                result = func(instance, *args, **kwargs)
+        finally:
+            # Restore the original standard output
+            sys.stdout = original_stdout
 
-            return result
+        return result
 
-        return wrapper
+    return wrapper
