@@ -10,6 +10,7 @@ CLI - reads and parsers user commands via command line.
 """
 
 import argparse
+import numpy as np
 import pandas as pd
 import os
 import warnings
@@ -50,18 +51,18 @@ class Interface:
         """Create required directories and files to store results."""
 
         # Create directories
-        dir_path = os.path.join(self.args.output, 'ageml')
-        if os.path.exists(dir_path):
+        self.dir_path = os.path.join(self.args.output, 'ageml')
+        if os.path.exists(self.dir_path):
             warnings.warn("Directory %s already exists files may be overwritten." %
-                          dir_path)
-        create_directory(dir_path)
-        create_directory(os.path.join(dir_path,'figures'))
+                          self.dir_path)
+        create_directory(self.dir_path)
+        create_directory(os.path.join(self.dir_path,'figures'))
 
         # Set visualizer directory path
-        self.visualizer.set_directory(dir_path)
+        self.visualizer.set_directory(self.dir_path)
 
         # Create .txt log file and log time
-        self.log_path = os.path.join(dir_path, 'log.txt')
+        self.log_path = os.path.join(self.dir_path, 'log.txt')
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + '\n')
@@ -75,7 +76,7 @@ class Interface:
         """
 
         if file is not None:
-            df = pd.read_csv(file, header=0, index_col=None)
+            df = pd.read_csv(file, header=0, index_col=0)
             df.columns = df.columns.str.lower() # ensure lower case
             return df
         else:
@@ -91,7 +92,7 @@ class Interface:
         Y = self.df_features['age'].to_numpy()
 
         # Use visualizer to show 
-        self.visualizer.featuresvsage(X, Y, feature_names)
+        self.visualizer.features_vs_age(X, Y, feature_names)
 
     @log
     def _model_age(self):
@@ -108,12 +109,20 @@ class Interface:
         print(self.ageml.pipeline)
 
         # Select data to model
-        feature_names = self.df_features.columns[2:]
+        feature_names = [name for name in self.df_features.columns
+                         if name != 'age']
         X = self.df_features[feature_names].to_numpy()
         y = self.df_features['age'].to_numpy()
 
-        # Fit model
-        ypred = self.ageml.fit_age(X, y)
+        # Fit model and plot results
+        y_pred = self.ageml.fit_age(X, y)
+        self.visualizer.true_vs_pred_age(y, y_pred)
+
+        # Save to dataframe and csv
+        data = np.stack((y, y_pred), axis=1)
+        cols = ['Age', 'Predicted Age']
+        self.df_age = df = pd.DataFrame(data, index=self.df_features.index, columns=cols)
+        self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
     def run(self):
         """Read the command entered and call the corresponding functions"""

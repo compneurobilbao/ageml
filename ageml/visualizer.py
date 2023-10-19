@@ -9,6 +9,7 @@ Visualizer - manages the visualization of data and results.
 
 import matplotlib.pyplot as plt
 import math
+import numpy as np
 import os
 
 from .utils import insert_newlines
@@ -25,7 +26,8 @@ class Visualizer:
 
     Public methods:
     ---------------
-    featyresvsage(self): Plots correlation between features and age.
+    features_vs_age(self, X, Y, features_name): Plots correlation between features and age.
+    true_vs_pred_age(self, y_true, y_pred): Plot true age vs predicted age.
     """
 
     def __init__(self):
@@ -36,7 +38,7 @@ class Visualizer:
         """Set directory to store results."""
         self.dir = path
 
-    def featuresvsage(self, X, Y, feature_names):
+    def features_vs_age(self, X, Y, feature_names):
         """Plot correlation between features and age.
 
         Parameters
@@ -62,3 +64,20 @@ class Visualizer:
             plt.title("Corr:%.2f" % corr[o])
         plt.tight_layout()
         plt.savefig(os.path.join(self.dir, 'figures/features_vs_age.svg'))
+        plt.close()
+
+    def true_vs_pred_age(self, y_true, y_pred):
+        """Plot true age vs predicted age.
+
+        Parameters
+        ----------
+        y_true: 1D-Array with true age; shape=n
+        y_pred: 1D-Array with predicted age; shape=n."""
+
+        age_range = np.arange(np.min([y_true, y_pred]), np.max([y_true, y_pred]))
+        plt.scatter(y_true, y_pred)
+        plt.plot(age_range, age_range, color='k', linestyle='dashed')
+        plt.xlabel('True Age')
+        plt.ylabel('Predicted Age')
+        plt.savefig(os.path.join(self.dir, 'figures/true_vs_pred_age.svg'))
+        plt.close()
