@@ -15,6 +15,20 @@ def create_directory(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+def convert(value):
+    """Convert string value to other types if possible."""
+    if value.lower() == 'true':
+        converted_value = True
+    elif value.lower() == 'false':
+        converted_value = False
+    else:
+        try:
+            converted_value = float(value)
+        except ValueError:
+            # If the value cannot be converted to a float, keep it as a string
+            converted_value = value
+    return converted_value
+
 def log(func):
     """Decorator function to log stdout to log.txt."""
     def wrapper(instance, *args, **kwargs):

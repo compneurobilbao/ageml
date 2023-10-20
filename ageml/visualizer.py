@@ -25,6 +25,7 @@ class Visualizer:
 
     Parameters
     -----------
+    out_dir: path to output directory where to save results
 
     Public methods:
     ---------------
@@ -34,9 +35,9 @@ class Visualizer:
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
     """
 
-    def __init__(self):
+    def __init__(self, out_dir):
         """Initialise variables."""
-        self.dir = None
+        self.set_directory(out_dir)
 
     def set_directory(self, path):
         """Set directory to store results."""

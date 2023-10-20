@@ -26,6 +26,12 @@ class AgeML:
 
     Parameters
     -----------
+    scaler_type: string indicating type of scaler to use
+    scaler_params: dictionary to pass as **kwargs to scaler
+    model_type: string indicating type of model to use
+    model_params: dictionary to pass as **kwargs to model
+    CV_split: integer number of CV splits
+    seed: integer seed for randomization
 
     Public methods:
     ---------------
@@ -50,14 +56,18 @@ class AgeML:
     predict_age(self, X): Predict age with fitted model.
     """
 
-    def __init__(self):
+    def __init__(self, scaler_type, scaler_params, model_type, model_params,
+                 CV_split, seed):
         """Initialise variables."""
-        self.scaler = None
-        self.model = None
-        self.pipeline = None
+
+        # Set required modelling parts
+        self.set_scaler(scaler_type, **scaler_params)
+        self.set_model(model_type, **model_params)
+        self.set_pipeline()
+        self.set_CV_params(CV_split, seed)
+
+        # Initialise flags
         self.pipelineFit = False
-        self.CV_split = None
-        self.seed = None
         self.age_biasFit = False
 
     def set_scaler(self, norm, **kwargs):
@@ -71,6 +81,8 @@ class AgeML:
         # Mean centered and unit variance
         if norm == 'standard':
             self.scaler = preprocessing.StandardScaler(**kwargs)
+        else:
+            raise ValueError('Must select an availble scaler type.')
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -83,6 +95,8 @@ class AgeML:
         # Linear Regression
         if model_type == 'linear':
             self.model = linear_model.LinearRegression(**kwargs)
+        else:
+            raise ValueError('Must select an availble model type.')
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
@@ -186,7 +200,7 @@ class AgeML:
         metrics_test = []
 
         # Apply cross-validation
-        kf = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed)
+        kf = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
         for i, (train, test) in enumerate(kf.split(X)):
             X_train, X_test = X[train], X[test]
             y_train, y_test = y[train], y[test]

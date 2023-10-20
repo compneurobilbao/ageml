@@ -18,7 +18,7 @@ import warnings
 from datetime import datetime
 
 from .visualizer import Visualizer
-from .utils import create_directory, log
+from .utils import create_directory, convert, log
 from .modelling import AgeML
 
 class Interface:
@@ -31,21 +31,27 @@ class Interface:
 
     Parameters
     -----------
+    args: arguments with which to run the modelling
 
     Public methods:
     ---------------
-    run(self): Runs the age modelling.
+    run(self): Runs the age modelling interface.
     """
 
-    def __init__(self):
+    def __init__(self, args):
         """Initialise variables."""
 
         # Arguments with which to run modelling
-        self.args = None
+        self.args = args
+
+        # Set up directory for storage of results
+        self._setup()
 
         # Initialise objects form library
-        self.visualizer = Visualizer()
-        self.ageml = AgeML()
+        self.visualizer = Visualizer(self.dir_path)
+        self.ageml = AgeML(self.args.scaler_type, self.args.scaler_params,
+                           self.args.model_type, self.args.model_params,
+                           self.args.cv_split, self.args.seed)
 
     def _setup(self):
         """Create required directories and files to store results."""
@@ -57,9 +63,6 @@ class Interface:
                           self.dir_path)
         create_directory(self.dir_path)
         create_directory(os.path.join(self.dir_path,'figures'))
-
-        # Set visualizer directory path
-        self.visualizer.set_directory(self.dir_path)
 
         # Create .txt log file and log time
         self.log_path = os.path.join(self.dir_path, 'log.txt')
@@ -98,14 +101,9 @@ class Interface:
     def _model_age(self):
         """Use AgeML to fit age model with data."""
 
+        # Show training pipeline
         print('-----------------------------------')
         print('Training Age Model')
-
-        # Set up pipeline
-        self.ageml.set_CV_params(10)
-        self.ageml.set_scaler('standard')
-        self.ageml.set_model('linear', fit_intercept=True)
-        self.ageml.set_pipeline()
         print(self.ageml.pipeline)
 
         # Select data to model
@@ -128,9 +126,6 @@ class Interface:
     def run(self):
         """Read the command entered and call the corresponding functions"""
 
-        # Set up directory for storage of results
-        self._setup()
-
         # Load data 
         self.df_features = self._load_csv(self.args.features)
         self.df_covariates = self._load_csv(self.args.covariates)
@@ -149,21 +144,36 @@ class CLI(Interface):
 
     def __init__(self):
         """Initialise variables."""
-        super().__init__()
         self.parser = argparse.ArgumentParser(description="Age Modelling using python.",
                                               formatter_class=argparse.RawTextHelpFormatter)
         self._configure_parser()
-        self.args = self.parser.parse_args()
+        args = self.parser.parse_args()
+        args = self._configure_args(args)
+        super().__init__(args)
 
     def _configure_parser(self):
         """Configure parser with required arguments for processing."""
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
                                  help="Path to output directory where to save results. (Required)")
-        self.parser.add_argument("--features", metavar='FILE',
+        self.parser.add_argument('-f', "--features", metavar='FILE',
                                  help="Path to input CSV file containing features. (Required) \n"
                                       "In the file the first column should be the ID, the second column should be the AGE, \n"
                                       "and the following columns the features. The first row should be the header for \n"
                                       "column names.", required=True)
+        self.parser.add_argument('-m', '--model', nargs='*', default=['linear'],
+                                 help='Model type and model parameters to use. First argument is the type and the following \n'
+                                      'arguments are input as keyword arguments into the model. They must be seperated by an =.\n'
+                                      'Example: -m linear fit_intercept=False\n'
+                                      'Available Types: linear (Default: linear)')
+        self.parser.add_argument('-s', '--scaler', nargs='*', default=['standard'],
+                                 help='Scaler type and scaler parameters to use. First argument is the type and the following \n'
+                                      'arguments are input as keyword arguments into the scaler. They must be seperated by an =.\n'
+                                      'Example: -m standard\n'
+                                      'Available Types: standard (Default: standard)')
+        self.parser.add_argument('--cv', nargs='+', type=int, default=[5, 0],
+                                 help='Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 integers. \n'
+                                      'First integer is the number of splits and the second is the seed for randomization. \n'
+                                      'Default: 5 0')
         self.parser.add_argument("--covariates", metavar='FILE',
                                  help="Path to input CSV file containing covariates. \n"
                                       "In the file the first column should be the ID, the followins columns should be the \n"
@@ -184,3 +194,47 @@ class CLI(Interface):
                                       "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
                                       "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)")
 
+    def _configure_args(self, args):
+        """Configure argumens with required fromatting for modelling.
+
+        Parameters
+        ----------
+        args: arguments object from parser
+        """
+
+        # Set CV params first item is the number of CV splits
+        if len(args.cv) == 1:
+            args.cv_split = args.cv[0]
+            args.seed = self.parser.get_default('cv')[1]
+        elif len(args.cv) == 2:
+            args.cv_split, args.seed = args.cv
+        else:
+            raise ValueError('Too many values to unpack')
+
+        # Set Scaler parameters first item is the scaler type
+        # The rest of the arguments conform a dictionary for **kwargs
+        args.scaler_type = args.scaler[0]
+        if len(args.scaler) > 1:
+            scaler_params = {}
+            for item in args.scaler[1:]:
+                key, value = item.split('=')
+                value = convert(value)
+                scaler_params[key] = value
+            args.scaler_params = scaler_params
+        else:
+            args.scaler_params = {}
+
+        # Set Model parameters first item is the model type
+        # The rest of the arguments conform a dictionary for **kwargs
+        args.model_type = args.model[0]
+        if len(args.model) > 1:
+            model_params = {}
+            for item in args.model[1:]:
+                key, value = item.split('=')
+                value = convert(value)
+                model_params[key] = value
+            args.model_params = model_params
+        else:
+            args.model_params = {}
+
+        return args
