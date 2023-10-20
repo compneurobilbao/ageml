@@ -12,6 +12,8 @@ import math
 import numpy as np
 import os
 
+from sklearn.linear_model import LinearRegression
+
 from .utils import insert_newlines
 from .processing import find_correlations
 
@@ -28,6 +30,8 @@ class Visualizer:
     ---------------
     features_vs_age(self, X, Y, features_name): Plots correlation between features and age.
     true_vs_pred_age(self, y_true, y_pred): Plot true age vs predicted age.
+
+    age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
     """
 
     def __init__(self):
@@ -74,10 +78,50 @@ class Visualizer:
         y_true: 1D-Array with true age; shape=n
         y_pred: 1D-Array with predicted age; shape=n."""
 
+        # Find min and max age range to fit in graph
         age_range = np.arange(np.min([y_true, y_pred]), np.max([y_true, y_pred]))
+
+        # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
         plt.xlabel('True Age')
         plt.ylabel('Predicted Age')
         plt.savefig(os.path.join(self.dir, 'figures/true_vs_pred_age.svg'))
+        plt.close()
+
+    def age_bias_correction(self, y_true, y_pred, y_corrected):
+        """Plot before and after age bias correction procedure.
+
+        Parameters
+        ----------
+        y_true: 1D-Array with true age; shape=n
+        y_pred: 1D-Array with predicted age before age bias correction; shape=n.
+        y_corrected: 1D-Array with predicted age after age bias correction; shape=n"""
+
+        # Find min and max age range to fit in graph
+        age_range = np.arange(np.min([y_true, y_pred, y_corrected]),
+                              np.max([y_true, y_pred, y_corrected]))
+
+        # Before age-bias correction
+        LR_age_bias = LinearRegression(fit_intercept=True)
+        LR_age_bias.fit(y_true.reshape(-1, 1), y_pred)
+        plt.subplot(1,2,1)
+        plt.plot(age_range, age_range, color='k', linestyle='dashed')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.scatter(y_true, y_pred)
+        plt.title('Before age-bias correction')
+        plt.ylabel('Predicted Age')
+        plt.xlabel('True Age')
+
+        # After age-bias correction
+        LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
+        plt.subplot(1,2,2)
+        plt.plot(age_range, age_range, color='k', linestyle='dashed')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.scatter(y_true, y_corrected)
+        plt.title('After age-bias correction')
+        plt.ylabel('Predicted Age')
+        plt.xlabel('True Age')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dir, 'figures/age_bias_correction.svg'))
         plt.close()

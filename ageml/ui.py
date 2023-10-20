@@ -115,12 +115,13 @@ class Interface:
         y = self.df_features['age'].to_numpy()
 
         # Fit model and plot results
-        y_pred = self.ageml.fit_age(X, y)
+        y_pred, y_corrected = self.ageml.fit_age(X, y)
         self.visualizer.true_vs_pred_age(y, y_pred)
+        self.visualizer.age_bias_correction(y, y_pred, y_corrected)
 
         # Save to dataframe and csv
-        data = np.stack((y, y_pred), axis=1)
-        cols = ['Age', 'Predicted Age']
+        data = np.stack((y, y_pred, y_corrected), axis=1)
+        cols = ['Age', 'Predicted Age', 'Corrected Age']
         self.df_age = df = pd.DataFrame(data, index=self.df_features.index, columns=cols)
         self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 

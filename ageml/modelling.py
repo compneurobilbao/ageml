@@ -41,18 +41,24 @@ class AgeML:
 
     summary_metrics(self, array): Calculates mean and standard deviations of metrics.
 
+    fit_age_bias(self, y_true, y_pred): Fit a linear age bias correction model.
+
+    predict_age_bias(self, y_true, y_pred): Apply age bias correction.
+
     fit_age(self, X, y): Fit the age model.
 
     predict_age(self, X): Predict age with fitted model.
     """
 
     def __init__(self):
+        """Initialise variables."""
         self.scaler = None
         self.model = None
         self.pipeline = None
         self.pipelineFit = False
         self.CV_split = None
         self.seed = None
+        self.age_biasFit = False
 
     def set_scaler(self, norm, **kwargs):
         """Sets the scaler to use in the pipeline.
@@ -77,7 +83,6 @@ class AgeML:
         # Linear Regression
         if model_type == 'linear':
             self.model = linear_model.LinearRegression(**kwargs)
-
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
@@ -132,6 +137,36 @@ class AgeML:
             summary.append(std)
         return summary
 
+    def fit_age_bias(self, y_true, y_pred):
+        """Fit a linear age bias correction model.
+
+        Parameters
+        ----------
+        y_true: 1D-Array with true age; shape=n
+        y_pred: 1D-Array with predicted age; shape=n."""
+
+        # Train linear regression model
+        self.age_bias = linear_model.LinearRegression(fit_intercept=True)
+        self.age_bias.fit(y_true.reshape(-1, 1), y_pred)
+        self.age_biasFit = True
+
+    def predict_age_bias(self, y_true, y_pred):
+        """Apply age bias correction.
+
+        Parameters
+        ----------
+        y_true: 1D-Array with true age; shape=n
+        y_pred: 1D-Array with predicted age; shape=n."""
+
+        # Check that age bias has been fit
+        if not self.age_biasFit:
+            raise TypeError("Must fun fit_age_bias before attempting to predict.")
+
+        # Apply linear correction
+        y_corrected =  y_pred + (y_true-self.age_bias.predict(y_true.reshape(-1, 1)))
+
+        return y_corrected
+
     def fit_age(self, X, y):
         """Fit the age model.
 
@@ -146,6 +181,7 @@ class AgeML:
 
         # Variables of interes
         pred_age = np.zeros(y.shape)
+        corrected_age = np.zeros(y.shape)
         metrics_train = []
         metrics_test = []
 
@@ -169,8 +205,15 @@ class AgeML:
             metrics_test.append(self.calculate_metrics(y_test, y_pred_test))
             print('Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f' % metrics_test[i])
 
-            # Save results
+            # Fit and apply age-bias correction
+            self.fit_age_bias(y_train, y_pred_train)
+            y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
+
+            # Apply age-bias hold out
+
+            # Save results of hold out
             pred_age[test] = y_pred_test
+            corrected_age[test] = y_pred_test_no_bias
 
         # Calculate metrics over all splits
         print('Summary metrics over all CV splits')
@@ -185,7 +228,7 @@ class AgeML:
         self.pipeline.fit(X, y)
         self.pipelineFit = True
 
-        return pred_age
+        return pred_age, corrected_age
 
     def predict_age(self, X):
         """Predict age with fitted model.
