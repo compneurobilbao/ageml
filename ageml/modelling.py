@@ -223,8 +223,6 @@ class AgeML:
             self.fit_age_bias(y_train, y_pred_train)
             y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
 
-            # Apply age-bias hold out
-
             # Save results of hold out
             pred_age[test] = y_pred_test
             corrected_age[test] = y_pred_test_no_bias
@@ -253,6 +251,6 @@ class AgeML:
 
         # Check that model has previously been fit
         if not self.pipelineFit:
-            raise ValueError('Must fit the pipline befor calling predict.')
+            raise ValueError('Must fit the pipline before calling predict.')
 
         return self.pipeline.predict(X)

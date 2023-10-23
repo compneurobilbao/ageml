@@ -86,11 +86,22 @@ class Interface:
             return None
 
     @log
+    def _age_distribution(self):
+        """Use visualizer to show age distribution."""
+
+        # Select age information
+        ages = self.df_features['age'].to_numpy()
+
+        # Use visualizer to show age distribution
+        self.visualizer.age_distribution(ages)
+
+    @log
     def _features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
         # Select data to visualize
-        feature_names = self.df_features.columns[2:]
+        feature_names = [name for name in self.df_features.columns
+                         if name != 'age']
         X = self.df_features[feature_names].to_numpy()
         Y = self.df_features['age'].to_numpy()
 
@@ -131,6 +142,9 @@ class Interface:
         self.df_covariates = self._load_csv(self.args.covariates)
         self.df_factors = self._load_csv(self.args.factors)
         self.df_clinical = self._load_csv(self.args.clinical)
+
+        # Distribution of ages
+        self._age_distribution()
 
         # Relationship between features and age
         self._features_vs_age()

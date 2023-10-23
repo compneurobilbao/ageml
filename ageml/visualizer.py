@@ -29,7 +29,11 @@ class Visualizer:
 
     Public methods:
     ---------------
+
+    age_distribution(self, Y): Plot age distribution.
+
     features_vs_age(self, X, Y, features_name): Plots correlation between features and age.
+
     true_vs_pred_age(self, y_true, y_pred): Plot true age vs predicted age.
 
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
@@ -42,6 +46,27 @@ class Visualizer:
     def set_directory(self, path):
         """Set directory to store results."""
         self.dir = path
+
+    def age_distribution(self, Y):
+        """ Plot age distribution.
+
+        Parameters
+        ----------
+        Y: 1D-Array with age; shape=n."""
+
+        # Mean, range and std of age distribution
+        print('-----------------------------------')
+        print('Age distribution')
+        print('Mean age: %.2f' % np.mean(Y))
+        print('Std age: %.2f' % np.std(Y))
+        print('Age range: %d - %d' % (np.min(Y), np.max(Y)))
+
+        # Plot age distribution
+        plt.hist(Y, bins=20)
+        plt.xlabel('Age (years)')
+        plt.ylabel('Count')
+        plt.savefig(os.path.join(self.dir, 'figures/age_distribution.svg'))
+        plt.close()
 
     def features_vs_age(self, X, Y, feature_names):
         """Plot correlation between features and age.
