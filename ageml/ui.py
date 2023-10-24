@@ -86,6 +86,24 @@ class Interface:
             return None
 
     @log
+    def _load_data(self):
+        """Load data from csv files."""
+
+        # Load data 
+        self.df_features = self._load_csv(self.args.features)
+        self.df_covariates = self._load_csv(self.args.covariates)
+        self.df_factors = self._load_csv(self.args.factors)
+        self.df_clinical = self._load_csv(self.args.clinical)
+
+        # Remove subjects with missing features
+        subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index
+        if subjects_missing_data is not None:
+            print('-----------------------------------')
+            print('Subjects with missing data: %s' % subjects_missing_data.to_list())
+            warnings.warn('Subjects with missing data: %s' % subjects_missing_data)
+        self.df_features.dropna(inplace=True)
+
+    @log
     def _age_distribution(self):
         """Use visualizer to show age distribution."""
 
@@ -137,11 +155,8 @@ class Interface:
     def run(self):
         """Read the command entered and call the corresponding functions"""
 
-        # Load data 
-        self.df_features = self._load_csv(self.args.features)
-        self.df_covariates = self._load_csv(self.args.covariates)
-        self.df_factors = self._load_csv(self.args.factors)
-        self.df_clinical = self._load_csv(self.args.clinical)
+        # Load data
+        self._load_data()
 
         # Distribution of ages
         self._age_distribution()
