@@ -267,3 +267,237 @@ class CLI(Interface):
             args.model_params = {}
 
         return args
+
+class InteractiveCLI(Interface):
+
+    """Read and parses user commands via command line via an interactive interface
+    
+    Public methods:
+    ---------------
+    command_interface(self): Reads in the commands and calls the corresponding
+                             functions.
+
+    get_line(self): Prints a prompt for the user and updates the user entry.
+
+    read_command(self): Returns the first non-whitespace character.
+
+    get_character(self): Moves the cursor forward by one character in the user
+                         entry.
+
+    skip_spaces(self): Skips whitespace characters until a non-whitespace
+                       character is reached.
+
+    cv_command(self): Loads CV parameters.
+
+    help_command(self): Prints a list of valid commands.
+
+    load_command(self): Loads file paths.
+
+    model_command(self): Loads model parameters.
+
+    output_command(self): Loads output directory.
+
+    run_command(self): Runs the modelling.
+
+    scaler_command(self): Loads scaler parameters.
+    """
+
+    def __init__(self):
+        """Initialise variables."""
+
+        # Interactive setup
+        self.character = ""  # current character
+        self.line = ""  # current string entered by the user
+        self.cursor = 0  # cursor position
+
+        # Ask for required inputs
+        self.args = argparse.Namespace()
+        print("Age Modelling (AgeML): interactive command line user interface.")
+        print('-----------------------------------')
+        print('Setup (for Optional or Default values enter: None)')
+        
+        # Askf for output directory
+        print('Output directory path (Required):')
+        self.get_line()
+        self.output_command()
+
+        # Ask for input files
+        print('Input features file path (Required):')
+        self.get_line()
+        self.line = '--features ' + self.line
+        self.load_command()
+        print('Input covariates file path (Optional):')
+        self.get_line()
+        self.line = '--covariates ' + self.line
+        self.load_command()
+        print('Input factors file path (Optional):')
+        self.get_line()
+        self.line = '--factors ' + self.line
+        self.load_command()
+        print('Input clinical file path (Optional):')
+        self.get_line()
+        self.line = '--clinical ' + self.line
+        self.load_command()
+        print('Input systems file path (Optional):')
+        self.get_line()
+        self.line = '--clinical ' + self.line
+        self.load_command()
+
+        # Ask for scaler, model and CV parameters
+        print('Scaler type and parameters (Default:Standard):')
+        self.get_line() 
+        self.scaler_command()
+        print('Model type and parameters (Default:linear):')
+        self.get_line()
+        self.model_command()
+        print('CV parameters (Default: nº splits=5 and seed=0):')
+        self.get_line()
+        self.cv_command()
+
+        # Configure Interface
+        super().__init__(self.args)
+    
+    def command_interface(self):
+        """Read the command entered and call the corresponding function."""
+
+        # Interactive mode after setup
+        print("Initialization finished. Enter 'h' for help.")
+        self.get_line()  # get the user entry
+        command = self.read_command()  # read the first character
+        while command != "q":
+            if command == "h":
+                self.help_command()
+            elif command == "l":
+                self.load_command()
+            elif command == "m":
+                self.model_command()
+            elif command == "o":
+                self.output_command()
+            elif command == "r":
+                self.run_command()
+            elif command == "s":
+                self.scaler_command()
+            elif command == "v":
+                self.cv_command()
+            else:
+                print("Invalid command. Enter 'h' for help.")
+            self.get_line()  # get the user entry
+            command = self.read_command()  # read the first character
+
+    def get_line(self):
+        """Print prompt for the user and update the user entry."""
+        self.cursor = 0
+        self.line = input("#: ")
+        while self.line == "":  # if the user enters a blank line
+            self.line = input("#: ")
+
+    def read_command(self):
+        """Return the first non-whitespace character."""
+        self.skip_spaces()
+        return self.character
+
+    def get_character(self):
+        """Move the cursor forward by one character in the user entry."""
+        if self.cursor < len(self.line):
+            self.character = self.line[self.cursor]
+            self.cursor += 1
+        else:  # end of the line
+            self.character = ""
+
+    def skip_spaces(self):
+        """Skip whitespace until a non-whitespace character is reached."""
+        self.get_character()
+        while self.character.isspace():
+            self.get_character()
+
+    def cv_command(self):
+        """Load CV parameters."""
+        self.line = self.line.split()
+        # TODO check that i/ps are integers
+        if self.line[0] == 'None':
+            self.args.cv_split = 5
+            self.args.seed = 0
+        elif len(self.line) == 1:
+            self.args.cv_split = self.line[0]
+            self.args.seed = 0
+        elif len(self.line) == 2:
+            self.args.cv_split, self.args.seed = self.line[0], self.line[1]
+        else:
+            # TODO ask for i/p again
+            print('Too many values to unpack')
+
+    def help_command(self):
+        """Print a list of valid commands."""
+        print("User commands:")
+        print("h                                   - help (this command)")
+        print("l --flag [file]                     - load file with the specified flag")
+        print("m model_type [param1, param2, ...]  - set model type and parameters (Default: linear)")
+        print("o [directory]                       - set output directory")
+        print("q                                   - quit the program")
+        print("r                                   - run the modelling")
+        print("s scaler_type [param1, param2, ...] - set scaler type and parameters (Default: standard)")
+        print("v [nº splits] [seed]                - set CV parameters (Default: 5, 0)")
+
+    def load_command(self):
+        """Load file paths."""
+        self.line = self.line.split()
+        command = self.line[0]
+        file = self.line[1]
+        if file == 'None':
+            file = None
+        if command == '--features':
+            self.args.features = file
+        elif command == '--covariates':
+            self.args.covariates = file
+        elif command == '--factors':
+            self.args.factors = file
+        elif command == '--clinical':
+            self.args.clinical = file
+        elif command == '--systems':
+            self.args.systems = file
+        else:
+            print('Choose a valid file type: --features, --covariates, --factors, --clinical, --systems')
+    
+    def model_command(self):
+        """Load model parameters."""
+        self.line = self.line.split()
+        # Set deafult
+        if self.line[0] == 'None':
+            self.args.model_type = 'linear'
+        else:
+            # TODO check that model type is valid
+            self.args.model_type = self.line[0]
+        if len(self.line[0]) > 1:
+            model_params = {}
+            for item in self.line[1:]:
+                key, value = item.split('=')
+                value = convert(value)
+                model_params[key] = value
+            self.args.model_params = model_params
+        else:
+            self.args.model_params = {}
+
+    def output_command(self):
+        """Load output directory."""
+        self.args.output = self.line
+
+    def run_command(self):
+        """Run the modelling."""
+        self.run()
+
+    def scaler_command(self):
+        self.line = self.line.split()
+        if self.line[0] == 'None':
+            self.args.scaler_type = 'standard'
+        else:
+            # TODO check that scaler type is valid
+            self.args.scaler_type = self.line[0]
+        if len(self.line[0]) > 1:
+            scaler_params = {}
+            for item in self.line[1:]:
+                key, value = item.split('=')
+                value = convert(value)
+                scaler_params[key] = value
+            self.args.scaler_params = scaler_params
+        else:
+            self.args.scaler_params = {}
