@@ -70,6 +70,13 @@ class Interface:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + '\n')
 
+    def _check_file(self, file):
+        """Check that file exists."""
+        if not os.path.exists(file):
+            return False
+        else:
+            return True
+
     def _load_csv(self, file):
         """Use panda to load csv into dataframe.
 
@@ -79,6 +86,9 @@ class Interface:
         """
 
         if file is not None:
+            # Check file exists
+            if not self._check_file(file):
+                raise FileNotFoundError('File %s not found.' % file)
             df = pd.read_csv(file, header=0, index_col=0)
             df.columns = df.columns.str.lower() # ensure lower case
             return df
@@ -274,6 +284,9 @@ class InteractiveCLI(Interface):
     
     Public methods:
     ---------------
+
+    force_command(self, func, command = None): Force the user to enter a valid command.
+
     command_interface(self): Reads in the commands and calls the corresponding
                              functions.
 
@@ -318,45 +331,42 @@ class InteractiveCLI(Interface):
         
         # Askf for output directory
         print('Output directory path (Required):')
-        self.get_line()
-        self.output_command()
-
+        self.force_command(self.output_command)
         # Ask for input files
         print('Input features file path (Required):')
-        self.get_line()
-        self.line = '--features ' + self.line
-        self.load_command()
+        self.force_command(self.load_command, '--features')
         print('Input covariates file path (Optional):')
-        self.get_line()
-        self.line = '--covariates ' + self.line
-        self.load_command()
+        self.force_command(self.load_command, '--covariates')
         print('Input factors file path (Optional):')
-        self.get_line()
-        self.line = '--factors ' + self.line
-        self.load_command()
+        self.force_command(self.load_command, '--factors')
         print('Input clinical file path (Optional):')
-        self.get_line()
-        self.line = '--clinical ' + self.line
-        self.load_command()
+        self.force_command(self.load_command, '--clinical')
         print('Input systems file path (Optional):')
-        self.get_line()
-        self.line = '--clinical ' + self.line
-        self.load_command()
+        self.force_command(self.load_command, '--systems')
 
         # Ask for scaler, model and CV parameters
-        print('Scaler type and parameters (Default:Standard):')
-        self.get_line() 
-        self.scaler_command()
+        print('Scaler type and parameters (Default:standard):')
+        self.force_command(self.scaler_command)
         print('Model type and parameters (Default:linear):')
-        self.get_line()
-        self.model_command()
+        self.force_command(self.model_command)
         print('CV parameters (Default: nº splits=5 and seed=0):')
-        self.get_line()
-        self.cv_command()
+        self.force_command(self.cv_command)
 
         # Configure Interface
         super().__init__(self.args)
     
+    def force_command(self, func, command = None):
+        """Force the user to enter a valid command."""
+        while True:
+            self.get_line() 
+            if command is not None:
+                self.line = command + ' ' + self.line
+            error = func()
+            if error is None:
+                return None
+            else:
+                print(error)
+
     def command_interface(self):
         """Read the command entered and call the corresponding function."""
 
@@ -365,22 +375,25 @@ class InteractiveCLI(Interface):
         self.get_line()  # get the user entry
         command = self.read_command()  # read the first character
         while command != "q":
+            error = None
             if command == "h":
                 self.help_command()
             elif command == "l":
-                self.load_command()
+                error = self.load_command()
             elif command == "m":
-                self.model_command()
+                error = self.model_command()
             elif command == "o":
-                self.output_command()
+                error = self.output_command()
             elif command == "r":
-                self.run_command()
+                error = self.run_command()
             elif command == "s":
-                self.scaler_command()
+                error = self.scaler_command()
             elif command == "v":
-                self.cv_command()
+                error = self.cv_command()
             else:
                 print("Invalid command. Enter 'h' for help.")
+            if error is not None:
+                print(error)
             self.get_line()  # get the user entry
             command = self.read_command()  # read the first character
 
@@ -412,19 +425,30 @@ class InteractiveCLI(Interface):
 
     def cv_command(self):
         """Load CV parameters."""
+        error = None
         self.line = self.line.split()
-        # TODO check that i/ps are integers
+
+        # Set default values
         if self.line[0] == 'None':
             self.args.cv_split = 5
             self.args.seed = 0
-        elif len(self.line) == 1:
-            self.args.cv_split = self.line[0]
+            return error
+
+        # Check wether items are integers
+        for item in self.line:
+            if not item.isdigit():
+                error = 'CV parameters must be integers'
+                return error
+        
+        if len(self.line) == 1:
+            self.args.cv_split = int(self.line[0])
             self.args.seed = 0
         elif len(self.line) == 2:
-            self.args.cv_split, self.args.seed = self.line[0], self.line[1]
+            self.args.cv_split, self.args.seed = int(self.line[0]), int(self.line[1])
         else:
-            # TODO ask for i/p again
-            print('Too many values to unpack')
+            error = 'Too many values to unpack.'
+        
+        return error
 
     def help_command(self):
         """Print a list of valid commands."""
@@ -440,12 +464,32 @@ class InteractiveCLI(Interface):
 
     def load_command(self):
         """Load file paths."""
+        error = None
         self.line = self.line.split()
         command = self.line[0]
         file = self.line[1]
+
+        # Determine if file is valid
         if file == 'None':
             file = None
+        else:
+            if not self._check_file(file):
+                error = 'File %s not found.' % file
+            elif command in ['--features', '--covariates', '--factors', '--clinical']:
+                if not file.endswith('.csv'):
+                    error = 'File %s must be a .csv file.' % file
+            elif command == '--systems':
+                if not file.endswith('.txt'):
+                    error = 'File %s must be a .txt file.' % file
+        
+        # Throw error if detected
+        if error is not None:
+            return error
+        
+        # Set file path
         if command == '--features':
+            if file is None:
+                error = 'A features file must be provided must not be None.'
             self.args.features = file
         elif command == '--covariates':
             self.args.covariates = file
@@ -456,17 +500,23 @@ class InteractiveCLI(Interface):
         elif command == '--systems':
             self.args.systems = file
         else:
-            print('Choose a valid file type: --features, --covariates, --factors, --clinical, --systems')
+            error = 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems'
     
+        return error
+
     def model_command(self):
         """Load model parameters."""
+        valid_types = ['linear']
+        error = None
         self.line = self.line.split()
         # Set deafult
         if self.line[0] == 'None':
             self.args.model_type = 'linear'
         else:
-            # TODO check that model type is valid
-            self.args.model_type = self.line[0]
+            if self.line[0] not in valid_types:
+                error = 'Choose a valid model type: {}'.format(valid_types)
+            else:
+                self.args.model_type = self.line[0]
         if len(self.line[0]) > 1:
             model_params = {}
             for item in self.line[1:]:
@@ -476,22 +526,37 @@ class InteractiveCLI(Interface):
             self.args.model_params = model_params
         else:
             self.args.model_params = {}
+        
+        return error
 
     def output_command(self):
         """Load output directory."""
-        self.args.output = self.line
+        error = None
+        path = self.line
+        if os.path.isdir(path):
+            self.args.output = self.line
+        else:
+            error = ('Directory %s does not exist.' % path)
+        return error
 
     def run_command(self):
         """Run the modelling."""
+        error = None
         self.run()
+        return error
 
     def scaler_command(self):
+        """Load scaler parameters."""
+        error = None
+        valid_types = ['standard']
         self.line = self.line.split()
         if self.line[0] == 'None':
             self.args.scaler_type = 'standard'
         else:
-            # TODO check that scaler type is valid
-            self.args.scaler_type = self.line[0]
+            if self.line[0] not in valid_types:
+                error = 'Choose a valid scaler type: {}'.format(valid_types)
+            else:
+                self.args.scaler_type = self.line[0]
         if len(self.line[0]) > 1:
             scaler_params = {}
             for item in self.line[1:]:
@@ -501,3 +566,5 @@ class InteractiveCLI(Interface):
             self.args.scaler_params = scaler_params
         else:
             self.args.scaler_params = {}
+        
+        return error
