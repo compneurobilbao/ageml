@@ -116,10 +116,10 @@ class Interface:
         self.df_clinical = self._load_csv(self.args.clinical)
 
         # Remove subjects with missing features
-        subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index
-        if subjects_missing_data is not None:
+        subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
+        if subjects_missing_data != []:
             print('-----------------------------------')
-            print('Subjects with missing data: %s' % subjects_missing_data.to_list())
+            print('Subjects with missing data: %s' % subjects_missing_data)
             warnings.warn('Subjects with missing data: %s' % subjects_missing_data)
         self.df_features.dropna(inplace=True)
 
