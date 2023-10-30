@@ -17,6 +17,7 @@ from sklearn.linear_model import LinearRegression
 from .utils import insert_newlines
 from .processing import find_correlations
 
+
 class Visualizer:
 
     """Manages the visualization of data and results.
@@ -82,13 +83,13 @@ class Visualizer:
 
         # Show results
         nplots = len(feature_names)
-        plt.figure(figsize=(14,3*math.ceil(nplots/4)))
+        plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
         print('-----------------------------------')
         print('Features by correlation with Age')
         for i, o in enumerate(order):
-            print('%d. %s: %.2f' % (i+1, feature_names[o], corr[o]))
-            plt.subplot(math.ceil(nplots/4),4,i+1)
-            plt.scatter(Y, X[:,o], s=15)
+            print('%d. %s: %.2f' % (i + 1, feature_names[o], corr[o]))
+            plt.subplot(math.ceil(nplots / 4), 4, i + 1)
+            plt.scatter(Y, X[:, o], s=15)
             plt.ylabel(insert_newlines(feature_names[o], 4))
             plt.xlabel('age (years)')
             plt.title("Corr:%.2f" % corr[o])
@@ -131,9 +132,9 @@ class Visualizer:
         # Before age-bias correction
         LR_age_bias = LinearRegression(fit_intercept=True)
         LR_age_bias.fit(y_true.reshape(-1, 1), y_pred)
-        plt.subplot(1,2,1)
+        plt.subplot(1, 2, 1)
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
         plt.scatter(y_true, y_pred)
         plt.title('Before age-bias correction')
         plt.ylabel('Predicted Age')
@@ -141,9 +142,9 @@ class Visualizer:
 
         # After age-bias correction
         LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
-        plt.subplot(1,2,2)
+        plt.subplot(1, 2, 2)
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
         plt.scatter(y_true, y_corrected)
         plt.title('After age-bias correction')
         plt.ylabel('Predicted Age')
