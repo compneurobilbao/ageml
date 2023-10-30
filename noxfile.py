@@ -17,7 +17,7 @@ def coverage(s: Session) -> None:
     # Coverage analysis
     s.run("poetry", "install", external=True)
     s.run("py.test", "--cov=src", "tests")
-    s.run("coverage", "report", "--show-missing") # "--fail-under=95")
+    s.run("coverage", "report", "--show-missing")  # "--fail-under=95")
 
 
 @session(reuse_venv=True)
