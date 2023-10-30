@@ -17,6 +17,7 @@ from sklearn import model_selection
 from sklearn import pipeline
 from sklearn import preprocessing
 
+
 class AgeML:
 
     """Able to fit age models and predict age.
@@ -56,8 +57,7 @@ class AgeML:
     predict_age(self, X): Predict age with fitted model.
     """
 
-    def __init__(self, scaler_type, scaler_params, model_type, model_params,
-                 CV_split, seed):
+    def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
         """Initialise variables."""
 
         # Set required modelling parts
@@ -79,10 +79,10 @@ class AgeML:
         **kwargs: to input to sklearn scaler object"""
 
         # Mean centered and unit variance
-        if norm == 'standard':
+        if norm == "standard":
             self.scaler = preprocessing.StandardScaler(**kwargs)
         else:
-            raise ValueError('Must select an availble scaler type.')
+            raise ValueError("Must select an availble scaler type.")
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -93,33 +93,33 @@ class AgeML:
         **kwargs: to input to sklearn modle object"""
 
         # Linear Regression
-        if model_type == 'linear':
+        if model_type == "linear":
             self.model = linear_model.LinearRegression(**kwargs)
         else:
-            raise ValueError('Must select an availble model type.')
+            raise ValueError("Must select an availble model type.")
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
 
         pipe = []
         if self.scaler is not None:
-            pipe.append(('scaler', self.scaler))
+            pipe.append(("scaler", self.scaler))
         if self.model is not None:
-            pipe.append(('model', self.model))
+            pipe.append(("model", self.model))
         else:
             raise TypeError("Must set a valid model before setting pipeline.")
         self.pipeline = pipeline.Pipeline(pipe)
 
     def set_CV_params(self, CV_split, seed=None):
-       """Set the parameters of the Cross Validation Scheme.
+        """Set the parameters of the Cross Validation Scheme.
 
-       Parameters
-       ----------
-       CV_split: number of splits in CV scheme
-       seed: seed to set random state."""
+        Parameters
+        ----------
+        CV_split: number of splits in CV scheme
+        seed: seed to set random state."""
 
-       self.CV_split = CV_split
-       self.seed = seed
+        self.CV_split = CV_split
+        self.seed = seed
 
     def calculate_metrics(self, y_true, y_pred):
         """Calculates MAE, RMSE, R2 and p (Pearson's corelation)
@@ -134,7 +134,6 @@ class AgeML:
         r2 = metrics.r2_score(y_true, y_pred)
         p, pval = stats.pearsonr(y_true, y_pred)
         return MAE, rmse, r2, p
-
 
     def summary_metrics(self, array):
         """Calculates mean and standard deviations of metrics.
@@ -177,7 +176,7 @@ class AgeML:
             raise TypeError("Must fun fit_age_bias before attempting to predict.")
 
         # Apply linear correction
-        y_corrected =  y_pred + (y_true-self.age_bias.predict(y_true.reshape(-1, 1)))
+        y_corrected = y_pred + (y_true - self.age_bias.predict(y_true.reshape(-1, 1)))
 
         return y_corrected
 
@@ -205,7 +204,7 @@ class AgeML:
             X_train, X_test = X[train], X[test]
             y_train, y_test = y[train], y[test]
 
-            #Train model
+            # Train model
             self.pipeline.fit(X_train, y_train)
 
             # Predictions
@@ -213,11 +212,11 @@ class AgeML:
             y_pred_test = self.pipeline.predict(X_test)
 
             # Metrics
-            print('Fold N: %d' % (i+1))
+            print("Fold N: %d" % (i + 1))
             metrics_train.append(self.calculate_metrics(y_train, y_pred_train))
-            print('Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f' % metrics_train[i])
+            print("Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % metrics_train[i])
             metrics_test.append(self.calculate_metrics(y_test, y_pred_test))
-            print('Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f' % metrics_test[i])
+            print("Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % metrics_test[i])
 
             # Fit and apply age-bias correction
             self.fit_age_bias(y_train, y_pred_train)
@@ -228,13 +227,11 @@ class AgeML:
             corrected_age[test] = y_pred_test_no_bias
 
         # Calculate metrics over all splits
-        print('Summary metrics over all CV splits')
+        print("Summary metrics over all CV splits")
         summary_train = self.summary_metrics(metrics_train)
-        print('Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f'
-              % tuple(summary_train))
+        print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
         summary_test = self.summary_metrics(metrics_test)
-        print('Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f'
-              % tuple(summary_test))
+        print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
 
         # Final model trained on all data
         self.pipeline.fit(X, y)
@@ -251,6 +248,6 @@ class AgeML:
 
         # Check that model has previously been fit
         if not self.pipelineFit:
-            raise ValueError('Must fit the pipline before calling predict.')
+            raise ValueError("Must fit the pipline before calling predict.")
 
         return self.pipeline.predict(X)
