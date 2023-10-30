@@ -30,6 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
         python -m pip install poetry nox nox-poetry
+        poetry config virtualenvs.in-project true
         poetry install        
     - name: Nox linting session
       run: |
