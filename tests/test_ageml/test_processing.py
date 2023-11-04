@@ -10,4 +10,4 @@ def test_find_correlations():
     result = processing.find_correlations(X, Y)[0]
     expected = np.array([1, 1, -1])
     
-    assert np.allclose(result, expected, rtol=1e-10) == True
+    assert np.allclose(result, expected, rtol=1e-10) is True
