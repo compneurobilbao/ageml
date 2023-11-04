@@ -7,6 +7,9 @@ import sys
 
 def insert_newlines(text, nwords):
     """Function to insert a new line every n words."""
+    if nwords == 0:
+        raise ValueError("Cannot insert newlines every 0 words.")
+
     words = text.split()
     new_lines = [words[i: i + nwords] for i in range(0, len(words), nwords)]
     return "\n".join([" ".join(line) for line in new_lines])
