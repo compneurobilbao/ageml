@@ -35,6 +35,24 @@ class Interface:
 
     Public methods:
     ---------------
+    setup(self): Creates required directories and files to store results.
+
+    set_visualizer(self): Set visualizer with output directory.
+
+    set_model(self): Set model with parameters.
+
+    check_file(self, file): Check that file exists.
+
+    load_csv(self, file): Use panda to load csv into dataframe.
+
+    load_data(self): Load data from csv files.
+
+    age_distribution(self): Use visualizer to show age distribution.
+
+    features_vs_age(self): Use visualizer to explore relationship between features and age.
+
+    model_age(self): Use AgeML to fit age model with data.
+
     run(self): Runs the age modelling interface.
     """
 
@@ -45,13 +63,13 @@ class Interface:
         self.args = args
 
         # Set up directory for storage of results
-        self._setup()
+        self.setup()
 
         # Initialise objects form library
-        self._set_visualizer()
-        self._set_model()
+        self.set_visualizer()
+        self.set_model()
 
-    def _setup(self):
+    def setup(self):
         """Create required directories and files to store results."""
 
         # Create directories
@@ -68,26 +86,26 @@ class Interface:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + '\n')
 
-    def _set_visualizer(self):
+    def set_visualizer(self):
         """Set visualizer with output directory."""
 
         self.visualizer = Visualizer(self.dir_path)
 
-    def _set_model(self):
+    def set_model(self):
         """Set model with parameters."""
 
         self.ageml = AgeML(self.args.scaler_type, self.args.scaler_params,
                            self.args.model_type, self.args.model_params,
                            self.args.cv_split, self.args.seed)
 
-    def _check_file(self, file):
+    def check_file(self, file):
         """Check that file exists."""
         if not os.path.exists(file):
             return False
         else:
             return True
 
-    def _load_csv(self, file):
+    def load_csv(self, file):
         """Use panda to load csv into dataframe.
 
         Parameters
@@ -97,7 +115,7 @@ class Interface:
 
         if file is not None:
             # Check file exists
-            if not self._check_file(file):
+            if not self.check_file(file):
                 raise FileNotFoundError('File %s not found.' % file)
             df = pd.read_csv(file, header=0, index_col=0)
             df.columns = df.columns.str.lower() # ensure lower case
@@ -106,14 +124,14 @@ class Interface:
             return None
 
     @log
-    def _load_data(self):
+    def load_data(self):
         """Load data from csv files."""
 
         # Load data 
-        self.df_features = self._load_csv(self.args.features)
-        self.df_covariates = self._load_csv(self.args.covariates)
-        self.df_factors = self._load_csv(self.args.factors)
-        self.df_clinical = self._load_csv(self.args.clinical)
+        self.df_features = self.load_csv(self.args.features)
+        self.df_covariates = self.load_csv(self.args.covariates)
+        self.df_factors = self.load_csv(self.args.factors)
+        self.df_clinical = self.load_csv(self.args.clinical)
 
         # Remove subjects with missing features
         subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
@@ -124,7 +142,7 @@ class Interface:
         self.df_features.dropna(inplace=True)
 
     @log
-    def _age_distribution(self):
+    def age_distribution(self):
         """Use visualizer to show age distribution."""
 
         # Select age information
@@ -134,7 +152,7 @@ class Interface:
         self.visualizer.age_distribution(ages)
 
     @log
-    def _features_vs_age(self):
+    def features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
         # Select data to visualize
@@ -147,7 +165,7 @@ class Interface:
         self.visualizer.features_vs_age(X, Y, feature_names)
 
     @log
-    def _model_age(self):
+    def model_age(self):
         """Use AgeML to fit age model with data."""
 
         # Show training pipeline
@@ -176,31 +194,38 @@ class Interface:
         """Read the command entered and call the corresponding functions"""
 
         # Load data
-        self._load_data()
+        self.load_data()
 
         # Distribution of ages
-        self._age_distribution()
+        self.age_distribution()
 
         # Relationship between features and age
-        self._features_vs_age()
+        self.features_vs_age()
 
         # Model age
-        self._model_age()
+        self.model_age()
 
 class CLI(Interface):
 
-    """Read and parses user commands via command line."""
+    """Read and parses user commands via command line.
+    
+    Public methods:
+    ---------------
+    configure_parser(self): Configure parser with required arguments for processing.
+
+    configure_args(self, args): Configure argumens with required fromatting for modelling.
+    """
 
     def __init__(self):
         """Initialise variables."""
         self.parser = argparse.ArgumentParser(description="Age Modelling using python.",
                                               formatter_class=argparse.RawTextHelpFormatter)
-        self._configure_parser()
+        self.configure_parser()
         args = self.parser.parse_args()
-        args = self._configure_args(args)
+        args = self.configure_args(args)
         super().__init__(args)
 
-    def _configure_parser(self):
+    def configure_parser(self):
         """Configure parser with required arguments for processing."""
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
                                  help="Path to output directory where to save results. (Required)")
@@ -243,7 +268,7 @@ class CLI(Interface):
                                       "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
                                       "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)")
 
-    def _configure_args(self, args):
+    def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 
         Parameters
@@ -399,10 +424,10 @@ class InteractiveCLI(Interface):
             if error is not None:
                 print(error)
             elif command == "o":
-                self._setup()
-                self._set_visualizer()
+                self.setup()
+                self.set_visualizer()
             elif command in ['cv', 'm', 's']:
-                self._set_model()
+                self.set_model()
 
             # Get next command
             self.get_line()  # get the user entry
@@ -476,7 +501,7 @@ class InteractiveCLI(Interface):
             if file == 'None':
                 file = None
             else:
-                if not self._check_file(file):
+                if not self.check_file(file):
                     error = 'File %s not found.' % file
                 elif file_type in ['--features', '--covariates', '--factors', '--clinical']:
                     if not file.endswith('.csv'):
