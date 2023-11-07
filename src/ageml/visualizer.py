@@ -14,7 +14,7 @@ import os
 
 from sklearn.linear_model import LinearRegression
 
-from .utils import insert_newlines
+from .utils import insert_newlines, create_directory
 from .processing import find_correlations
 
 
@@ -66,6 +66,9 @@ class Visualizer:
         plt.hist(Y, bins=20)
         plt.xlabel('Age (years)')
         plt.ylabel('Count')
+        # Make diectory for saving the file
+        path_for_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_for_fig)
         plt.savefig(os.path.join(self.dir, 'figures/age_distribution.svg'))
         plt.close()
 

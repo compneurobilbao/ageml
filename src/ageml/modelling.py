@@ -82,7 +82,7 @@ class AgeML:
         if norm == "standard":
             self.scaler = preprocessing.StandardScaler(**kwargs)
         else:
-            raise ValueError("Must select an availble scaler type.")
+            raise ValueError("Must select an available scaler type.")
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -96,18 +96,17 @@ class AgeML:
         if model_type == "linear":
             self.model = linear_model.LinearRegression(**kwargs)
         else:
-            raise ValueError("Must select an availble model type.")
+            raise ValueError("Must select an available model type.")
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
 
         pipe = []
-        if self.scaler is not None:
-            pipe.append(("scaler", self.scaler))
-        if self.model is not None:
-            pipe.append(("model", self.model))
-        else:
-            raise TypeError("Must set a valid model before setting pipeline.")
+        if self.scaler is None or self.model is None:
+            raise ValueError("Must set a valid model or scaler before setting pipeline.")
+        
+        pipe.append(("scaler", self.scaler))
+        pipe.append(("model", self.model))
         self.pipeline = pipeline.Pipeline(pipe)
 
     def set_CV_params(self, CV_split, seed=None):

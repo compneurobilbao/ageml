@@ -11,7 +11,6 @@ class InstanceClass(object):
     input object must have a .log_path attribute, ideally a
     path.
     """
-    
     def __init__(self, log_path):
         self.log_path = log_path
 
