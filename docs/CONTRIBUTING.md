@@ -63,7 +63,10 @@ ageml
 To install the required packages for creating the environment with poetry.
 `pip install poetry, nox, nox-poetry`
 
-Poetry will provide to install in the virtual environment (in developer mode) when running_ ```poetry install```.
+If you want the virtual environment of the project to be located in the project root, run this line (make sure you have poetry installed running `poetry --version`):
+`poetry config virtualenvs.in-project true` (makes sense)
+
+Poetry will provide to install in the virtual environment (in developer mode) when running_ `poetry install`.
 A _pyproject.toml_ file is provided for creating the environment using poetry.
 
 ### Activate the environment
