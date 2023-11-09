@@ -15,23 +15,26 @@ def generate_synthetic_data(file_name: str):
     
     """
     # Weights of our synthetic variables
-    weights = np.array([[1.32, -5.97, 0.66]])  # (1, 3)
+    weights = np.array([[0.77, -0.54, 0.095]])  # (1, 3)
     
     # 100 samples, 3 variables (X1, X2, X3)
     N = 100
     
     # w@X + N(0, 1) = Y
+    # Y
     # Set random seed for the noise
     np.random.seed(1)
-    # Generate the data
-    X1 = np.random.uniform(200, 1000, N)
-    X2 = np.random.uniform(0.1, 20, N)
-    X3 = np.random.uniform(-400, 30, N)
-    noise = np.random.rand(N) - 0.5
+    # Generate the normally distributed random variables
+    Y = np.random.normal(loc=72, scale=10, size=[N, 1])
+    X1 = np.divide(Y[:, 0], weights[0][0])
+    X1 += np.random.normal(loc=0, scale=X1.std(), size=N)
+    X2 = np.divide(Y[:, 0], weights[0][1])
+    X2 += np.random.normal(loc=0, scale=X2.std(), size=N)
+    X3 = np.divide(Y[:, 0], weights[0][2])
+    X3 += np.random.normal(loc=0, scale=X3.std(), size=N)
     X = np.array([X1, X2, X3])
-    Y = (weights @ X) + noise
     # Concatenate
-    synth_data = np.concatenate([X.transpose(), Y.transpose()], axis=1)
+    synth_data = np.concatenate([X.transpose(), Y], axis=1)
     
     # Import pandas only for this function, otherwise it slows down importing the datasets.
     df_synth_data = pd.DataFrame(synth_data, columns=['X1', 'X2', 'X3', 'Y'])
@@ -57,7 +60,6 @@ class SyntheticDataset:
 
     def _load_data(self):
         df = pd.read_csv(self.path_to_data, index_col=False)
-        df.drop(columns="Unnamed: 0", inplace=True)
         return df
 
     def get_data(self):
