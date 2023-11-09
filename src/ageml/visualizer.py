@@ -69,7 +69,7 @@ class Visualizer:
         # Make diectory for saving the file
         path_for_fig = os.path.join(self.dir, 'figures')
         create_directory(path_for_fig)
-        plt.savefig(os.path.join(self.dir, 'figures/age_distribution.svg'))
+        plt.savefig(os.path.join(path_for_fig, 'age_distribution.svg'))
         plt.close()
 
     def features_vs_age(self, X, Y, feature_names):
@@ -79,7 +79,7 @@ class Visualizer:
         ----------
         X: 2D-Array with features; shape=(n,m)
         Y: 1D-Array with age; shape=n
-        feature_names: list of names of features, shape=n"""
+        feature_names: list of names of features, shape=m"""
 
         # Calculate correlation between features and age
         corr, order = find_correlations(X, Y)
@@ -97,7 +97,9 @@ class Visualizer:
             plt.xlabel('age (years)')
             plt.title("Corr:%.2f" % corr[o])
         plt.tight_layout()
-        plt.savefig(os.path.join(self.dir, 'figures/features_vs_age.svg'))
+        path_for_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_for_fig)
+        plt.savefig(os.path.join(path_for_fig, 'features_vs_age.svg'))
         plt.close()
 
     def true_vs_pred_age(self, y_true, y_pred):
@@ -116,7 +118,9 @@ class Visualizer:
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
         plt.xlabel('True Age')
         plt.ylabel('Predicted Age')
-        plt.savefig(os.path.join(self.dir, 'figures/true_vs_pred_age.svg'))
+        path_to_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_to_fig)
+        plt.savefig(os.path.join(path_to_fig, 'true_vs_pred_age.svg'))
         plt.close()
 
     def age_bias_correction(self, y_true, y_pred, y_corrected):
