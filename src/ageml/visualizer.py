@@ -157,5 +157,7 @@ class Visualizer:
         plt.ylabel('Predicted Age')
         plt.xlabel('True Age')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.dir, 'figures/age_bias_correction.svg'))
+        path_to_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_to_fig)
+        plt.savefig(os.path.join(path_to_fig, 'age_bias_correction.svg'))
         plt.close()

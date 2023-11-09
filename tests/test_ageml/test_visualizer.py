@@ -79,4 +79,15 @@ def test_true_vs_pred_age(dummy_viz, np_test_data, dummy_ml):
 
 
 def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
-    pass
+    # Separate data in X and Y
+    X = np_test_data[:, :3]
+    Y = np_test_data[:, -1]
+    # Fit Age
+    Y_pred, Y_corrected = dummy_ml.fit_age(X, Y)
+    dummy_viz.age_bias_correction(Y, Y_pred, Y_corrected)
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir,
+                            'figures/age_bias_correction.svg')
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
