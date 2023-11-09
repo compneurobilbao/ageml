@@ -5,3 +5,4 @@ from .utils import *
 from .processing import *
 from .visualizer import *
 from .modelling import *
+from .datasets import *
