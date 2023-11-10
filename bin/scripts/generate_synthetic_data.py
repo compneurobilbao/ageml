@@ -1,8 +1,11 @@
 import os
-import inspect
-from ageml.datasets.synthetic_test_data import generate_synthetic_data as gsd
+import importlib.resources as pkg_resources
+import ageml.datasets.synthetic_test_data as data_generator
+
 if __name__ == "__main__":
-    # Set path in datasets
-    p = os.path.join(os.path.dirname(inspect.getfile(gsd)),
-                     "synthetic_dataset.csv")
-    gsd(p)
+    # Generate synthetic features
+    data_generator.generate_synthetic_features()
+    # Generate synthetic covariates
+    data_generator.generate_synthetic_covariates()
+    # Generate synthetic factors
+    data_generator.generate_synthetic_factors()

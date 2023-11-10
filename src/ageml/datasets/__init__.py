@@ -1,1 +1,1 @@
-from .synthetic_test_data import SyntheticDataset
+from .synthetic_test_data import SyntheticData
