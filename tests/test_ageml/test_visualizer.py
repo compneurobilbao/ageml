@@ -7,7 +7,7 @@ import ageml.modelling as modelling
 import ageml.ui as ui
 import ageml.utils as utils
 import ageml.visualizer as viz
-from ageml.datasets import SyntheticDataset
+from ageml.datasets import SyntheticData
 from .test_modelling import AgeMLTest
 
 
@@ -18,7 +18,7 @@ def dummy_viz():
 
 @pytest.fixture
 def np_test_data():
-    return SyntheticDataset().get_np_data()
+    return SyntheticData("features").get_np_data()
 
 
 @pytest.fixture
