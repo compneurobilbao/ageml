@@ -46,7 +46,7 @@ class Interface:
         self.args = args
 
         # Set up directory for storage of results
-        self._setup()
+        self.setup()
 
         # Initialise objects form library
         self.visualizer = Visualizer(self.dir_path)
@@ -54,7 +54,7 @@ class Interface:
             self.args.scaler_type, self.args.scaler_params, self.args.model_type, self.args.model_params, self.args.cv_split, self.args.seed
         )
 
-    def _setup(self):
+    def setup(self):
         """Create required directories and files to store results."""
 
         # Create directories
@@ -70,7 +70,7 @@ class Interface:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
 
-    def _load_csv(self, file):
+    def load_csv(self, file):
         """Use panda to load csv into dataframe.
 
         Parameters
@@ -86,14 +86,14 @@ class Interface:
             return None
 
     @log
-    def _load_data(self):
+    def load_data(self):
         """Load data from csv files."""
 
         # Load data
-        self.df_features = self._load_csv(self.args.features)
-        self.df_covariates = self._load_csv(self.args.covariates)
-        self.df_factors = self._load_csv(self.args.factors)
-        self.df_clinical = self._load_csv(self.args.clinical)
+        self.df_features = self.load_csv(self.args.features)
+        self.df_covariates = self.load_csv(self.args.covariates)
+        self.df_factors = self.load_csv(self.args.factors)
+        self.df_clinical = self.load_csv(self.args.clinical)
 
         # Remove subjects with missing features
         subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index
@@ -104,7 +104,7 @@ class Interface:
         self.df_features.dropna(inplace=True)
 
     @log
-    def _age_distribution(self):
+    def age_distribution(self):
         """Use visualizer to show age distribution."""
 
         # Select age information
@@ -114,7 +114,7 @@ class Interface:
         self.visualizer.age_distribution(ages)
 
     @log
-    def _features_vs_age(self):
+    def features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
         # Select data to visualize
@@ -126,7 +126,7 @@ class Interface:
         self.visualizer.features_vs_age(X, Y, feature_names)
 
     @log
-    def _model_age(self):
+    def model_age(self):
         """Use AgeML to fit age model with data."""
 
         # Show training pipeline
@@ -154,16 +154,16 @@ class Interface:
         """Read the command entered and call the corresponding functions"""
 
         # Load data
-        self._load_data()
+        self.load_data()
 
         # Distribution of ages
-        self._age_distribution()
+        self.age_distribution()
 
         # Relationship between features and age
-        self._features_vs_age()
+        self.features_vs_age()
 
         # Model age
-        self._model_age()
+        self.model_age()
 
 
 class CLI(Interface):
