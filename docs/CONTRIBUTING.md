@@ -104,14 +104,14 @@ We try to follow the [**seven rules of a great Git commit message**](https://cbe
 
 We like using the following standard prefixes for commit messages:
 
-  - `BUG:` *Fix for runtime crash or incorrect result*
-  - `DOC:` *Documentation change*
-  - `ENH:` *New functionality*
-  - `PERF:` *Performance improvement*
-  - `REF:` *Only refactoring -> moving classes, files, splitting functions*
-  - `TST:` *Adding/improving testing of existing functions*
-  - `STYLE:` *No logic impact (indentation, comments, variable names)*
-  - `WIP:` *Work In Progress not ready for merge*
-  - `GIT:` *Modify some repository settings (gitignore, gitmodules, others)*
-  - `DEL:` *Deleted files, functions, classes, resources and so on*
-  - `CI:` *Changes in the the CI/CD Pipelines*
+- `BUG:` *Fix for runtime crash or incorrect result*
+- `DOC:` *Documentation change*
+- `ENH:` *New functionality*
+- `PERF:` *Performance improvement*
+- `REF:` *Only refactoring -> moving classes, files, splitting functions*
+- `TST:` *Adding/improving testing of existing functions*
+- `STYLE:` *No logic impact (indentation, comments, variable names)*
+- `WIP:` *Work In Progress not ready for merge*
+- `GIT:` *Modify some repository settings (gitignore, gitmodules, others)*
+- `DEL:` *Deleted files, functions, classes, resources and so on*
+- `CI:` *Changes in the the CI/CD Pipelines*
