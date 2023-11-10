@@ -46,7 +46,7 @@ class Interface:
         self.args = args
 
         # Set up directory for storage of results
-        self._setup()
+        self.setup()
 
         # Initialise objects form library
         self.visualizer = Visualizer(self.dir_path)
@@ -54,7 +54,7 @@ class Interface:
             self.args.scaler_type, self.args.scaler_params, self.args.model_type, self.args.model_params, self.args.cv_split, self.args.seed
         )
 
-    def _setup(self):
+    def setup(self):
         """Create required directories and files to store results."""
 
         # Create directories
@@ -70,7 +70,7 @@ class Interface:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
 
-    def _load_csv(self, file):
+    def load_csv(self, file):
         """Use panda to load csv into dataframe.
 
         Parameters
@@ -78,7 +78,7 @@ class Interface:
         file: path to file; must be .csv
         """
 
-        if file is not None:
+        if os.path.exists(file):
             df = pd.read_csv(file, header=0, index_col=0)
             df.columns = df.columns.str.lower()  # ensure lower case
             return df
@@ -86,47 +86,58 @@ class Interface:
             return None
 
     @log
-    def _load_data(self):
+    def load_data(self):
         """Load data from csv files."""
 
         # Load data
-        self.df_features = self._load_csv(self.args.features)
-        self.df_covariates = self._load_csv(self.args.covariates)
-        self.df_factors = self._load_csv(self.args.factors)
-        self.df_clinical = self._load_csv(self.args.clinical)
+        self.df_features = self.load_csv(self.args.features)
+        self.df_covariates = self.load_csv(self.args.covariates)
+        self.df_factors = self.load_csv(self.args.factors)
+        self.df_clinical = self.load_csv(self.args.clinical)
 
         # Remove subjects with missing features
         subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index
-        if subjects_missing_data is not None:
+        if subjects_missing_data.tolist().__len__() != 0:
             print("-----------------------------------")
             print("Subjects with missing data: %s" % subjects_missing_data.to_list())
             warnings.warn("Subjects with missing data: %s" % subjects_missing_data)
         self.df_features.dropna(inplace=True)
 
     @log
-    def _age_distribution(self):
+    def age_distribution(self):
         """Use visualizer to show age distribution."""
 
-        # Select age information
-        ages = self.df_features["age"].to_numpy()
+        # Select age information. Try getting the age column
+        try:
+            ages = self.df_features["age"].to_numpy()
+        # If the age column is not present, use the index to get the last column
+        except KeyError:
+            array = self.df_features.to_numpy()
+            ages = array[:, -1]
 
         # Use visualizer to show age distribution
         self.visualizer.age_distribution(ages)
 
     @log
-    def _features_vs_age(self):
+    def features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
         # Select data to visualize
-        feature_names = [name for name in self.df_features.columns if name != "age"]
-        X = self.df_features[feature_names].to_numpy()
-        Y = self.df_features["age"].to_numpy()
+        if "age" in self.df_features.columns:
+            feature_names = [name for name in self.df_features.columns if name != "age"]
+            X = self.df_features[feature_names].to_numpy()
+        else:
+            # We assume that the last column is the age
+            feature_names = self.df_features.columns[:-1]
+            array = self.df_features.to_numpy()
+            X = array[:, :-1]
+            Y = array[:, -1]
 
         # Use visualizer to show
         self.visualizer.features_vs_age(X, Y, feature_names)
 
     @log
-    def _model_age(self):
+    def model_age(self):
         """Use AgeML to fit age model with data."""
 
         # Show training pipeline
@@ -135,9 +146,16 @@ class Interface:
         print(self.ageml.pipeline)
 
         # Select data to model
-        feature_names = [name for name in self.df_features.columns if name != "age"]
-        X = self.df_features[feature_names].to_numpy()
-        y = self.df_features["age"].to_numpy()
+        if "age" in self.df_features.columns:
+            feature_names = [name for name in self.df_features.columns if name != "age"]
+            X = self.df_features[feature_names].to_numpy()
+            y = self.df_features["age"].to_numpy()
+        else:
+            # We assume that the last column is the age
+            feature_names = self.df_features.columns[:-1]
+            array = self.df_features.to_numpy()
+            X = array[:, :-1]
+            y = array[:, -1]
 
         # Fit model and plot results
         y_pred, y_corrected = self.ageml.fit_age(X, y)
@@ -154,16 +172,16 @@ class Interface:
         """Read the command entered and call the corresponding functions"""
 
         # Load data
-        self._load_data()
+        self.load_data()
 
         # Distribution of ages
-        self._age_distribution()
+        self.age_distribution()
 
         # Relationship between features and age
-        self._features_vs_age()
+        self.features_vs_age()
 
         # Model age
-        self._model_age()
+        self.model_age()
 
 
 class CLI(Interface):
@@ -223,6 +241,7 @@ class CLI(Interface):
             "Default: 5 0",
         )
         self.parser.add_argument(
+            "-c",
             "--covariates",
             metavar="FILE",
             help="Path to input CSV file containing covariates. \n"

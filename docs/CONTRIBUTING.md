@@ -63,7 +63,10 @@ ageml
 To install the required packages for creating the environment with poetry.
 `pip install poetry, nox, nox-poetry`
 
-Poetry will provide to install in the virtual environment (in developer mode) when running_ ```poetry install```.
+If you want the virtual environment of the project to be located in the project root, run this line (make sure you have poetry installed running `poetry --version`):
+`poetry config virtualenvs.in-project true` (makes sense)
+
+Poetry will provide to install in the virtual environment (in developer mode) when running_ `poetry install`.
 A _pyproject.toml_ file is provided for creating the environment using poetry.
 
 ### Activate the environment
@@ -95,3 +98,20 @@ For coverage:
 nox -s cover
 ```
 
+### Commits
+
+We try to follow the [**seven rules of a great Git commit message**](https://cbea.ms/git-commit/).
+
+We like using the following standard prefixes for commit messages:
+
+- `BUG:` *Fix for runtime crash or incorrect result*
+- `DOC:` *Documentation change*
+- `ENH:` *New functionality*
+- `PERF:` *Performance improvement*
+- `REF:` *Only refactoring -> moving classes, files, splitting functions*
+- `TST:` *Adding/improving testing of existing functions*
+- `STYLE:` *No logic impact (indentation, comments, variable names)*
+- `WIP:` *Work In Progress not ready for merge*
+- `GIT:` *Modify some repository settings (gitignore, gitmodules, others)*
+- `DEL:` *Deleted files, functions, classes, resources and so on*
+- `CI:` *Changes in the the CI/CD Pipelines*
