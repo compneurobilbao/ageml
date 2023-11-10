@@ -78,7 +78,7 @@ class Interface:
         file: path to file; must be .csv
         """
 
-        if file is not None:
+        if os.path.exists(file):
             df = pd.read_csv(file, header=0, index_col=0)
             df.columns = df.columns.str.lower()  # ensure lower case
             return df
@@ -97,7 +97,7 @@ class Interface:
 
         # Remove subjects with missing features
         subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index
-        if subjects_missing_data is not None:
+        if subjects_missing_data.tolist().__len__() != 0:
             print("-----------------------------------")
             print("Subjects with missing data: %s" % subjects_missing_data.to_list())
             warnings.warn("Subjects with missing data: %s" % subjects_missing_data)
@@ -107,8 +107,13 @@ class Interface:
     def age_distribution(self):
         """Use visualizer to show age distribution."""
 
-        # Select age information
-        ages = self.df_features["age"].to_numpy()
+        # Select age information. Try getting the age column
+        try:
+            ages = self.df_features["age"].to_numpy()
+        # If the age column is not present, use the index to get the last column
+        except KeyError:
+            array = self.df_features.to_numpy()
+            ages = array[:, -1]
 
         # Use visualizer to show age distribution
         self.visualizer.age_distribution(ages)
@@ -118,9 +123,15 @@ class Interface:
         """Use visualizer to explore relationship between features and age."""
 
         # Select data to visualize
-        feature_names = [name for name in self.df_features.columns if name != "age"]
-        X = self.df_features[feature_names].to_numpy()
-        Y = self.df_features["age"].to_numpy()
+        if "age" in self.df_features.columns:
+            feature_names = [name for name in self.df_features.columns if name != "age"]
+            X = self.df_features[feature_names].to_numpy()
+        else:
+            # We assume that the last column is the age
+            feature_names = self.df_features.columns[:-1]
+            array = self.df_features.to_numpy()
+            X = array[:, :-1]
+            Y = array[:, -1]
 
         # Use visualizer to show
         self.visualizer.features_vs_age(X, Y, feature_names)
@@ -135,9 +146,16 @@ class Interface:
         print(self.ageml.pipeline)
 
         # Select data to model
-        feature_names = [name for name in self.df_features.columns if name != "age"]
-        X = self.df_features[feature_names].to_numpy()
-        y = self.df_features["age"].to_numpy()
+        if "age" in self.df_features.columns:
+            feature_names = [name for name in self.df_features.columns if name != "age"]
+            X = self.df_features[feature_names].to_numpy()
+            y = self.df_features["age"].to_numpy()
+        else:
+            # We assume that the last column is the age
+            feature_names = self.df_features.columns[:-1]
+            array = self.df_features.to_numpy()
+            X = array[:, :-1]
+            y = array[:, -1]
 
         # Fit model and plot results
         y_pred, y_corrected = self.ageml.fit_age(X, y)
@@ -223,6 +241,7 @@ class CLI(Interface):
             "Default: 5 0",
         )
         self.parser.add_argument(
+            "-c",
             "--covariates",
             metavar="FILE",
             help="Path to input CSV file containing covariates. \n"

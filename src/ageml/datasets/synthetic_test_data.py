@@ -21,10 +21,6 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
         datasets_path (str, optional): Folder to save at. Defaults to datasets_path.
     """
     # FEATURES #
-
-    # Weights of our synthetic variables
-    weights = np.array([[0.77, -0.54, 0.095]])  # (1, 3)
-    
     # 100 samples, 3 variables (X1, X2, X3)
     N = 100
     
@@ -32,11 +28,11 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     np.random.seed(1)
     # Generate the normally distributed random variables
     X1 = np.random.normal(loc=5, scale=2, size=N)
-    X2 = np.random.normal(loc=-6, scale=3, size=N)
+    X2 = np.random.normal(loc=6, scale=3, size=N)
     X3 = np.random.normal(loc=4, scale=1, size=N)
     X = np.array([X1, X2, X3])
     # Set weights
-    weights = np.array([8, 1, 8])
+    weights = np.array([8, -1, 8])
     # Compute Y=weights@X + epsilon
     epsilon = np.random.normal(loc=0, scale=15, size=N)
     Y = weights @ X + epsilon
@@ -104,6 +100,7 @@ def generate_synthetic_factors(file_name: str = "synthetic_factors.csv",
     pass
 
 
+# TODO: Test this class
 class SyntheticData():
     """
     Class for storing the synthetic features that were generated in the generate_synthetic_data function. To be imported.
