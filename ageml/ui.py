@@ -225,6 +225,9 @@ class CLI(Interface):
         args = self.configure_args(args)
         super().__init__(args)
 
+        # Run modelling
+        self.run()
+
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
@@ -347,16 +350,34 @@ class InteractiveCLI(Interface):
 
         # Ask for required inputs
         self.args = argparse.Namespace()
+        emblem = """
+************************************************
+*  █████╗  ██████╗ ███████╗███╗   ███╗██╗      *
+* ██╔══██╗██╔════╝ ██╔════╝████╗ ████║██║      *
+* ███████║██║  ███╗█████╗  ██╔████╔██║██║      *
+* ██╔══██║██║   ██║██╔══╝  ██║╚██╔╝██║██║      *
+* ██║  ██║╚██████╔╝███████╗██║ ╚═╝ ██║███████╗ *
+* ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝╚══════╝ *
+************************************************
+"""
+        print(emblem)
         print("Age Modelling (AgeML): interactive command line user interface.")
-        print('-----------------------------------')
-        print('Setup (for Optional or Default values enter: None)')
+
+        # Setup
+        setup = """
+*********
+* Setup *
+*********
+"""
+        print(setup)
+        print('For Optional or Default values leave empty. \n')
         
         # Askf for output directory
         print('Output directory path (Required):')
-        self.force_command(self.output_command, 'o')
+        self.force_command(self.output_command, 'o', required=True)
         # Ask for input files
         print('Input features file path (Required):')
-        self.force_command(self.load_command, 'l --features')
+        self.force_command(self.load_command, 'l --features', required=True)
         print('Input covariates file path (Optional):')
         self.force_command(self.load_command, 'l --covariates')
         print('Input factors file path (Optional):')
@@ -375,18 +396,32 @@ class InteractiveCLI(Interface):
         self.force_command(self.cv_command, 'cv')
 
         # Configure Interface
+        print('\n Configuring Interface...')
         super().__init__(self.args)
 
-    def get_line(self):
+        # Run command interface
+        print('\n Initialization finished.')
+        modelling = """
+*************
+* Modelling *
+*************
+"""
+        print(modelling)
+        self.command_interface()
+
+    def get_line(self, required=True):
         """Print prompt for the user and update the user entry."""
         self.line = input("#: ")
-        while self.line == "":  # if the user enters a blank line
+        while self.line == "" and required:
+            print("Must provide a value.")
             self.line = input("#: ")
 
-    def force_command(self, func, command):
+    def force_command(self, func, command, required=False):
         """Force the user to enter a valid command."""
         while True:
-            self.get_line() 
+            self.get_line(required=required)
+            if self.line == "":
+                self.line = 'None'
             self.line = command + ' ' + self.line
             error = func()
             if error is None:
@@ -398,7 +433,7 @@ class InteractiveCLI(Interface):
         """Read the command entered and call the corresponding function."""
 
         # Interactive mode after setup
-        print("Initialization finished. Enter 'h' for help.")
+        print("Enter 'h' for help.")
         self.get_line()  # get the user entry
         command = self.line.split()[0] # read the first item
         while command != "q":
