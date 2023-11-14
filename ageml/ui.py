@@ -53,7 +53,13 @@ class Interface:
 
     model_age(self): Use AgeML to fit age model with data.
 
-    run(self): Runs the age modelling interface.
+    run_age(self): Run basic age modelling.
+
+    run_lifestyle(self): Run age modelling with lifestyle factors.
+
+    run_clinical(self): Run age modelling with clinical factors.
+
+    run_classification(self): Run classification between two different clinical groups.
     """
 
     def __init__(self, args):
@@ -123,7 +129,6 @@ class Interface:
         else:
             return None
 
-    @log
     def load_data(self):
         """Load data from csv files."""
 
@@ -141,7 +146,6 @@ class Interface:
             warnings.warn('Subjects with missing data: %s' % subjects_missing_data)
         self.df_features.dropna(inplace=True)
 
-    @log
     def age_distribution(self):
         """Use visualizer to show age distribution."""
 
@@ -151,7 +155,6 @@ class Interface:
         # Use visualizer to show age distribution
         self.visualizer.age_distribution(ages)
 
-    @log
     def features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
@@ -164,7 +167,6 @@ class Interface:
         # Use visualizer to show 
         self.visualizer.features_vs_age(X, Y, feature_names)
 
-    @log
     def model_age(self):
         """Use AgeML to fit age model with data."""
 
@@ -190,8 +192,12 @@ class Interface:
         self.df_age = df = pd.DataFrame(data, index=self.df_features.index, columns=cols)
         self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
-    def run(self):
-        """Read the command entered and call the corresponding functions"""
+    @log
+    def run_age(self):
+        """Run basic age modelling."""
+
+        # Run age modelling
+        print('Running age modelling...')
 
         # Load data
         self.load_data()
@@ -204,6 +210,27 @@ class Interface:
 
         # Model age
         self.model_age()
+
+    @log
+    def run_lifestyle(self):
+        """Run age modelling with lifestyle factors."""
+
+        print('Running lifestyle factors...')
+        pass
+
+    @log
+    def run_clinical(self):
+        """Run age modelling with clinical factors."""
+
+        print('Running clinical outcomes...')
+        pass
+
+    @log
+    def run_classification(self):
+        """Run classification between two different clinical groups."""
+
+        print('Running classification...')
+        pass
 
 class CLI(Interface):
 
@@ -226,10 +253,22 @@ class CLI(Interface):
         super().__init__(args)
 
         # Run modelling
-        self.run()
+        case = args.run
+        if case == 'age':
+            self.run_age()
+        elif case == 'lifestyle':
+            self.run_lifestyle()
+        elif case == 'clinical':
+            self.run_clinical()
+        elif case == 'classification':
+            self.run_classification()
+        else:
+            raise ValueError('Choose a valid run type: age, lifestyle, clinical, classification')
 
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
+        self.parser.add_argument('-r', '--run', metavar='RUN', default='age', required=True,
+                                 help= "Run type. Choose between: age, lifestyle, clinical, classification. (Required)")
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
                                  help="Path to output directory where to save results. (Required)")
         self.parser.add_argument('-f', "--features", metavar='FILE',
@@ -506,13 +545,13 @@ class InteractiveCLI(Interface):
     def help_command(self):
         """Print a list of valid commands."""
         print("User commands:")
-        print("cv [nº splits] [seed]                - set CV parameters (Default: 5, 0)")
+        print("cv [nº splits] [seed]               - set CV parameters (Default: 5, 0)")
         print("h                                   - help (this command)")
         print("l --flag [file]                     - load file with the specified flag")
         print("m model_type [param1, param2, ...]  - set model type and parameters (Default: linear)")
         print("o [directory]                       - set output directory")
         print("q                                   - quit the program")
-        print("r                                   - run the modelling")
+        print("r [command]                         - run different programs (Options: age, lifestyle, clinical, classification)")
         print("s scaler_type [param1, param2, ...] - set scaler type and parameters (Default: standard)")
 
     def load_command(self):
@@ -631,7 +670,28 @@ class InteractiveCLI(Interface):
     def run_command(self):
         """Run the modelling."""
         error = None
-        self.run()
+
+        # Split into items and remove  command
+        self.line = self.line.split()[1:]
+
+        # Check that only one argument input
+        if len(self.line) != 1:
+            error = 'Must provide one argument.'
+            return error
+
+        # Run specificed modelling
+        case = self.line[0]
+        if case == 'age':
+            self.run_age() 
+        elif case == 'lifestyle':
+            self.run_lifestyle()
+        elif case == 'clinical':
+            self.run_clinical()
+        elif case == 'classification':
+            self.run_classification()
+        else:
+            error = 'Choose a valid run type: age, lifestyle, clinical, classification'
+
         return error
 
     def scaler_command(self):
