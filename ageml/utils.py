@@ -34,16 +34,22 @@ def log(func):
     def wrapper(instance, *args, **kwargs):
         # Redirect the standard output to capture print statements
         original_stdout = sys.stdout
-        sys.stdout = io.StringIO()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
 
         try:
-            # Call the function without displaying print statements
-            with open(instance.log_path, 'a') as log_file:
-                sys.stdout = log_file  # Redirect to log file
-                result = func(instance, *args, **kwargs)
+            # Call the function
+            result = func(instance, *args, **kwargs)
         finally:
             # Restore the original standard output
             sys.stdout = original_stdout
+
+        # Log the captured output to the file
+        with open(instance.log_path, 'a') as log_file:
+            log_file.write(captured_output.getvalue())
+
+        # Print the captured output to the console
+        print('\n'.join(captured_output.getvalue().split('\n')[:-1]))
 
         return result
 

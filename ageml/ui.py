@@ -250,6 +250,8 @@ class CLI(Interface):
         self.configure_parser()
         args = self.parser.parse_args()
         args = self.configure_args(args)
+
+        # Initialise parent class
         super().__init__(args)
 
         # Run modelling
@@ -397,6 +399,8 @@ class InteractiveCLI(Interface):
 
         # Initialization
         self.args = argparse.Namespace()
+
+        # Print welcome message
         emblem = """
 ************************************************
 *  █████╗  ██████╗ ███████╗███╗   ███╗██╗      *
