@@ -333,6 +333,9 @@ class CLI(Interface):
         if len(args.scaler) > 1:
             scaler_params = {}
             for item in args.scaler[1:]:
+                # Check that item has one = to split
+                if item.count('=') != 1:
+                    raise ValueError('Scaler parameters must be in the format param1=value1 param2=value2 ...')
                 key, value = item.split('=')
                 value = convert(value)
                 scaler_params[key] = value
@@ -346,6 +349,9 @@ class CLI(Interface):
         if len(args.model) > 1:
             model_params = {}
             for item in args.model[1:]:
+                # Check that item has one = to split
+                if item.count('=') != 1:
+                    raise ValueError('Model parameters must be in the format param1=value1 param2=value2 ...')
                 key, value = item.split('=')
                 value = convert(value)
                 model_params[key] = value
@@ -362,12 +368,14 @@ class InteractiveCLI(Interface):
     Public methods:
     ---------------
 
+    initial_command(self): Ask for initial inputs for initial setup.
+
+    get_line(self): Prints a prompt for the user and updates the user entry.
+
     force_command(self, func, command = None): Force the user to enter a valid command.
 
     command_interface(self): Reads in the commands and calls the corresponding
                              functions.
-
-    get_line(self): Prints a prompt for the user and updates the user entry.
 
     cv_command(self): Loads CV parameters.
 
@@ -387,7 +395,7 @@ class InteractiveCLI(Interface):
     def __init__(self):
         """Initialise variables."""
 
-        # Ask for required inputs
+        # Initialization
         self.args = argparse.Namespace()
         emblem = """
 ************************************************
@@ -410,7 +418,33 @@ class InteractiveCLI(Interface):
 """
         print(setup)
         print('For Optional or Default values leave empty. \n')
-        
+        self.initial_command()
+
+        # Configure Interface
+        configFlag = False
+        while not configFlag:
+            try:
+                print('\n Configuring Interface...')
+                super().__init__(self.args)
+                configFlag = True
+            except Exception as e:
+                print(e)
+                print('Error configuring interface, please try again.')
+                self.initial_command()
+
+        # Run command interface
+        print('\n Initialization finished.')
+        modelling = """
+*************
+* Modelling *
+*************
+"""
+        print(modelling)
+        self.command_interface()
+
+    def initial_command(self):
+        """Ask for initial inputs for initial setup."""
+
         # Askf for output directory
         print('Output directory path (Required):')
         self.force_command(self.output_command, 'o', required=True)
@@ -433,20 +467,6 @@ class InteractiveCLI(Interface):
         self.force_command(self.model_command, 'm')
         print('CV parameters (Default: nº splits=5 and seed=0):')
         self.force_command(self.cv_command, 'cv')
-
-        # Configure Interface
-        print('\n Configuring Interface...')
-        super().__init__(self.args)
-
-        # Run command interface
-        print('\n Initialization finished.')
-        modelling = """
-*************
-* Modelling *
-*************
-"""
-        print(modelling)
-        self.command_interface()
 
     def get_line(self, required=True):
         """Print prompt for the user and update the user entry."""
@@ -498,10 +518,16 @@ class InteractiveCLI(Interface):
             if error is not None:
                 print(error)
             elif command == "o":
-                self.setup()
-                self.set_visualizer()
+                try:
+                    self.setup()
+                    self.set_visualizer()
+                except Exception as e:
+                    print(e)
             elif command in ['cv', 'm', 's']:
-                self.set_model()
+                try:
+                    self.set_model()
+                except Exception as e:
+                    print(e)
 
             # Get next command
             self.get_line()  # get the user entry
@@ -635,6 +661,10 @@ class InteractiveCLI(Interface):
         if len(self.line) > 1 and model_type != 'None':
             model_params = {}
             for item in self.line[1:]:
+                # Check that item has one = to split
+                if item.count('=') != 1:
+                    error = 'Model parameters must be in the format param1=value1 param2=value2 ...'
+                    return error
                 key, value = item.split('=')
                 value = convert(value)
                 model_params[key] = value
@@ -682,15 +712,23 @@ class InteractiveCLI(Interface):
         # Run specificed modelling
         case = self.line[0]
         if case == 'age':
-            self.run_age() 
+            run = self.run_age
         elif case == 'lifestyle':
-            self.run_lifestyle()
+            run = self.run_lifestyle
         elif case == 'clinical':
-            self.run_clinical()
+            run = self.run_clinical
         elif case == 'classification':
-            self.run_classification()
+            run = self.run_classification
         else:
             error = 'Choose a valid run type: age, lifestyle, clinical, classification'
+            return error
+
+        # Capture any error raised and print
+        try:
+            run()
+        except Exception as e:
+            print(e)
+            error = 'Error running modelling.'
 
         return error
 
@@ -722,6 +760,9 @@ class InteractiveCLI(Interface):
         if len(self.line) > 1 and scaler_type != 'None':
             scaler_params = {}
             for item in self.line[1:]:
+                if item.count('=') != 1:
+                    error = 'Scaler parameters must be in the format param1=value1 param2=value2 ...'
+                    return error
                 key, value = item.split('=')
                 value = convert(value)
                 scaler_params[key] = value
