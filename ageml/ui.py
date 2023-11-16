@@ -425,12 +425,12 @@ class InteractiveCLI(Interface):
         self.initial_command()
 
         # Configure Interface
-        configFlag = False
-        while not configFlag:
+        self.configFlag = False
+        while not self.configFlag:
             try:
                 print('\n Configuring Interface...')
                 super().__init__(self.args)
-                configFlag = True
+                self.configFlag = True
             except Exception as e:
                 print(e)
                 print('Error configuring interface, please try again.')
@@ -521,17 +521,26 @@ class InteractiveCLI(Interface):
             # Check error and if not make updates
             if error is not None:
                 print(error)
+            elif command == "r":
+                # Capture any error raised and print
+                try:
+                    self.run()
+                except Exception as e:
+                    print(e)
+                    print('Error running modelling.')
             elif command == "o":
                 try:
                     self.setup()
                     self.set_visualizer()
                 except Exception as e:
                     print(e)
+                    print('Error setting up output directory.')
             elif command in ['cv', 'm', 's']:
                 try:
                     self.set_model()
                 except Exception as e:
                     print(e)
+                    print('Error setting up model.')
 
             # Get next command
             self.get_line()  # get the user entry
@@ -710,29 +719,21 @@ class InteractiveCLI(Interface):
 
         # Check that only one argument input
         if len(self.line) != 1:
-            error = 'Must provide one argument.'
+            error = 'Must provide one argument only.'
             return error
 
         # Run specificed modelling
         case = self.line[0]
         if case == 'age':
-            run = self.run_age
+            self.run = self.run_age
         elif case == 'lifestyle':
-            run = self.run_lifestyle
+            self.run = self.run_lifestyle
         elif case == 'clinical':
-            run = self.run_clinical
+            self.run = self.run_clinical
         elif case == 'classification':
-            run = self.run_classification
+            self.run = self.run_classification
         else:
             error = 'Choose a valid run type: age, lifestyle, clinical, classification'
-            return error
-
-        # Capture any error raised and print
-        try:
-            run()
-        except Exception as e:
-            print(e)
-            error = 'Error running modelling.'
 
         return error
 
