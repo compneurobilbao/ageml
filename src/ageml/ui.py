@@ -141,7 +141,7 @@ class Interface:
 
         # Remove subjects with missing features
         subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
-        if subjects_missing_data != []:
+        if subjects_missing_data.__len__() != 0:
             print('-----------------------------------')
             print('Subjects with missing data: %s' % subjects_missing_data)
             warnings.warn('Subjects with missing data: %s' % subjects_missing_data)
