@@ -41,6 +41,11 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     # Save into dataframe
     df_synth_features = pd.DataFrame(synth_data, columns=['X1', 'X2', 'X3', 'age'])
     
+    # Set a some values to NaN
+    df_synth_features.loc[37, 'X1'] = np.NaN
+    df_synth_features.loc[53, 'X3'] = np.NaN
+    df_synth_features.loc[92, 'age'] = np.NaN
+    
     # Sanity check in file_name
     if ".csv" not in file_name:
         file_name += ".csv"
