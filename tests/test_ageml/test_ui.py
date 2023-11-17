@@ -9,7 +9,7 @@ import pandas as pd
 
 import ageml.datasets as datasets
 import ageml.ui as ui
-from ageml.messages import *
+import ageml.messages as messages
 from ageml.ui import Interface, CLI, InteractiveCLI
 
 
@@ -152,14 +152,14 @@ def test_cli_initialization(features_data_path):
 
 def test_configure_interactiveCLI(dummy_cli):
     """Test dummy InteractiveCLI configured"""
-    assert dummy_cli.configFlag == True
+    assert dummy_cli.configFlag is True
 
 
 def test_get_line_interactiveCLI(dummy_cli, monkeypatch, capsys):
     """Test dummy InteractiveCLI getline"""
 
     # Test that without required can pass empty string
-    monkeypatch.setattr('builtins.input', lambda _:'')
+    monkeypatch.setattr('builtins.input', lambda _: '')
     dummy_cli.get_line(required=False)
     assert dummy_cli.line == ''
 
@@ -176,15 +176,15 @@ def test_force_command_interactiveCLI(dummy_cli, monkeypatch):
     """Test dummy InteractiveCLI force command"""
 
     # Test when no input is given and not required
-    monkeypatch.setattr('builtins.input', lambda _:'')
+    monkeypatch.setattr('builtins.input', lambda _: '')
     error = dummy_cli.force_command(dummy_cli.load_command, 'l --systems', required=False)
-    assert error == None
+    assert error is None
     assert dummy_cli.line == ['--systems', 'None']
 
     # Test when correct input is error returned is None
-    monkeypatch.setattr('builtins.input', lambda _:'linear')
+    monkeypatch.setattr('builtins.input', lambda _: 'linear')
     error = dummy_cli.force_command(dummy_cli.model_command, 'm', required=True)
-    assert error == None
+    assert error is None
 
 
 def test_command_interface_interactiveCLI(dummy_cli, monkeypatch, capsys):
@@ -231,7 +231,7 @@ def test_cv_command_interactiveCLI(dummy_cli):
     # Test default values
     dummy_cli.line = 'cv None'
     error = dummy_cli.cv_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.cv_split == 5
     assert dummy_cli.args.seed == 0
 
@@ -251,12 +251,12 @@ def test_cv_command_interactiveCLI(dummy_cli):
     # Test correct parsing
     dummy_cli.line = 'cv 1'
     error = dummy_cli.cv_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.cv_split == 1
     assert dummy_cli.args.seed == 0
     dummy_cli.line = 'cv 1 2'
     error = dummy_cli.cv_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.cv_split == 1
     assert dummy_cli.args.seed == 2
 
@@ -266,14 +266,14 @@ def test_help_command_interactiveCLI(dummy_cli, capsys):
     dummy_cli.help_command()
     captured = capsys.readouterr().out.split('\n')
     assert captured[0] == 'User commands:'
-    assert captured[1] == cv_command_message
-    assert captured[2] == help_command_message
-    assert captured[3] == load_command_message
-    assert captured[4] == model_command_message
-    assert captured[5] == output_command_message
-    assert captured[6] == quit_command_message
-    assert captured[7] == run_command_message
-    assert captured[8] == scaler_command_message
+    assert captured[1] == messages.cv_command_message
+    assert captured[2] == messages.help_command_message
+    assert captured[3] == messages.load_command_message
+    assert captured[4] == messages.model_command_message
+    assert captured[5] == messages.output_command_message
+    assert captured[6] == messages.quit_command_message
+    assert captured[7] == messages.run_command_message
+    assert captured[8] == messages.scaler_command_message
 
 
 def test_load_command_interactiveCLI(dummy_cli):
@@ -324,7 +324,7 @@ def test_load_command_interactiveCLI(dummy_cli):
     # Test passing correct arguments
     dummy_cli.line = 'l --features ' + tmpcsv.name
     error = dummy_cli.load_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.features == tmpcsv.name
 
 
@@ -339,7 +339,7 @@ def test_model_command_interactiveCLI(dummy_cli):
     # Test using default
     dummy_cli.line = 'm None'
     error = dummy_cli.model_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.model_type == 'linear'
     assert dummy_cli.args.model_params == {}
 
@@ -351,7 +351,7 @@ def test_model_command_interactiveCLI(dummy_cli):
     # Test empty model params if none given
     dummy_cli.line = 'm linear'
     error = dummy_cli.model_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.model_type == 'linear'
     assert dummy_cli.args.model_params == {}
 
@@ -367,7 +367,7 @@ def test_model_command_interactiveCLI(dummy_cli):
     # Test passing correct model params
     dummy_cli.line = 'm linear fit_intercept=True'
     error = dummy_cli.model_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.model_type == 'linear'
     assert dummy_cli.args.model_params == {'fit_intercept': True}
 
@@ -394,7 +394,7 @@ def test_output_command_interactiveCLI(dummy_cli):
     tempDir = tempfile.TemporaryDirectory()
     dummy_cli.line = 'o ' + tempDir.name
     error = dummy_cli.output_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.output == tempDir.name
 
 
@@ -404,7 +404,7 @@ def test_run_command_interactiveCLI(dummy_cli):
     # Test no input or mutiple arguments
     dummy_cli.line = 'r'
     error = dummy_cli.run_command()
-    assert error == 'Must provide one argument only.' 
+    assert error == 'Must provide one argument only.'
     dummy_cli.line = 'r type1 type1'
     error = dummy_cli.run_command()
     assert error == 'Must provide one argument only.'
@@ -417,7 +417,7 @@ def test_run_command_interactiveCLI(dummy_cli):
     # Test passing correct arguments
     dummy_cli.line = 'r age'
     error = dummy_cli.run_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.run == dummy_cli.run_age
 
 
@@ -432,7 +432,7 @@ def test_scaler_command_interactiveCLI(dummy_cli):
     # Test using default
     dummy_cli.line = 's None'
     error = dummy_cli.scaler_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.scaler_type == 'standard'
     assert dummy_cli.args.scaler_params == {}
 
@@ -444,7 +444,7 @@ def test_scaler_command_interactiveCLI(dummy_cli):
     # Test empty scaler params if none given
     dummy_cli.line = 's standard'
     error = dummy_cli.scaler_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.scaler_type == 'standard'
     assert dummy_cli.args.scaler_params == {}
 
@@ -460,6 +460,6 @@ def test_scaler_command_interactiveCLI(dummy_cli):
     # Test passing correct scaler params
     dummy_cli.line = 's standard mean=0'
     error = dummy_cli.scaler_command()
-    assert error == None
+    assert error is None
     assert dummy_cli.args.scaler_type == 'standard'
     assert dummy_cli.args.scaler_params == {'mean': 0}

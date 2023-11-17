@@ -17,10 +17,11 @@ import warnings
 
 from datetime import datetime
 
-from .visualizer import Visualizer
-from .utils import create_directory, convert, log
-from .messages import *
-from .modelling import AgeML
+import ageml.messages as messages
+from ageml.visualizer import Visualizer
+from ageml.utils import create_directory, convert, log
+from ageml.modelling import AgeML
+
 
 class Interface:
 
@@ -85,7 +86,7 @@ class Interface:
             warnings.warn("Directory %s already exists files may be overwritten." %
                           self.dir_path)
         create_directory(self.dir_path)
-        create_directory(os.path.join(self.dir_path,'figures'))
+        create_directory(os.path.join(self.dir_path, 'figures'))
 
         # Create .txt log file and log time
         self.log_path = os.path.join(self.dir_path, 'log.txt')
@@ -125,7 +126,7 @@ class Interface:
             if not self.check_file(file):
                 raise FileNotFoundError('File %s not found.' % file)
             df = pd.read_csv(file, header=0, index_col=0)
-            df.columns = df.columns.str.lower() # ensure lower case
+            df.columns = df.columns.str.lower()  # ensure lower case
             return df
         else:
             return None
@@ -133,7 +134,7 @@ class Interface:
     def load_data(self):
         """Load data from csv files."""
 
-        # Load data 
+        # Load data
         self.df_features = self.load_csv(self.args.features)
         self.df_covariates = self.load_csv(self.args.covariates)
         self.df_factors = self.load_csv(self.args.factors)
@@ -165,7 +166,7 @@ class Interface:
         X = self.df_features[feature_names].to_numpy()
         Y = self.df_features['age'].to_numpy()
 
-        # Use visualizer to show 
+        # Use visualizer to show
         self.visualizer.features_vs_age(X, Y, feature_names)
 
     def model_age(self):
@@ -190,7 +191,7 @@ class Interface:
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected), axis=1)
         cols = ['Age', 'Predicted Age', 'Corrected Age']
-        self.df_age = df = pd.DataFrame(data, index=self.df_features.index, columns=cols)
+        self.df_age = pd.DataFrame(data, index=self.df_features.index, columns=cols)
         self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
     @log
@@ -233,6 +234,7 @@ class Interface:
         print('Running classification...')
         pass
 
+
 class CLI(Interface):
 
     """Read and parses user commands via command line.
@@ -271,25 +273,25 @@ class CLI(Interface):
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
         self.parser.add_argument('-r', '--run', metavar='RUN', default='age', required=True,
-                                 help=run_long_description)
+                                 help=messages.run_long_description)
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
-                                 help=output_long_description)
+                                 help=messages.output_long_description)
         self.parser.add_argument('-f', "--features", metavar='FILE', required=True,
-                                 help=features_long_description)
+                                 help=messages.features_long_description)
         self.parser.add_argument('-m', '--model', nargs='*', default=['linear'],
-                                 help=model_long_description)
+                                 help=messages.model_long_description)
         self.parser.add_argument('-s', '--scaler', nargs='*', default=['standard'],
-                                 help=scaler_long_description)
+                                 help=messages.scaler_long_description)
         self.parser.add_argument('--cv', nargs='+', type=int, default=[5, 0],
-                                 help=cv_long_description)
+                                 help=messages.cv_long_description)
         self.parser.add_argument("--covariates", metavar='FILE',
-                                 help=covar_long_description)
+                                 help=messages.covar_long_description)
         self.parser.add_argument("--factors", metavar='FILE',
-                                 help=factors_long_description)
+                                 help=messages.factors_long_description)
         self.parser.add_argument("--clinical", metavar='FILE',
-                                 help=clinical_long_description)
+                                 help=messages.clinical_long_description)
         self.parser.add_argument("--systems", metavar='FILE',
-                                 help=systems_long_description)
+                                 help=messages.systems_long_description)
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -342,6 +344,7 @@ class CLI(Interface):
 
         return args
 
+
 class InteractiveCLI(Interface):
 
     """Read and parses user commands via command line via an interactive interface
@@ -380,11 +383,11 @@ class InteractiveCLI(Interface):
         self.args = argparse.Namespace()
 
         # Print welcome message
-        print(emblem)
+        print(messages.emblem)
         print("Age Modelling (AgeML): interactive command line user interface.")
 
         # Setup
-        print(setup_banner)
+        print(messages.setup_banner)
         print('For Optional or Default values leave empty. \n')
         self.initial_command()
 
@@ -402,7 +405,7 @@ class InteractiveCLI(Interface):
 
         # Run command interface
         print('\n Initialization finished.')
-        print(modelling_banner)
+        print(messages.modelling_banner)
         self.command_interface()
 
     def initial_command(self):
@@ -457,7 +460,7 @@ class InteractiveCLI(Interface):
         # Interactive mode after setup
         print("Enter 'h' for help.")
         self.get_line()  # get the user entry
-        command = self.line.split()[0] # read the first item
+        command = self.line.split()[0]  # read the first item
         while command != "q":
             error = None
             if command == "cv":
@@ -469,7 +472,7 @@ class InteractiveCLI(Interface):
             elif command == "m":
                 error = self.model_command()
             elif command == "o":
-                error = self.output_command()    
+                error = self.output_command()
             elif command == "r":
                 error = self.run_command()
             elif command == "s":
@@ -545,14 +548,14 @@ class InteractiveCLI(Interface):
 
         # Print possible commands
         print("User commands:")
-        print(cv_command_message)
-        print(help_command_message)
-        print(load_command_message)
-        print(model_command_message)
-        print(output_command_message)
-        print(quit_command_message)
-        print(run_command_message)
-        print(scaler_command_message)
+        print(messages.cv_command_message)
+        print(messages.help_command_message)
+        print(messages.load_command_message)
+        print(messages.model_command_message)
+        print(messages.output_command_message)
+        print(messages.quit_command_message)
+        print(messages.run_command_message)
+        print(messages.scaler_command_message)
 
     def load_command(self):
         """Load file paths."""
@@ -563,7 +566,7 @@ class InteractiveCLI(Interface):
 
         # Determine if correct number of arguments and check file valid
         if len(self.line) > 2:
-            error = 'Too many arguments only two arguments --file_type and file path.'  
+            error = 'Too many arguments only two arguments --file_type and file path.'
         elif len(self.line) == 1:
             error = 'Must provide a file path or None when using --file_type.'
         elif len(self.line) == 0:

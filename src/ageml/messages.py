@@ -11,51 +11,69 @@ run_command_message = "r [command]                         - run different progr
 scaler_command_message = "s scaler_type [param1, param2, ...] - set scaler type and parameters (Default: standard)"
 
 # Help long messeages
-run_long_description = "Run type. Choose between: age, lifestyle, clinical, classification. (Required) \n" \
-                       "age: Predict age from features. \n" \
-                       "lifestyle: Calculate associations between lifestyle and age gaps. \n" \
-                       "clinical: Calculate associations between clinical groups and age gaps. \n" \
-                       "classification: Classify clinicals groups from age gaps."
+run_long_description = (
+    "Run type. Choose between: age, lifestyle, clinical, classification. (Required) \n"
+    "age: Predict age from features. \n"
+    "lifestyle: Calculate associations between lifestyle and age gaps. \n"
+    "clinical: Calculate associations between clinical groups and age gaps. \n"
+    "classification: Classify clinicals groups from age gaps."
+)
 
 output_long_description = "Path to output directory where to save results. (Required)"
 
-features_long_description = "Path to input CSV file containing features. (Required) \n" \
-                            "In the file the first column should be the ID, the second column should be the AGE, \n" \
-                            "and the following columns the features. The first row should be the header for \n" \
-                            "column names."
+features_long_description = (
+    "Path to input CSV file containing features. (Required) \n"
+    "In the file the first column should be the ID, the second column should be the AGE, \n"
+    "and the following columns the features. The first row should be the header for \n"
+    "column names."
+)
 
-model_long_description = 'Model type and model parameters to use. First argument is the type and the following \n' \
-                         'arguments are input as keyword arguments into the model. They must be seperated by an =.\n' \
-                         'Example: -m linear fit_intercept=False\n' \
-                         'Available Types: linear (Default: linear)'
+model_long_description = (
+    "Model type and model parameters to use. First argument is the type and the following \n"
+    "arguments are input as keyword arguments into the model. They must be seperated by an =.\n"
+    "Example: -m linear fit_intercept=False\n"
+    "Available Types: linear (Default: linear)"
+)
 
-scaler_long_description = 'Scaler type and scaler parameters to use. First argument is the type and the following \n' \
-                          'arguments are input as keyword arguments into the scaler. They must be seperated by an =.\n' \
-                          'Example: -m standard\n' \
-                          'Available Types: standard (Default: standard)'
+scaler_long_description = (
+    "Scaler type and scaler parameters to use. First argument is the type and the following \n"
+    "arguments are input as keyword arguments into the scaler. They must be seperated by an =.\n"
+    "Example: -m standard\n"
+    "Available Types: standard (Default: standard)"
+)
 
-cv_long_description = 'Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 integers. \n' \
-                      'First integer is the number of splits and the second is the seed for randomization. \n' \
-                      'Default: 5 0'
+cv_long_description = (
+    "Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 integers. \n"
+    "First integer is the number of splits and the second is the seed for randomization. \n"
+    "Default: 5 0"
+)
 
-covar_long_description = "Path to input CSV file containing covariates. \n" \
-                         "In the file the first column should be the ID, the followins columns should be the \n" \
-                         "covariates. The first row should be the header for column names." 
+covar_long_description = (
+    "Path to input CSV file containing covariates. \n"
+    "In the file the first column should be the ID, the followins columns should be the \n"
+    "covariates. The first row should be the header for column names."
+)
 
-factors_long_description = "Path to input CSV file containing factors (e.g. liefstyle and environmental factors). \n" \
-                           "In the file the first column should be the ID, the followins columns should be the \n" \
-                           "factors. The first row should be the header for column names."
+factors_long_description = (
+    "Path to input CSV file containing factors (e.g. liefstyle and environmental factors). \n"
+    "In the file the first column should be the ID, the followins columns should be the \n"
+    "factors. The first row should be the header for column names."
+)
 
-clinical_long_description = "Path to input CSV file containing health conditions. \n" \
-                            "In the file the first column should be the ID, the second column should be wether the \n" \
-                            "subject is a CONTROL and the following columns are binary variables for different \n" \
-                            "conditions. The first row should be the header for column names." \
-                            
-systems_long_description = "Path to input .txt file containing the features to use to model each system. \n" \
-                           "Each new line corresponds to a different system. The parser follows a formatting \n" \
-                           "where the first words in the line is the system name followed by a colon and then the \n" \
-                           "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n" \
-                           "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)" \
+clinical_long_description = (
+    "Path to input CSV file containing health conditions. \n"
+    "In the file, the first column should be the ID, the second column should be whether the \n"
+    "subject is a CONTROL, and the following columns are binary variables for different \n"
+    "conditions. The first row should be the header for column names."
+)
+
+systems_long_description = (
+    "Path to input .txt file containing the features to use to model each system. \n"
+    "Each new line corresponds to a different system. The parser follows a formatting \n"
+    "where the first words in the line is the system name followed by a colon and then the \n"
+    "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
+    "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)"
+)
 
 # UI information
 
