@@ -84,7 +84,7 @@ class Interface:
         self.dir_path = os.path.join(self.args.output, 'ageml')
         if os.path.exists(self.dir_path):
             warnings.warn("Directory %s already exists files may be overwritten." %
-                          self.dir_path)
+                          self.dir_path, category=UserWarning)
         create_directory(self.dir_path)
         create_directory(os.path.join(self.dir_path, 'figures'))
 
@@ -136,16 +136,18 @@ class Interface:
 
         # Load data
         self.df_features = self.load_csv(self.args.features)
+        if 'age' not in self.df_features.columns:
+            raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
         self.df_covariates = self.load_csv(self.args.covariates)
         self.df_factors = self.load_csv(self.args.factors)
         self.df_clinical = self.load_csv(self.args.clinical)
 
         # Remove subjects with missing features
-        subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
-        if subjects_missing_data.__len__() != 0:
+        self.subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
+        if self.subjects_missing_data.__len__() != 0:
             print('-----------------------------------')
-            print('Subjects with missing data: %s' % subjects_missing_data)
-            warnings.warn('Subjects with missing data: %s' % subjects_missing_data)
+            print('Subjects with missing data: %s' % self.subjects_missing_data)
+            warnings.warn('Subjects with missing data: %s' % self.subjects_missing_data, category=UserWarning)
         self.df_features.dropna(inplace=True)
 
     def age_distribution(self):
