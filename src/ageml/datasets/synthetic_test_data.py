@@ -39,7 +39,7 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     # Concatenate
     synth_data = np.concatenate([X.transpose(), Y.reshape([N, 1])], axis=1)
     # Save into dataframe
-    df_synth_features = pd.DataFrame(synth_data, columns=['X1', 'X2', 'X3', 'Y'])
+    df_synth_features = pd.DataFrame(synth_data, columns=['X1', 'X2', 'X3', 'age'])
     
     # Sanity check in file_name
     if ".csv" not in file_name:
