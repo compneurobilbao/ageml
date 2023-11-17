@@ -15,13 +15,13 @@ from ageml.ui import Interface, CLI, InteractiveCLI
 
 class ExampleArguments(object):
     def __init__(self):
-        test_path = os.path.dirname(__file__)
         self.scaler_type = "standard"
         self.scaler_params = {"with_mean": True}
         self.model_type = "linear"
         self.model_params = {"fit_intercept": True}
         self.cv_split = 5
         self.seed = 42
+        test_path = os.path.dirname(__file__)
         self.output = test_path
         self.features = os.path.join(str(pkg_resources.files(datasets)), "synthetic_features.csv")
         self.covariates = os.path.join(str(pkg_resources.files(datasets)), "synthetic_covariates.csv")
@@ -107,6 +107,23 @@ def test_load_data(dummy_interface):
     assert all([col.islower() for col in dummy_interface.df_features.columns])
 
 
+def test_load_data_age_not_column(dummy_interface):
+    # If the features CSV does not have a column called "age", check that the raised Exception is a KeyError
+    # Create a temporary file, csv with no age column
+    csv_path = os.path.join(dummy_interface.dir_path, "no_age_features.csv")
+    pd.DataFrame({"feature1": [1, 2, 3], "feature2": [4, 5, 6]}).to_csv(path_or_buf=csv_path, index=True)
+    dummy_interface.args.features = csv_path
+    
+    with pytest.raises(KeyError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == KeyError
+    assert exc_info.value.args[0] == "Features file must contain a column name 'age', or any other case-insensitive variation."
+
+
+def test_load_data_nan_values_warning(dummy_interface):
+    pass
+
+
 def test_run_age(dummy_interface):
     # Run the modelling pipeline
     dummy_interface.run_age()
@@ -132,6 +149,14 @@ def test_run_age(dummy_interface):
     # Check that the output CSV has the right columns
     df = pd.read_csv(csv_path, header=0, index_col=0)
     assert all([col in df.columns for col in ["Age", "Predicted Age", "Corrected Age"]])
+
+
+def test_interface_setup_dir_existing_warning(dummy_interface):
+    # Setup another dummy_interface in the newly created directory
+    with pytest.warns(UserWarning) as warn_record:
+        Interface(args=ExampleArguments())
+    assert isinstance(warn_record.list[0].message, UserWarning)
+    assert warn_record.list[0].message.args[0] == f"Directory {dummy_interface.dir_path} already exists files may be overwritten."
 
 
 def test_cli_initialization(features_data_path):
@@ -164,12 +189,12 @@ def test_get_line_interactiveCLI(dummy_cli, monkeypatch, capsys):
     assert dummy_cli.line == ''
 
     # Test that with required cannot pass empty string
-    responses = ['', 'asdf']
+    responses = ['', 'mondong']
     monkeypatch.setattr('builtins.input', lambda _: responses.pop(0))
     dummy_cli.get_line(required=True)
     captured = capsys.readouterr()
     assert captured.out == 'Must provide a value.\n'
-    assert dummy_cli.line == 'asdf'
+    assert dummy_cli.line == 'mondong'
 
 
 def test_force_command_interactiveCLI(dummy_cli, monkeypatch):
@@ -191,7 +216,7 @@ def test_command_interface_interactiveCLI(dummy_cli, monkeypatch, capsys):
     """Test dummy InteractiveCLI command interface"""
 
     # Test command that does not exist
-    responses = ['asdf', 'q']
+    responses = ['mnoang', 'q']
     monkeypatch.setattr('builtins.input', lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split('\n')[:-1]
