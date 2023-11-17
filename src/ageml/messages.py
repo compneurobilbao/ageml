@@ -1,4 +1,4 @@
-"""Messeages for the AgeML package."""
+"""Messages for the AgeML package."""
 
 # Help command messeages
 cv_command_message = "cv [nº splits] [seed]               - set CV parameters (Default: 5, 0)"
