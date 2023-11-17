@@ -2,6 +2,7 @@ import pytest
 import tempfile
 
 from ageml.ui import InteractiveCLI
+from ageml.messages import *
 
 @pytest.fixture
 def monkeypatch():
@@ -136,6 +137,14 @@ def test_help_command_interactiveCLI(dummy_cli, capsys):
     dummy_cli.help_command()
     captured = capsys.readouterr().out.split('\n')
     assert captured[0] == 'User commands:'
+    assert captured[1] == cv_command_message
+    assert captured[2] == help_command_message
+    assert captured[3] == load_command_message
+    assert captured[4] == model_command_message
+    assert captured[5] == output_command_message
+    assert captured[6] == quit_command_message
+    assert captured[7] == run_command_message
+    assert captured[8] == scaler_command_message
 
 def test_load_command_interactiveCLI(dummy_cli):
     """Test dummy InteractiveCLI load command"""

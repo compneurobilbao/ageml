@@ -4,4 +4,5 @@ from .ui import *
 from .utils import *
 from .processing import *
 from .visualizer import *
+from .messages import *
 from .modelling import *

@@ -19,6 +19,7 @@ from datetime import datetime
 
 from .visualizer import Visualizer
 from .utils import create_directory, convert, log
+from .messages import *
 from .modelling import AgeML
 
 class Interface:
@@ -270,47 +271,25 @@ class CLI(Interface):
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
         self.parser.add_argument('-r', '--run', metavar='RUN', default='age', required=True,
-                                 help= "Run type. Choose between: age, lifestyle, clinical, classification. (Required)")
+                                 help=run_long_description)
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
-                                 help="Path to output directory where to save results. (Required)")
-        self.parser.add_argument('-f', "--features", metavar='FILE',
-                                 help="Path to input CSV file containing features. (Required) \n"
-                                      "In the file the first column should be the ID, the second column should be the AGE, \n"
-                                      "and the following columns the features. The first row should be the header for \n"
-                                      "column names.", required=True)
+                                 help=output_long_description)
+        self.parser.add_argument('-f', "--features", metavar='FILE', required=True,
+                                 help=features_long_description)
         self.parser.add_argument('-m', '--model', nargs='*', default=['linear'],
-                                 help='Model type and model parameters to use. First argument is the type and the following \n'
-                                      'arguments are input as keyword arguments into the model. They must be seperated by an =.\n'
-                                      'Example: -m linear fit_intercept=False\n'
-                                      'Available Types: linear (Default: linear)')
+                                 help=model_long_description)
         self.parser.add_argument('-s', '--scaler', nargs='*', default=['standard'],
-                                 help='Scaler type and scaler parameters to use. First argument is the type and the following \n'
-                                      'arguments are input as keyword arguments into the scaler. They must be seperated by an =.\n'
-                                      'Example: -m standard\n'
-                                      'Available Types: standard (Default: standard)')
+                                 help=scaler_long_description)
         self.parser.add_argument('--cv', nargs='+', type=int, default=[5, 0],
-                                 help='Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 integers. \n'
-                                      'First integer is the number of splits and the second is the seed for randomization. \n'
-                                      'Default: 5 0')
+                                 help=cv_long_description)
         self.parser.add_argument("--covariates", metavar='FILE',
-                                 help="Path to input CSV file containing covariates. \n"
-                                      "In the file the first column should be the ID, the followins columns should be the \n"
-                                      "covariates. The first row should be the header for column names.")
+                                 help=covar_long_description)
         self.parser.add_argument("--factors", metavar='FILE',
-                                 help="Path to input CSV file containing factors (e.g. liefstyle and environmental factors). \n"
-                                      "In the file the first column should be the ID, the followins columns should be the \n"
-                                      "factors. The first row should be the header for column names.")
+                                 help=factors_long_description)
         self.parser.add_argument("--clinical", metavar='FILE',
-                                 help="Path to input CSV file containing health conditions. \n"
-                                      "In the file the first column should be the ID, the second column should be wether the \n"
-                                      "subject is a CONTROL and the following columns are binary variables for different \n"
-                                      "conditions. The first row should be the header for column names.")
+                                 help=clinical_long_description)
         self.parser.add_argument("--systems", metavar='FILE',
-                                 help="Path to input .txt file containing the features to use to model each system. \n"
-                                      "Each new line corresponds to a different system. The parser follows a formatting \n"
-                                      "where the first words in the line is the system name followed by a colon and then the \n"
-                                      "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
-                                      "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)")
+                                 help=systems_long_description)
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -401,26 +380,11 @@ class InteractiveCLI(Interface):
         self.args = argparse.Namespace()
 
         # Print welcome message
-        emblem = """
-************************************************
-*  █████╗  ██████╗ ███████╗███╗   ███╗██╗      *
-* ██╔══██╗██╔════╝ ██╔════╝████╗ ████║██║      *
-* ███████║██║  ███╗█████╗  ██╔████╔██║██║      *
-* ██╔══██║██║   ██║██╔══╝  ██║╚██╔╝██║██║      *
-* ██║  ██║╚██████╔╝███████╗██║ ╚═╝ ██║███████╗ *
-* ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝╚══════╝ *
-************************************************
-"""
         print(emblem)
         print("Age Modelling (AgeML): interactive command line user interface.")
 
         # Setup
-        setup = """
-*********
-* Setup *
-*********
-"""
-        print(setup)
+        print(setup_banner)
         print('For Optional or Default values leave empty. \n')
         self.initial_command()
 
@@ -438,12 +402,7 @@ class InteractiveCLI(Interface):
 
         # Run command interface
         print('\n Initialization finished.')
-        modelling = """
-*************
-* Modelling *
-*************
-"""
-        print(modelling)
+        print(modelling_banner)
         self.command_interface()
 
     def initial_command(self):
@@ -583,15 +542,17 @@ class InteractiveCLI(Interface):
 
     def help_command(self):
         """Print a list of valid commands."""
+
+        # Print possible commands
         print("User commands:")
-        print("cv [nº splits] [seed]               - set CV parameters (Default: 5, 0)")
-        print("h                                   - help (this command)")
-        print("l --flag [file]                     - load file with the specified flag")
-        print("m model_type [param1, param2, ...]  - set model type and parameters (Default: linear)")
-        print("o [directory]                       - set output directory")
-        print("q                                   - quit the program")
-        print("r [command]                         - run different programs (Options: age, lifestyle, clinical, classification)")
-        print("s scaler_type [param1, param2, ...] - set scaler type and parameters (Default: standard)")
+        print(cv_command_message)
+        print(help_command_message)
+        print(load_command_message)
+        print(model_command_message)
+        print(output_command_message)
+        print(quit_command_message)
+        print(run_command_message)
+        print(scaler_command_message)
 
     def load_command(self):
         """Load file paths."""
