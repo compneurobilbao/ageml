@@ -4,22 +4,28 @@ import io
 import os
 import sys
 
+
 def insert_newlines(text, nwords):
     """Function to insert a new line every n words."""
+    if nwords == 0:
+        raise ValueError("Cannot insert newlines every 0 words.")
+
     words = text.split()
-    new_lines = [words[i:i+nwords] for i in range(0, len(words), nwords)]
-    return '\n'.join([' '.join(line) for line in new_lines])
+    new_lines = [words[i: i + nwords] for i in range(0, len(words), nwords)]
+    return "\n".join([" ".join(line) for line in new_lines])
+
 
 def create_directory(path):
     """Create directory only if it does not previously exist."""
     if not os.path.exists(path):
         os.makedirs(path)
 
+
 def convert(value):
     """Convert string value to other types if possible."""
-    if value.lower() == 'true':
+    if value.lower() == "true":
         converted_value = True
-    elif value.lower() == 'false':
+    elif value.lower() == "false":
         converted_value = False
     else:
         try:
@@ -29,8 +35,10 @@ def convert(value):
             converted_value = value
     return converted_value
 
+
 def log(func):
     """Decorator function to log stdout to log.txt."""
+
     def wrapper(instance, *args, **kwargs):
         # Redirect the standard output to capture print statements
         original_stdout = sys.stdout

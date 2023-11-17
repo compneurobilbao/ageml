@@ -14,8 +14,9 @@ import os
 
 from sklearn.linear_model import LinearRegression
 
-from .utils import insert_newlines
+from .utils import insert_newlines, create_directory
 from .processing import find_correlations
+
 
 class Visualizer:
 
@@ -65,7 +66,10 @@ class Visualizer:
         plt.hist(Y, bins=20)
         plt.xlabel('Age (years)')
         plt.ylabel('Count')
-        plt.savefig(os.path.join(self.dir, 'figures/age_distribution.svg'))
+        # Make diectory for saving the file
+        path_for_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_for_fig)
+        plt.savefig(os.path.join(path_for_fig, 'age_distribution.svg'))
         plt.close()
 
     def features_vs_age(self, X, Y, feature_names):
@@ -75,25 +79,27 @@ class Visualizer:
         ----------
         X: 2D-Array with features; shape=(n,m)
         Y: 1D-Array with age; shape=n
-        feature_names: list of names of features, shape=n"""
+        feature_names: list of names of features, shape=m"""
 
         # Calculate correlation between features and age
         corr, order = find_correlations(X, Y)
 
         # Show results
         nplots = len(feature_names)
-        plt.figure(figsize=(14,3*math.ceil(nplots/4)))
+        plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
         print('-----------------------------------')
         print('Features by correlation with Age')
         for i, o in enumerate(order):
-            print('%d. %s: %.2f' % (i+1, feature_names[o], corr[o]))
-            plt.subplot(math.ceil(nplots/4),4,i+1)
-            plt.scatter(Y, X[:,o], s=15)
+            print('%d. %s: %.2f' % (i + 1, feature_names[o], corr[o]))
+            plt.subplot(math.ceil(nplots / 4), 4, i + 1)
+            plt.scatter(Y, X[:, o], s=15)
             plt.ylabel(insert_newlines(feature_names[o], 4))
             plt.xlabel('age (years)')
             plt.title("Corr:%.2f" % corr[o])
         plt.tight_layout()
-        plt.savefig(os.path.join(self.dir, 'figures/features_vs_age.svg'))
+        path_for_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_for_fig)
+        plt.savefig(os.path.join(path_for_fig, 'features_vs_age.svg'))
         plt.close()
 
     def true_vs_pred_age(self, y_true, y_pred):
@@ -112,7 +118,9 @@ class Visualizer:
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
         plt.xlabel('True Age')
         plt.ylabel('Predicted Age')
-        plt.savefig(os.path.join(self.dir, 'figures/true_vs_pred_age.svg'))
+        path_to_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_to_fig)
+        plt.savefig(os.path.join(path_to_fig, 'true_vs_pred_age.svg'))
         plt.close()
 
     def age_bias_correction(self, y_true, y_pred, y_corrected):
@@ -131,9 +139,9 @@ class Visualizer:
         # Before age-bias correction
         LR_age_bias = LinearRegression(fit_intercept=True)
         LR_age_bias.fit(y_true.reshape(-1, 1), y_pred)
-        plt.subplot(1,2,1)
+        plt.subplot(1, 2, 1)
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
         plt.scatter(y_true, y_pred)
         plt.title('Before age-bias correction')
         plt.ylabel('Predicted Age')
@@ -141,13 +149,15 @@ class Visualizer:
 
         # After age-bias correction
         LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
-        plt.subplot(1,2,2)
+        plt.subplot(1, 2, 2)
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1,1)), color='r')
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
         plt.scatter(y_true, y_corrected)
         plt.title('After age-bias correction')
         plt.ylabel('Predicted Age')
         plt.xlabel('True Age')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.dir, 'figures/age_bias_correction.svg'))
+        path_to_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_to_fig)
+        plt.savefig(os.path.join(path_to_fig, 'age_bias_correction.svg'))
         plt.close()
