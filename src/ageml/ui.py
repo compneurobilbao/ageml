@@ -70,6 +70,9 @@ class Interface:
         # Arguments with which to run modelling
         self.args = args
 
+        # Flags
+        self.flags = {'CN': False}
+
         # Set up directory for storage of results
         self.setup()
 
@@ -134,13 +137,25 @@ class Interface:
     def load_data(self):
         """Load data from csv files."""
 
-        # Load data
+        # Load features
         self.df_features = self.load_csv(self.args.features)
         if 'age' not in self.df_features.columns:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
+        
+        # Load covariates
         self.df_covariates = self.load_csv(self.args.covariates)
+
+        # Load factors
         self.df_factors = self.load_csv(self.args.factors)
+
+        # Load clinical
         self.df_clinical = self.load_csv(self.args.clinical)
+        if self.df_clinical is not None:
+            if 'cn' not in self.df_clinical.columns:
+                raise KeyError("Clinical file must contian a column name 'CN' or any other case-insensitive variation.")
+            else:
+                self.flags['CN'] = True
+                self.cn_subjects = self.df_clinical[self.df_clinical['cn']].index
 
         # Remove subjects with missing features
         self.subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
@@ -162,11 +177,17 @@ class Interface:
     def features_vs_age(self):
         """Use visualizer to explore relationship between features and age."""
 
+        # Select which dataframe to use
+        if self.flags['CN']:
+            df = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
+        else:
+            df = self.df_features
+
         # Select data to visualize
         feature_names = [name for name in self.df_features.columns
                          if name != 'age']
-        X = self.df_features[feature_names].to_numpy()
-        Y = self.df_features['age'].to_numpy()
+        X = df[feature_names].to_numpy()
+        Y = df['age'].to_numpy()
 
         # Use visualizer to show
         self.visualizer.features_vs_age(X, Y, feature_names)
@@ -179,21 +200,38 @@ class Interface:
         print('Training Age Model')
         print(self.ageml.pipeline)
 
+        # Select which dataframe to use
+        if self.flags['CN']:
+            df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
+        else:
+            df_cn = self.df_features
+
         # Select data to model
         feature_names = [name for name in self.df_features.columns
                          if name != 'age']
-        X = self.df_features[feature_names].to_numpy()
-        y = self.df_features['age'].to_numpy()
+        X_cn = df_cn[feature_names].to_numpy()
+        y_cn = df_cn['age'].to_numpy()
 
         # Fit model and plot results
-        y_pred, y_corrected = self.ageml.fit_age(X, y)
-        self.visualizer.true_vs_pred_age(y, y_pred)
-        self.visualizer.age_bias_correction(y, y_pred, y_corrected)
+        y_cn_pred, y_cn_corrected = self.ageml.fit_age(X_cn, y_cn)
+        self.visualizer.true_vs_pred_age(y_cn, y_cn_pred)
+        self.visualizer.age_bias_correction(y_cn, y_cn_pred, y_cn_corrected)
 
         # Save to dataframe and csv
-        data = np.stack((y, y_pred, y_corrected), axis=1)
+        data = np.stack((y_cn, y_cn_pred, y_cn_corrected), axis=1)
         cols = ['Age', 'Predicted Age', 'Corrected Age']
-        self.df_age = pd.DataFrame(data, index=self.df_features.index, columns=cols)
+        self.df_age = pd.DataFrame(data, index=df_cn.index, columns=cols)
+
+        # Calculate for the rest of the subjects
+        if self.flags['CN']:
+            df_clin = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
+            X_clin = df_clin[feature_names].to_numpy()
+            y_clin = df_clin['age'].to_numpy()
+            y_clin_pred, y_clin_corrected = self.ageml.predict_age(X_clin, y_clin)
+            data = np.stack((y_clin, y_clin_pred, y_clin_corrected), axis=1)
+            self.df_age = pd.concat([self.df_age, pd.DataFrame(data, index=df_clin.index, columns=cols)])
+
+        # Save results
         self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
     @log
