@@ -35,6 +35,18 @@ def convert(value):
             converted_value = value
     return converted_value
 
+def feature_extractor(df):
+    """Extracts features and target variable from a dataframe.
+    
+    Parameters:
+    -----------
+    df: pandas dataframe with features and target variable"""
+
+    feature_names = [name for name in df.columns if name != 'age']
+    X = df[feature_names].to_numpy()
+    y = df['age'].to_numpy()
+
+    return X, y, feature_names
 
 def log(func):
     """Decorator function to log stdout to log.txt."""
