@@ -235,18 +235,32 @@ class AgeML:
         # Final model trained on all data
         self.pipeline.fit(X, y)
         self.pipelineFit = True
+        y_pred = self.pipeline.predict(X)
+        self.fit_age_bias(y, y_pred)
 
         return pred_age, corrected_age
 
-    def predict_age(self, X):
+    def predict_age(self, X, y=None):
         """Predict age with fitted model.
 
         Parameters:
         -----------
-        X: 2D-Array with features; shape=(n,m)"""
+        X: 2D-Array with features; shape=(n,m)
+        y: 1D-Array with age; shape=n"""
 
         # Check that model has previously been fit
         if not self.pipelineFit:
             raise ValueError("Must fit the pipline before calling predict.")
+        if y is not None and not self.age_biasFit:
+            raise ValueError("Must fit the age bias before calling predict with bias correction.")
 
-        return self.pipeline.predict(X)
+        # Predict age
+        y_pred = self.pipeline.predict(X)
+
+        # Apply age bias correction
+        if y is not None:
+            y_corrected = self.predict_age_bias(y, y_pred)
+        else:
+            y_corrected = y_pred
+
+        return y_pred, y_corrected
