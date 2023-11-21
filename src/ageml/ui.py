@@ -19,7 +19,7 @@ from datetime import datetime
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, convert, log
+from ageml.utils import create_directory, convert, log, feature_extractor
 from ageml.modelling import AgeML
 
 
@@ -49,11 +49,13 @@ class Interface:
 
     load_data(self): Load data from csv files.
 
-    age_distribution(self): Use visualizer to show age distribution.
+    age_distribution(self, dfs, labels=None): Use visualizer to show age distribution.
 
-    features_vs_age(self): Use visualizer to explore relationship between features and age.
+    features_vs_age(self, df): Use visualizer to explore relationship between features and age.
 
-    model_age(self): Use AgeML to fit age model with data.
+    model_age(self, df, model): Use AgeML to fit age model with data.
+
+    predict_age(self, df, model): Use AgeML to predict age with data.
 
     run_age(self): Run basic age modelling.
 
@@ -165,74 +167,82 @@ class Interface:
             warnings.warn('Subjects with missing data: %s' % self.subjects_missing_data, category=UserWarning)
         self.df_features.dropna(inplace=True)
 
-    def age_distribution(self):
-        """Use visualizer to show age distribution."""
+    def age_distribution(self, dfs, labels=None):
+        """Use visualizer to show age distribution.
+        
+        Parameters
+        ----------
+        dfs: list of dataframes with age information; shape=(n,m)"""
 
         # Select age information
-        ages = self.df_features['age'].to_numpy()
+        ages = []
+        for df in dfs:
+            ages.append(self.df_features['age'].to_numpy())
+        
+        # Use visualiser
+        self.visualizer.age_distribution(ages[0])
 
-        # Use visualizer to show age distribution
-        self.visualizer.age_distribution(ages)
-
-    def features_vs_age(self):
-        """Use visualizer to explore relationship between features and age."""
-
-        # Select which dataframe to use
-        if self.flags['CN']:
-            df = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
-        else:
-            df = self.df_features
+    def features_vs_age(self, df):
+        """Use visualizer to explore relationship between features and age.
+        
+        Parameters
+        ----------
+        df: dataframe with features and age; shape=(n,m+1)"""
 
         # Select data to visualize
-        feature_names = [name for name in self.df_features.columns
-                         if name != 'age']
-        X = df[feature_names].to_numpy()
-        Y = df['age'].to_numpy()
+        X, y, feature_names = feature_extractor(df)
 
         # Use visualizer to show
-        self.visualizer.features_vs_age(X, Y, feature_names)
+        self.visualizer.features_vs_age(X, y, feature_names)
 
-    def model_age(self):
-        """Use AgeML to fit age model with data."""
+    def model_age(self, df, model):
+        """Use AgeML to fit age model with data.
+        
+        Parameters
+        ----------
+        df: dataframe with features and age; shape=(n,m+1)
+        model: AgeML object"""
 
         # Show training pipeline
         print('-----------------------------------')
         print('Training Age Model')
         print(self.ageml.pipeline)
 
-        # Select which dataframe to use
-        if self.flags['CN']:
-            df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
-        else:
-            df_cn = self.df_features
-
         # Select data to model
-        feature_names = [name for name in self.df_features.columns
-                         if name != 'age']
-        X_cn = df_cn[feature_names].to_numpy()
-        y_cn = df_cn['age'].to_numpy()
+        X, y, feature_names = feature_extractor(df)
 
         # Fit model and plot results
-        y_cn_pred, y_cn_corrected = self.ageml.fit_age(X_cn, y_cn)
-        self.visualizer.true_vs_pred_age(y_cn, y_cn_pred)
-        self.visualizer.age_bias_correction(y_cn, y_cn_pred, y_cn_corrected)
+        y_pred, y_corrected = model.fit_age(X, y)
+        self.visualizer.true_vs_pred_age(y, y_pred)
+        self.visualizer.age_bias_correction(y, y_pred, y_corrected)
 
         # Save to dataframe and csv
-        data = np.stack((y_cn, y_cn_pred, y_cn_corrected), axis=1)
+        data = np.stack((y, y_pred, y_corrected), axis=1)
         cols = ['Age', 'Predicted Age', 'Corrected Age']
-        self.df_age = pd.DataFrame(data, index=df_cn.index, columns=cols)
+        df_age = pd.DataFrame(data, index=df.index, columns=cols)
 
-        # Calculate for the rest of the subjects
-        if self.flags['CN']:
-            df_clin = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
-            X_clin = df_clin[feature_names].to_numpy()
-            y_clin = df_clin['age'].to_numpy()
-            y_clin_pred, y_clin_corrected = self.ageml.predict_age(X_clin, y_clin)
-            data = np.stack((y_clin, y_clin_pred, y_clin_corrected), axis=1)
-            self.df_age = pd.concat([self.df_age, pd.DataFrame(data, index=df_clin.index, columns=cols)])
+        return model, df_age
 
-        # Save results
-        self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
+    def predict_age(self, df, model):
+        """Use AgeML to predict age with data."""
+
+        # Show prediction pipeline
+        print('-----------------------------------')
+        print('Predicting with Age Model')
+        print(self.ageml.pipeline)
+
+        # Select data to model
+        X, y, feature_names = feature_extractor(df)
+
+        # Predict age
+        y_pred, y_corrected = model.predict_age(X, y)
+
+        # Save to dataframe and csv
+        data = np.stack((y, y_pred, y_corrected), axis=1)
+        cols = ['Age', 'Predicted Age', 'Corrected Age']
+        df_age = pd.DataFrame(data, index=df.index, columns=cols)
+
+        return df_age
 
     @log
     def run_age(self):
@@ -244,14 +254,31 @@ class Interface:
         # Load data
         self.load_data()
 
-        # Distribution of ages
-        self.age_distribution()
+        # Select controls
+        if self.flags['CN']:
+            df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
+        else:
+            df_cn = self.df_features
+
+        # Use visualizer to show age distribution
+        self.age_distribution([df_cn])
 
         # Relationship between features and age
-        self.features_vs_age()
+        self.features_vs_age(df_cn)
 
         # Model age
-        self.model_age()
+        self.ageml, df_age_cn = self.model_age(df_cn, self.ageml)
+
+        # Apply to clinical data
+        if self.flags['CN']:
+            df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
+            df_age_clinical = self.predict_age(df_clinical, self.ageml)
+            self.df_age = pd.concat([df_age_cn, df_age_clinical])
+        else:
+            self.df_age = df_age_cn
+
+        # Save dataframe
+        self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
     @log
     def run_lifestyle(self):
