@@ -15,8 +15,6 @@ import os
 from sklearn.linear_model import LinearRegression
 
 from .utils import insert_newlines, create_directory
-from .processing import find_correlations
-
 
 class Visualizer:
 
@@ -48,49 +46,42 @@ class Visualizer:
         """Set directory to store results."""
         self.dir = path
 
-    def age_distribution(self, Y):
+    def age_distribution(self, Ys, labels=None, name=''):
         """ Plot age distribution.
 
         Parameters
         ----------
-        Y: 1D-Array with age; shape=n."""
-
-        # Mean, range and std of age distribution
-        print('-----------------------------------')
-        print('Age distribution')
-        print('Mean age: %.2f' % np.mean(Y))
-        print('Std age: %.2f' % np.std(Y))
-        print('Age range: %d - %d' % (np.min(Y), np.max(Y)))
+        Ys: 2D-Array with list of ages; shape=(m, n)."""
 
         # Plot age distribution
-        plt.hist(Y, bins=20)
+        for Y in Ys:
+            plt.hist(Y, bins=20, alpha=1/len(Ys))
+        if labels is not None:
+            plt.legend(labels)
         plt.xlabel('Age (years)')
         plt.ylabel('Count')
+
         # Make diectory for saving the file
         path_for_fig = os.path.join(self.dir, 'figures')
         create_directory(path_for_fig)
-        plt.savefig(os.path.join(path_for_fig, 'age_distribution.svg'))
+        plt.savefig(os.path.join(path_for_fig, 'age_distribution_%s.svg' % name))
         plt.close()
 
-    def features_vs_age(self, X, Y, feature_names):
+    def features_vs_age(self, X, Y, corr, order, feature_names):
         """Plot correlation between features and age.
 
         Parameters
         ----------
-        X: 2D-Array with features; shape=(n,m)
+        X: 2D-Array with features; shape=(n, m)
         Y: 1D-Array with age; shape=n
+        corr: 1D-Array with correlation coefficients; shape=m
+        order: 1D-Array with order of features; shape=m
         feature_names: list of names of features, shape=m"""
-
-        # Calculate correlation between features and age
-        corr, order = find_correlations(X, Y)
 
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
-        print('-----------------------------------')
-        print('Features by correlation with Age')
         for i, o in enumerate(order):
-            print('%d. %s: %.2f' % (i + 1, feature_names[o], corr[o]))
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
             plt.scatter(Y, X[:, o], s=15)
             plt.ylabel(insert_newlines(feature_names[o], 4))

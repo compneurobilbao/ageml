@@ -16,11 +16,13 @@ import os
 import warnings
 
 from datetime import datetime
+import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, convert, log, feature_extractor
 from ageml.modelling import AgeML
+from ageml.processing import find_correlations
 
 
 class Interface:
@@ -163,11 +165,12 @@ class Interface:
         self.subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
         if self.subjects_missing_data.__len__() != 0:
             print('-----------------------------------')
-            print('Subjects with missing data: %s' % self.subjects_missing_data)
-            warnings.warn('Subjects with missing data: %s' % self.subjects_missing_data, category=UserWarning)
+            warn_message = 'Subjects with missing data: %s' % self.subjects_missing_data
+            print(warn_message)
+            warnings.warn(warn_message, category=UserWarning)
         self.df_features.dropna(inplace=True)
 
-    def age_distribution(self, dfs, labels=None):
+    def age_distribution(self, dfs, labels=None, name=''):
         """Use visualizer to show age distribution.
         
         Parameters
@@ -175,12 +178,29 @@ class Interface:
         dfs: list of dataframes with age information; shape=(n,m)"""
 
         # Select age information
-        ages = []
-        for df in dfs:
-            ages.append(self.df_features['age'].to_numpy())
+        print('-----------------------------------')
+        print('Age distribution %s' % name)
+        list_ages = []
+        for i, df in enumerate(dfs):
+            if labels is not None:
+                print(labels[i])
+            ages = df['age'].to_numpy()
+            print('Mean age: %.2f' % np.mean(ages))
+            print('Std age: %.2f' % np.std(ages))
+            print('Age range: %d - %d' % (np.min(ages), np.max(ages)))
+            list_ages.append(ages)
+        
+        # Check that distributions of ages are similar
+        for i in range(len(list_ages)):
+            for j in range(i + 1, len(list_ages)):
+                _, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
+                if p_val < 0.05:
+                    warn_message = 'Age distributions %s and %s are not similar.' % (labels[i], labels[j])
+                    print(warn_message)
+                    warnings.warn(warn_message, category=UserWarning)
         
         # Use visualiser
-        self.visualizer.age_distribution(ages[0])
+        self.visualizer.age_distribution(list_ages, labels, name)
 
     def features_vs_age(self, df):
         """Use visualizer to explore relationship between features and age.
@@ -190,10 +210,17 @@ class Interface:
         df: dataframe with features and age; shape=(n,m+1)"""
 
         # Select data to visualize
+        print('-----------------------------------')
+        print('Features by correlation with Age')
         X, y, feature_names = feature_extractor(df)
 
+        # Calculate correlation between features and age
+        corr, order = find_correlations(X, y)
+        for i, o in enumerate(order):
+            print('%d. %s: %.2f' % (i + 1, feature_names[o], corr[o]))
+
         # Use visualizer to show
-        self.visualizer.features_vs_age(X, y, feature_names)
+        self.visualizer.features_vs_age(X, y, corr, order, feature_names)
 
     def model_age(self, df, model):
         """Use AgeML to fit age model with data.
@@ -215,6 +242,9 @@ class Interface:
         y_pred, y_corrected = model.fit_age(X, y)
         self.visualizer.true_vs_pred_age(y, y_pred)
         self.visualizer.age_bias_correction(y, y_pred, y_corrected)
+
+        # Calculate deltas
+        deltas = y_corrected - y
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected), axis=1)
@@ -261,7 +291,7 @@ class Interface:
             df_cn = self.df_features
 
         # Use visualizer to show age distribution
-        self.age_distribution([df_cn])
+        self.age_distribution([df_cn], name='controls')
 
         # Relationship between features and age
         self.features_vs_age(df_cn)
@@ -292,7 +322,19 @@ class Interface:
         """Run age modelling with clinical factors."""
 
         print('Running clinical outcomes...')
-        pass
+        
+        # Run age
+        self.run_age()
+
+        # Obtain dataframes for each clinical group
+        groups = self.df_clinical.columns.to_list()
+        group_features = []
+        for g in groups:
+            group_features.append(self.df_features.loc[self.df_clinical[g]])
+
+        # Use visualizer to show age distribution
+        self.age_distribution(group_features, groups, name='clinical_groups')
+
 
     @log
     def run_classification(self):
