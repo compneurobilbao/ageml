@@ -36,11 +36,18 @@ class Visualizer:
     true_vs_pred_age(self, y_true, y_pred): Plot true age vs predicted age.
 
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
+
+    deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
     """
 
     def __init__(self, out_dir):
         """Initialise variables."""
+
+        # Setup
         self.set_directory(out_dir)
+
+        # Set color map
+        self.cmap = plt.get_cmap('viridis')
 
     def set_directory(self, path):
         """Set directory to store results."""
@@ -151,4 +158,25 @@ class Visualizer:
         path_to_fig = os.path.join(self.dir, 'figures')
         create_directory(path_to_fig)
         plt.savefig(os.path.join(path_to_fig, 'age_bias_correction.svg'))
+        plt.close()
+    
+    def deltas_by_groups(self, deltas, labels):
+        """Plot box plot for deltas in each group.
+        
+        Parameters
+        ----------
+        deltas: 2D-Array with deltas; shape=(n, m)
+        labels: list of labels for each group; shape=m"""
+
+        # Plot boxplots
+        plt.figure(figsize=(10, 5))
+        num_groups = len(labels)
+        boxes = plt.boxplot(deltas, labels=labels, patch_artist=True)
+        for i, box in enumerate(boxes['boxes']):
+            box.set_facecolor(self.cmap(i / num_groups))
+        plt.xlabel('Gruop')
+        plt.ylabel('Delta')
+        path_to_fig = os.path.join(self.dir, 'figures')
+        create_directory(path_to_fig)
+        plt.savefig(os.path.join(path_to_fig, 'clinical_groups_box_plot.svg'))
         plt.close()
