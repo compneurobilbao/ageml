@@ -187,10 +187,11 @@ class Interface:
             ages = df['age'].to_numpy()
             print('Mean age: %.2f' % np.mean(ages))
             print('Std age: %.2f' % np.std(ages))
-            print('Age range: %d - %d' % (np.min(ages), np.max(ages)))
+            print('Age range: [%d,%d]' % (np.min(ages), np.max(ages)))
             list_ages.append(ages)
         
         # Check that distributions of ages are similar
+        print('Checking that age distributions are similar...')
         for i in range(len(list_ages)):
             for j in range(i + 1, len(list_ages)):
                 _, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
@@ -247,8 +248,8 @@ class Interface:
         deltas = y_corrected - y
 
         # Save to dataframe and csv
-        data = np.stack((y, y_pred, y_corrected), axis=1)
-        cols = ['Age', 'Predicted Age', 'Corrected Age']
+        data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
+        cols = ['Age', 'Predicted Age', 'Corrected Age', 'Delta']
         df_age = pd.DataFrame(data, index=df.index, columns=cols)
 
         return model, df_age
@@ -267,12 +268,45 @@ class Interface:
         # Predict age
         y_pred, y_corrected = model.predict_age(X, y)
 
+        # Calculate deltas
+        deltas = y_corrected - y
+
         # Save to dataframe and csv
-        data = np.stack((y, y_pred, y_corrected), axis=1)
-        cols = ['Age', 'Predicted Age', 'Corrected Age']
+        data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
+        cols = ['Age', 'Predicted Age', 'Corrected Age', 'Delta']
         df_age = pd.DataFrame(data, index=df.index, columns=cols)
 
         return df_age
+
+    def deltas_by_group(self, df, labels):
+
+        # Select age information
+        print('-----------------------------------')
+        print('Delta distribution by group') 
+
+        # Obtain deltas means and stds
+        deltas = []
+        for i, df_group in enumerate(df):
+            deltas.append(df_group['Delta'].to_numpy())
+            print(labels[i])
+            print('Mean delta: %.2f' % np.mean(deltas[i]))
+            print('Std delta: %.2f' % np.std(deltas[i]))
+            print('Delta range: [%d, %d]' % (np.min(deltas[i]), np.max(deltas[i])))
+
+        # Obtain statistically significant difference between deltas
+        print('Checking for statistically significant differences between deltas...')
+        for i in range(len(deltas)):
+            for j in range(i + 1, len(deltas)):
+                _, p_val = stats.ttest_ind(deltas[i], deltas[j])
+                pval_message = 'p-value between %s and %s: %.2g' % (labels[i], labels[j], p_val)
+                if p_val < 0.001:
+                    pval_message = '*' + pval_message
+                elif p_val < 0.01:
+                    pval_message = '**' + pval_message
+                print(pval_message)
+
+        # Use visualizer
+        self.visualizer.deltas_by_groups(deltas, labels)
 
     @log
     def run_age(self):
@@ -324,17 +358,25 @@ class Interface:
         print('Running clinical outcomes...')
         
         # Run age
+        print('No age models detected...')
+        print('-----------------------------------')
         self.run_age()
+        print('-----------------------------------')
+        print('Resuming clinical outcomes...')
 
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
         group_features = []
+        group_ages = []
         for g in groups:
-            group_features.append(self.df_features.loc[self.df_clinical[g]])
+            group_features.append(self.df_features.loc[self.df_clinical[g]]) 
+            group_ages.append(self.df_age.loc[self.df_clinical[g]])
 
         # Use visualizer to show age distribution
         self.age_distribution(group_features, groups, name='clinical_groups')
 
+        # Use visualizer to show box plots of deltas by group
+        self.deltas_by_group(group_ages, groups)
 
     @log
     def run_classification(self):
