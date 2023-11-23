@@ -46,6 +46,10 @@ class Visualizer:
         # Setup
         self.set_directory(out_dir)
 
+        # Make diectory for saving the file
+        self.path_for_fig = os.path.join(self.dir, 'figures')
+        create_directory(self.path_for_fig)
+
         # Set color map
         self.cmap = plt.get_cmap('viridis')
 
@@ -65,13 +69,9 @@ class Visualizer:
             plt.hist(Y, bins=20, alpha=1/len(Ys))
         if labels is not None:
             plt.legend(labels)
-        plt.xlabel('Age (years)')
+        plt.xlabel('Age (years)')        
         plt.ylabel('Count')
-
-        # Make diectory for saving the file
-        path_for_fig = os.path.join(self.dir, 'figures')
-        create_directory(path_for_fig)
-        plt.savefig(os.path.join(path_for_fig, 'age_distribution_%s.svg' % name))
+        plt.savefig(os.path.join(self.path_for_fig, 'age_distribution_%s.svg' % name))
         plt.close()
 
     def features_vs_age(self, X, Y, corr, order, feature_names):
@@ -95,9 +95,7 @@ class Visualizer:
             plt.xlabel('age (years)')
             plt.title("Corr:%.2f" % corr[o])
         plt.tight_layout()
-        path_for_fig = os.path.join(self.dir, 'figures')
-        create_directory(path_for_fig)
-        plt.savefig(os.path.join(path_for_fig, 'features_vs_age.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, 'features_vs_age.svg'))
         plt.close()
 
     def true_vs_pred_age(self, y_true, y_pred):
@@ -116,9 +114,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color='k', linestyle='dashed')
         plt.xlabel('True Age')
         plt.ylabel('Predicted Age')
-        path_to_fig = os.path.join(self.dir, 'figures')
-        create_directory(path_to_fig)
-        plt.savefig(os.path.join(path_to_fig, 'true_vs_pred_age.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, 'true_vs_pred_age.svg'))
         plt.close()
 
     def age_bias_correction(self, y_true, y_pred, y_corrected):
@@ -155,9 +151,7 @@ class Visualizer:
         plt.ylabel('Predicted Age')
         plt.xlabel('True Age')
         plt.tight_layout()
-        path_to_fig = os.path.join(self.dir, 'figures')
-        create_directory(path_to_fig)
-        plt.savefig(os.path.join(path_to_fig, 'age_bias_correction.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, 'age_bias_correction.svg'))
         plt.close()
     
     def deltas_by_groups(self, deltas, labels):
@@ -176,7 +170,5 @@ class Visualizer:
             box.set_facecolor(self.cmap(i / num_groups))
         plt.xlabel('Gruop')
         plt.ylabel('Delta')
-        path_to_fig = os.path.join(self.dir, 'figures')
-        create_directory(path_to_fig)
-        plt.savefig(os.path.join(path_to_fig, 'clinical_groups_box_plot.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, 'clinical_groups_box_plot.svg'))
         plt.close()

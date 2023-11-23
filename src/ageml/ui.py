@@ -59,6 +59,8 @@ class Interface:
 
     predict_age(self, df, model): Use AgeML to predict age with data.
 
+    run_wrapper(self, run): Wrapper for running modelling with log.
+
     run_age(self): Run basic age modelling.
 
     run_lifestyle(self): Run age modelling with lifestyle factors.
@@ -169,6 +171,9 @@ class Interface:
         if self.df_clinical is not None:
             if 'cn' not in self.df_clinical.columns:
                 raise KeyError("Clinical file must contian a column name 'CN' or any other case-insensitive variation.")
+            # Check datatypes of columns are all boolean
+            elif [self.df_clinical[col].dtype == bool for col in self.df_clinical.columns].count(False) != 0:
+                raise TypeError("Clinical columns must be boolean type.")
             else:
                 self.flags['CN'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical['cn']].index
@@ -213,12 +218,13 @@ class Interface:
         # Check that all dataframes have the same subjects
         non_shared_subjects = [] 
         for i in range(len(dfs)):
-            for j in range(i+1, len(dfs)):
-                if dfs[i] is not None and dfs[j] is not None:
-                    # Find subjects in one dataframe but not the other
-                    non_shared_subjects = non_shared_subjects + \
-                                          [s for s in dfs[i].index.to_list() 
-                                           if s not in dfs[j].index.to_list()]
+            for j in range(len(dfs)):
+                if i != j:
+                    if dfs[i] is not None and dfs[j] is not None:
+                        # Find subjects in one dataframe but not the other
+                        non_shared_subjects = non_shared_subjects + \
+                                              [s for s in dfs[i].index.to_list() 
+                                              if s not in dfs[j].index.to_list()]
         if non_shared_subjects.__len__() != 0:
             warn_message = 'Subjects not shared between dataframes: %s' % non_shared_subjects
             print(warn_message)
@@ -298,7 +304,7 @@ class Interface:
         print(self.ageml.pipeline)
 
         # Select data to model
-        X, y, feature_names = feature_extractor(df)
+        X, y, _ = feature_extractor(df)
 
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
@@ -324,7 +330,7 @@ class Interface:
         print(self.ageml.pipeline)
 
         # Select data to model
-        X, y, feature_names = feature_extractor(df)
+        X, y, _ = feature_extractor(df)
 
         # Predict age
         y_pred, y_corrected = model.predict_age(X, y)
@@ -826,7 +832,7 @@ class InteractiveCLI(Interface):
         elif file_type == '--ages':
             self.args.ages = file
         else:
-            error = 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems'
+            error = 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems, --ages'
     
         return error
 

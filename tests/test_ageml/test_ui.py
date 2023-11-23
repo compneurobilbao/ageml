@@ -4,14 +4,15 @@ import pytest
 import shutil
 import sys
 import tempfile
-
+import random
+import string
 import pandas as pd
+import numpy as np
 
 import ageml.datasets as datasets
 import ageml.ui as ui
 import ageml.messages as messages
 from ageml.ui import Interface, CLI, InteractiveCLI
-
 
 class ExampleArguments(object):
     def __init__(self):
@@ -19,25 +20,55 @@ class ExampleArguments(object):
         self.scaler_params = {"with_mean": True}
         self.model_type = "linear"
         self.model_params = {"fit_intercept": True}
-        self.cv_split = 5
-        self.seed = 42
+        self.cv_split = 2
+        self.seed = 0
         test_path = os.path.dirname(__file__)
         self.output = test_path
-        self.features = os.path.join(str(pkg_resources.files(datasets)), "synthetic_features.csv")
-        self.covariates = os.path.join(str(pkg_resources.files(datasets)), "synthetic_covariates.csv")
-        self.factors = None  # TODO: add this synthetic files in ageml.datasets
-        self.clinical = None  # TODO: add this synthetic files in ageml.datasets
+        self.features = None
+        self.covariates = None
+        self.factors = None
+        self.clinical = None
+        self.ages = None
+
+@pytest.fixture
+def features():
+    df = pd.DataFrame({"id": [1, 2, 3, 4, 5],
+                       "age": [50, 60, 70, 80, 90], 
+                       "feature1": [1.3, 2.2, 3.9, 4.1, 5.7], 
+                       "feature2": [9.4, 8.2, 7.5, 6.4, 5.3]})
+    df.set_index("id", inplace=True)
+    return df
 
 
 @pytest.fixture
-def features_data_path():
-    return os.path.join(str(pkg_resources.files(datasets)), "synthetic_features.csv")
+def clinical():
+    df = pd.DataFrame({"id": [1, 2, 3, 4, 5],
+                       "CN": [True, False, True, False, True],
+                       "group1": [False, True, False, True, False]})
+    df.set_index("id", inplace=True)
+    return df
 
+@pytest.fixture
+def ages():
+    df = pd.DataFrame({"id": [1, 2, 3, 4, 5],
+                       "age": [50, 60, 70, 80, 90],
+                       "predicted age": [55, 67, 57, 75, 85],
+                       "corrected age": [51, 58, 73, 80, 89],
+                       "delta": [1, -2, 3, 0, -1]})
+    df.set_index("id", inplace=True)
+    return df
+
+def create_csv(df, path):
+    # Generate random name for the csv file
+    letters = string.ascii_lowercase
+    csv_name = ''.join(random.choice(letters) for i in range(20)) + ".csv"
+    file_path = os.path.join(path, csv_name)
+    df.to_csv(path_or_buf=file_path, index=True)
+    return file_path
 
 @pytest.fixture
 def dummy_interface():
     return Interface(args=ExampleArguments())
-
 
 # To be executed in every test in this module
 @pytest.fixture(autouse=True)
@@ -65,13 +96,12 @@ def dummy_cli(monkeypatch):
     temp_file = tempfile.NamedTemporaryFile(dir=temp_dir.name, suffix='.csv', delete=False)
 
     # Define a list of responses
-    responses = [temp_dir.name, temp_file.name, '', '', '', '', '', '', '', 'q']
+    responses = [temp_dir.name, temp_file.name, '', '', '', '', '', '', '', '', 'q']
     
     # Patch the input function
     monkeypatch.setattr('builtins.input', lambda _: responses.pop(0))
     interface = InteractiveCLI()
     return interface
-
 
 def test_interface_setup(dummy_interface):
     expected_args = ExampleArguments()
@@ -87,8 +117,10 @@ def test_interface_setup(dummy_interface):
     assert dummy_interface.args.output == expected_args.output
 
 
-def test_load_csv(dummy_interface, features_data_path):
-    data = dummy_interface.load_csv(features_data_path)
+def test_load_csv(dummy_interface, features):
+    
+    features_path = create_csv(features, dummy_interface.dir_path)
+    data = dummy_interface.load_csv(features_path)
     
     # Check that the data is a pandas dataframe
     assert isinstance(data, pd.core.frame.DataFrame)
@@ -96,8 +128,10 @@ def test_load_csv(dummy_interface, features_data_path):
     assert all([col.islower() for col in data.columns])
 
 
-def test_load_data(dummy_interface):
+def test_load_data(dummy_interface, features):
     # Load some data
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
     dummy_interface.load_data()
     
     # Check that the data is a pandas dataframe
@@ -107,36 +141,145 @@ def test_load_data(dummy_interface):
     assert all([col.islower() for col in dummy_interface.df_features.columns])
 
 
-def test_load_data_age_not_column(dummy_interface):
-    # If the features CSV does not have a column called "age", check that the raised Exception is a KeyError
-    # Create a temporary file, csv with no age column
-    csv_path = os.path.join(dummy_interface.dir_path, "no_age_features.csv")
-    pd.DataFrame({"feature1": [1, 2, 3], "feature2": [4, 5, 6]}).to_csv(path_or_buf=csv_path, index=True)
-    dummy_interface.args.features = csv_path
+def test_load_data_age_not_column(dummy_interface, features):
+    # Remove age columng from features
+    features.drop("age", axis=1, inplace=True)
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path    
     
+    # Test error risen
     with pytest.raises(KeyError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == KeyError
     assert exc_info.value.args[0] == "Features file must contain a column name 'age', or any other case-insensitive variation."
 
 
-def test_load_data_nan_values_warning(dummy_interface):
+
+def test_load_data_cn_not_column(dummy_interface, clinical):
+    # Test no CN column in clinical
+    clinical.drop("CN", axis=1, inplace=True)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+    
+    # Test error risen
+    with pytest.raises(KeyError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == KeyError
+    assert exc_info.value.args[0] == "Clinical file must contian a column name 'CN' or any other case-insensitive variation."
+
+
+def test_load_data_ages_missing_column(dummy_interface, ages):
+
+    # Test removal of columns
+    cols = ['age', 'predicted age', 'corrected age', 'delta']
+    for col in cols:
+        # Remove column
+        df = ages.copy()
+        df.drop(col, axis=1, inplace=True)
+        file_path = create_csv(df, dummy_interface.dir_path)
+        dummy_interface.args.ages = file_path
+    
+        # Test error risen
+        with pytest.raises(KeyError) as exc_info:
+            dummy_interface.load_data()
+        assert exc_info.type == KeyError
+        assert exc_info.value.args[0] == "Clinical file must contian a column name %s" % col
+
+
+def test_load_data_required_file_types(dummy_interface):
+    dummy_interface.args.features = None
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.load_data(required=["features"])
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Features file must be provided."
+
+    dummy_interface.args.clinical = None
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.load_data(required=["clinical"])
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Clinical file must be provided."
+
+
+def test_load_data_clinical_not_boolean(dummy_interface, clinical):
+
+    # Change booleans to other types
+    clinical.loc[2, "CN"] = 1.3
+    clinical.loc[3, "group1"] = "mondongo"
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    assert exc_info.value.args[0] == "Clinical columns must be boolean type."
+   
+# TODO: check boolean type for clinical columns
+
+def test_load_data_ages_warning(dummy_interface, ages):
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path 
+    with pytest.warns(UserWarning) as warn_record:
+        dummy_interface.load_data()
+        dummy_interface.load_data()
+    assert isinstance(warn_record.list[0].message, UserWarning)
+    expected = "Ages file already loaded, overwriting with  %s provided file." % dummy_interface.args.ages
+    assert warn_record.list[0].message.args[0] == expected
+
+def test_load_data_nan_values_warning(dummy_interface, features):
+
+    # Remove from features a few values
+    features.loc[2, "feature1"] = np.nan
+    features.loc[3, "feature2"] = np.nan
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = f'Subjects with missing data: {dummy_interface.subjects_missing_data}'
+    expected = f'Subjects with missing data: {[2, 3]}'
     assert warn_record.list[0].message.args[0] == expected
 
 
-def test_run_age(dummy_interface):
+def test_load_data_different_indexes_warning(dummy_interface, features, clinical):
+    # Drop subjects 2 and 3 from features
+    features.drop([2, 3], axis=0, inplace=True)
+    clinical.drop([4], axis=0, inplace=True)
+    features_path = create_csv(features, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    dummy_interface.args.clinical = clinical_path
+    
+    with pytest.warns(UserWarning) as warn_record:
+        dummy_interface.load_data()
+    assert isinstance(warn_record.list[0].message, UserWarning)
+    expected = 'Subjects not shared between dataframes: %s' % [4, 2, 3]
+    assert warn_record.list[0].message.args[0] == expected
+
+
+def test_age_distribution_warning(dummy_interface):
+    dist1 = np.random.normal(loc=50, scale=1, size=100)
+    dist2 = np.random.normal(loc=0, scale=1, size=100)
+    df1 = pd.DataFrame({"age": dist1})
+    df2 = pd.DataFrame({"age": dist2})
+    with pytest.warns(UserWarning) as warn_record:
+        dummy_interface.age_distribution([df1, df2], labels=["dist1", "dist2"])
+    assert isinstance(warn_record.list[0].message, UserWarning)
+    expected = 'Age distributions %s and %s are not similar.' % ("dist1", "dist2")
+    assert warn_record.list[0].message.args[0] == expected
+
+
+def test_run_age(dummy_interface, features):
     # Run the modelling pipeline
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
     dummy_interface.run_age()
     
     # Check for the existence of the output directory
     assert os.path.exists(dummy_interface.dir_path)
     
     # Check for the existence of the output figures
-    figs = ["age_bias_correction", "age_distribution",
+    figs = ["age_bias_correction", "age_distribution_controls",
             "features_vs_age", "true_vs_pred_age"]
     svg_paths = [os.path.join(dummy_interface.dir_path,
                               f'figures/{fig}.svg') for fig in figs]
@@ -152,7 +295,31 @@ def test_run_age(dummy_interface):
     
     # Check that the output CSV has the right columns
     df = pd.read_csv(csv_path, header=0, index_col=0)
-    assert all([col in df.columns for col in ["Age", "Predicted Age", "Corrected Age"]])
+    assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
+
+
+def test_run_clinical(dummy_interface, ages, clinical):
+
+    # Run the clinical pipeline
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_clinical()
+    
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+    
+    # Check for the existence of the output figures
+    figs = ["age_distribution_clinical_groups",
+            "clinical_groups_box_plot"]
+    svg_paths = [os.path.join(dummy_interface.dir_path,
+                              f'figures/{fig}.svg') for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
 
 
 def test_interface_setup_dir_existing_warning(dummy_interface):
@@ -163,20 +330,25 @@ def test_interface_setup_dir_existing_warning(dummy_interface):
     assert warn_record.list[0].message.args[0] == f"Directory {dummy_interface.dir_path} already exists files may be overwritten."
 
 
-def test_cli_initialization(features_data_path):
+def test_cli_initialization(features, dummy_interface):
+
+    # create features file
+    features_data_path = create_csv(features, dummy_interface.dir_path)
+
     output_path = os.path.dirname(__file__)
     # Path sys.argv (command line arguments)
     # sys.argv[0] should be empty, so we set it to ''
     # TODO: Cleaner way to test CLI?
     sys.argv = ['', '-f', features_data_path,
-                '-o', output_path, '-r', 'age']
+                '-o', output_path, '-r', 'age',
+                '--cv', '2', '1']
     cli = CLI()
     
     # Check correct default initialization
     assert cli.args.features == features_data_path
     assert cli.args.model == ['linear']
     assert cli.args.scaler_type == 'standard'
-    assert cli.args.cv == [5, 0]
+    assert cli.args.cv == [2, 1]
 
 
 def test_configure_interactiveCLI(dummy_cli):
@@ -340,15 +512,10 @@ def test_load_command_interactiveCLI(dummy_cli):
     error = dummy_cli.load_command()
     assert error == 'File %s must be a .txt file.' % tmpcsv.name
 
-    # Test passing None to required file
-    dummy_cli.line = 'l --features None'
-    error = dummy_cli.load_command()
-    assert error == 'A features file must be provided must not be None.'
-
     # Test choosing invalid file type
     dummy_cli.line = 'l --flag ' + tmpcsv.name
     error = dummy_cli.load_command()
-    assert error == 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems'
+    assert error == 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems, --ages'
 
     # Test passing correct arguments
     dummy_cli.line = 'l --features ' + tmpcsv.name
