@@ -58,6 +58,8 @@ def test_set_pipeline_none_model():
     assert exc_info.type == ValueError
     assert str(exc_info.value) == "Must set a valid model or scaler before setting pipeline."
 
+# TODO: test: metrics, summary_metrics, fit_age_bias, predict_age_bias, fit_age, predict_age
+# TODO: check all errors raised
 
 def test_fit_age():
     pass
