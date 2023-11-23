@@ -49,7 +49,7 @@ class Interface:
 
     load_csv(self, file): Use panda to load csv into dataframe.
 
-    load_data(self): Load data from csv files.
+    load_data(self, required): Load data from csv files.
 
     age_distribution(self, dfs, labels=None): Use visualizer to show age distribution.
 
@@ -138,13 +138,25 @@ class Interface:
         else:
             return None
 
-    def load_data(self):
-        """Load data from csv files."""
+    def load_data(self, required=[]):
+        """Load data from csv files.
+        
+        Parameters
+        ----------
+        required: list of required files"""
+
+        # Load files
+        print('-----------------------------------')
+        print('Loading data...')
+
 
         # Load features
         self.df_features = self.load_csv(self.args.features)
-        if 'age' not in self.df_features.columns:
-            raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
+        if self.df_features is not None:
+            if 'age' not in self.df_features.columns:
+                raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
+        elif 'features' in required:
+            raise ValueError("Features file must be provided.")
         
         # Load covariates
         self.df_covariates = self.load_csv(self.args.covariates)
@@ -160,15 +172,64 @@ class Interface:
             else:
                 self.flags['CN'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical['cn']].index
+        elif 'clinical' in required:
+            raise ValueError("Clinical file must be provided.")
 
-        # Remove subjects with missing features
-        self.subjects_missing_data = self.df_features[self.df_features.isnull().any(axis=1)].index.to_list()
+        # Load ages
+        # Check if already has ages loaded 
+        if hasattr(self, 'df_ages'):
+            if self.df_ages is None:
+                self.df_ages = self.load_csv(self.args.ages)
+            else:
+                # Dont over write if None
+                df = self.load_csv(self.args.ages)
+                if df is not None:
+                    self.df_ages = df
+                    warning_message = "Ages file already loaded, overwriting with  %s provided file." \
+                                      % self.args.ages
+                    print(warning_message)
+                    warnings.warn(warning_message, category=UserWarning)
+        else:
+            self.df_ages = self.load_csv(self.args.ages)
+
+        # Check that ages file has required columns
+        if self.df_ages is not None:
+            cols = ['age', 'predicted age', 'corrected age', 'delta']
+            for col in cols:
+                if col not in self.df_ages.columns:
+                    raise KeyError("Clinical file must contian a column name %s" % col)
+
+        # Remove subjects with missing values
+        dfs = [self.df_features, self.df_covariates, self.df_factors, self.df_clinical, self.df_ages]
+        self.subjects_missing_data = []
+        for df in dfs:
+            if df is not None:    
+                self.subjects_missing_data = self.subjects_missing_data + df[df.isnull().any(axis=1)].index.to_list()
         if self.subjects_missing_data.__len__() != 0:
-            print('-----------------------------------')
             warn_message = 'Subjects with missing data: %s' % self.subjects_missing_data
             print(warn_message)
             warnings.warn(warn_message, category=UserWarning)
-        self.df_features.dropna(inplace=True)
+
+        # Check that all dataframes have the same subjects
+        non_shared_subjects = [] 
+        for i in range(len(dfs)):
+            for j in range(i+1, len(dfs)):
+                if dfs[i] is not None and dfs[j] is not None:
+                    # Find subjects in one dataframe but not the other
+                    non_shared_subjects = non_shared_subjects + \
+                                          [s for s in dfs[i].index.to_list() 
+                                           if s not in dfs[j].index.to_list()]
+        if non_shared_subjects.__len__() != 0:
+            warn_message = 'Subjects not shared between dataframes: %s' % non_shared_subjects
+            print(warn_message)
+            warnings.warn(warn_message, category=UserWarning)
+            self.subjects_missing_data = self.subjects_missing_data + non_shared_subjects
+
+        # Remove subjects with missing values
+        for df in dfs:
+            if df is not None:                
+                df.drop(self.subjects_missing_data, inplace=True, errors='ignore')            
+
 
     def age_distribution(self, dfs, labels=None, name=''):
         """Use visualizer to show age distribution.
@@ -249,10 +310,10 @@ class Interface:
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
-        cols = ['Age', 'Predicted Age', 'Corrected Age', 'Delta']
-        df_age = pd.DataFrame(data, index=df.index, columns=cols)
+        cols = ['age', 'predicted age', 'corrected age', 'delta']
+        df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
-        return model, df_age
+        return model, df_ages
 
     def predict_age(self, df, model):
         """Use AgeML to predict age with data."""
@@ -273,10 +334,10 @@ class Interface:
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
-        cols = ['Age', 'Predicted Age', 'Corrected Age', 'Delta']
-        df_age = pd.DataFrame(data, index=df.index, columns=cols)
+        cols = ['age', 'predicted age', 'corrected age', 'delta']
+        df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
-        return df_age
+        return df_ages
 
     def deltas_by_group(self, df, labels):
 
@@ -287,7 +348,7 @@ class Interface:
         # Obtain deltas means and stds
         deltas = []
         for i, df_group in enumerate(df):
-            deltas.append(df_group['Delta'].to_numpy())
+            deltas.append(df_group['delta'].to_numpy())
             print(labels[i])
             print('Mean delta: %.2f' % np.mean(deltas[i]))
             print('Std delta: %.2f' % np.std(deltas[i]))
@@ -309,6 +370,10 @@ class Interface:
         self.visualizer.deltas_by_groups(deltas, labels)
 
     @log
+    def run_wrapper(self, run):
+        """Wrapper for running modelling with log."""
+        run()
+
     def run_age(self):
         """Run basic age modelling."""
 
@@ -316,7 +381,7 @@ class Interface:
         print('Running age modelling...')
 
         # Load data
-        self.load_data()
+        self.load_data(required=['features'])
 
         # Select controls
         if self.flags['CN']:
@@ -331,54 +396,53 @@ class Interface:
         self.features_vs_age(df_cn)
 
         # Model age
-        self.ageml, df_age_cn = self.model_age(df_cn, self.ageml)
+        self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
 
         # Apply to clinical data
         if self.flags['CN']:
             df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
-            df_age_clinical = self.predict_age(df_clinical, self.ageml)
-            self.df_age = pd.concat([df_age_cn, df_age_clinical])
+            df_ages_clinical = self.predict_age(df_clinical, self.ageml)
+            self.df_ages = pd.concat([df_ages_cn, df_ages_clinical])
         else:
-            self.df_age = df_age_cn
+            self.df_ages = df_ages_cn
 
         # Save dataframe
-        self.df_age.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
+        self.df_ages.to_csv(os.path.join(self.dir_path, 'predicted_age.csv'))
 
-    @log
     def run_lifestyle(self):
         """Run age modelling with lifestyle factors."""
 
         print('Running lifestyle factors...')
         pass
 
-    @log
     def run_clinical(self):
         """Run age modelling with clinical factors."""
 
         print('Running clinical outcomes...')
+
+        # Load data
+        self.load_data(required=['clinical'])
         
-        # Run age
-        print('No age models detected...')
-        print('-----------------------------------')
-        self.run_age()
-        print('-----------------------------------')
-        print('Resuming clinical outcomes...')
+        # Run age if not ages found
+        if self.df_ages is None:
+            print('No age data detected...')
+            print('-----------------------------------')
+            self.run_age()
+            print('-----------------------------------')
+            print('Resuming clinical outcomes...')
 
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
-        group_features = []
         group_ages = []
         for g in groups:
-            group_features.append(self.df_features.loc[self.df_clinical[g]]) 
-            group_ages.append(self.df_age.loc[self.df_clinical[g]])
+            group_ages.append(self.df_ages.loc[self.df_clinical[g]])
 
         # Use visualizer to show age distribution
-        self.age_distribution(group_features, groups, name='clinical_groups')
+        self.age_distribution(group_ages, groups, name='clinical_groups')
 
         # Use visualizer to show box plots of deltas by group
         self.deltas_by_group(group_ages, groups)
 
-    @log
     def run_classification(self):
         """Run classification between two different clinical groups."""
 
@@ -411,15 +475,17 @@ class CLI(Interface):
         # Run modelling
         case = args.run
         if case == 'age':
-            self.run_age()
+            self.run = self.run_age
         elif case == 'lifestyle':
-            self.run_lifestyle()
+            self.run = self.run_lifestyle
         elif case == 'clinical':
-            self.run_clinical()
+            self.run = self.run_clinical
         elif case == 'classification':
-            self.run_classification()
+            self.run = self.run_classification
         else:
             raise ValueError('Choose a valid run type: age, lifestyle, clinical, classification')
+
+        self.run_wrapper(self.run)
 
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
@@ -427,7 +493,7 @@ class CLI(Interface):
                                  help=messages.run_long_description)
         self.parser.add_argument('-o', '--output', metavar='DIR', required=True,
                                  help=messages.output_long_description)
-        self.parser.add_argument('-f', "--features", metavar='FILE', required=True,
+        self.parser.add_argument('-f', "--features", metavar='FILE',
                                  help=messages.features_long_description)
         self.parser.add_argument('-m', '--model', nargs='*', default=['linear'],
                                  help=messages.model_long_description)
@@ -443,6 +509,8 @@ class CLI(Interface):
                                  help=messages.clinical_long_description)
         self.parser.add_argument("--systems", metavar='FILE',
                                  help=messages.systems_long_description)
+        self.parser.add_argument("--ages", metavar='FILE',
+                                 help=messages.ages_long_description)
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -566,16 +634,18 @@ class InteractiveCLI(Interface):
         print('Output directory path (Required):')
         self.force_command(self.output_command, 'o', required=True)
         # Ask for input files
-        print('Input features file path (Required):')
-        self.force_command(self.load_command, 'l --features', required=True)
+        print('Input features file path (Required for run age):')
+        self.force_command(self.load_command, 'l --features')
         print('Input covariates file path (Optional):')
         self.force_command(self.load_command, 'l --covariates')
-        print('Input factors file path (Optional):')
+        print('Input factors file path (Reqruired for run lifestyle):')
         self.force_command(self.load_command, 'l --factors')
-        print('Input clinical file path (Optional):')
+        print('Input clinical file path (Required for run clinical or run classification):')
         self.force_command(self.load_command, 'l --clinical')
         print('Input systems file path (Optional):')
         self.force_command(self.load_command, 'l --systems')
+        print('Input ages file path (Optional):')
+        self.force_command(self.load_command, 'l --ages')
 
         # Ask for scaler, model and CV parameters
         print('Scaler type and parameters (Default:standard):')
@@ -637,7 +707,7 @@ class InteractiveCLI(Interface):
             elif command == "r":
                 # Capture any error raised and print
                 try:
-                    self.run()
+                    self.run_wrapper(self.run)
                 except Exception as e:
                     print(e)
                     print('Error running modelling.')
@@ -731,7 +801,7 @@ class InteractiveCLI(Interface):
             else:
                 if not self.check_file(file):
                     error = 'File %s not found.' % file
-                elif file_type in ['--features', '--covariates', '--factors', '--clinical']:
+                elif file_type in ['--features', '--covariates', '--factors', '--clinical', '--ages']:
                     if not file.endswith('.csv'):
                         error = 'File %s must be a .csv file.' % file
                 elif file_type == '--systems':
@@ -744,10 +814,7 @@ class InteractiveCLI(Interface):
         
         # Set file path
         if file_type == '--features':
-            if file is None:
-                error = 'A features file must be provided must not be None.'
-            else:
-                self.args.features = file
+            self.args.features = file
         elif file_type == '--covariates':
             self.args.covariates = file
         elif file_type == '--factors':
@@ -756,6 +823,8 @@ class InteractiveCLI(Interface):
             self.args.clinical = file
         elif file_type == '--systems':
             self.args.systems = file
+        elif file_type == '--ages':
+            self.args.ages = file
         else:
             error = 'Choose a valid file type: --features, --covariates, --factors, --clinical, --systems'
     

@@ -22,7 +22,7 @@ run_long_description = (
 output_long_description = "Path to output directory where to save results. (Required)"
 
 features_long_description = (
-    "Path to input CSV file containing features. (Required) \n"
+    "Path to input CSV file containing features. (Required: run age) \n"
     "In the file the first column should be the ID, the second column should be the AGE, \n"
     "and the following columns the features. The first row should be the header for \n"
     "column names."
@@ -37,15 +37,15 @@ model_long_description = (
 
 scaler_long_description = (
     "Scaler type and scaler parameters to use. First argument is the type and the following \n"
-    "arguments are input as keyword arguments into the scaler. They must be seperated by an =.\n"
+    "arguments are input as keyword arguments into scaler. They must be seperated by an =.\n"
     "Example: -m standard\n"
     "Available Types: standard (Default: standard)"
 )
 
 cv_long_description = (
-    "Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 integers. \n"
-    "First integer is the number of splits and the second is the seed for randomization. \n"
-    "Default: 5 0"
+    "Number of CV splits with which to run the Cross Validation Scheme. Expect 1 or 2 \n"
+    "integers. First integer is the number of splits and the second is the seed for \n"
+    "randomization. Default: 5 0"
 )
 
 covar_long_description = (
@@ -55,13 +55,13 @@ covar_long_description = (
 )
 
 factors_long_description = (
-    "Path to input CSV file containing factors (e.g. liefstyle and environmental factors). \n"
+    "Path to input CSV file containing factors (Required: run lifestyle). \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
     "factors. The first row should be the header for column names."
 )
 
 clinical_long_description = (
-    "Path to input CSV file containing health conditions. \n"
+    "Path to input CSV file containing conditions (Required: run clinical or classification).\n"
     "In the file, the first column should be the ID, the second column should be whether the \n"
     "subject is a CONTROL, and the following columns are binary variables for different \n"
     "conditions. The first row should be the header for column names."
@@ -75,6 +75,12 @@ systems_long_description = (
     "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)"
 )
 
+ages_long_description = (
+    "Path to input CSV file containing the ages of the subjects. \n"
+    "In the file the first column should be the ID, the second column should be the age, \n"
+    "the third column should be the predicted age, fourth age is corrected age and last \n"
+    "column is the delta. The first row should be the header for column names."
+)
 # UI information
 
 emblem = """
