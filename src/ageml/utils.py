@@ -36,6 +36,20 @@ def convert(value):
     return converted_value
 
 
+def feature_extractor(df):
+    """Extracts features and target variable from a dataframe.
+
+    Parameters:
+    -----------
+    df: pandas dataframe with features and target variable"""
+
+    feature_names = [name for name in df.columns if name != "age"]
+    X = df[feature_names].to_numpy()
+    y = df["age"].to_numpy()
+
+    return X, y, feature_names
+
+
 def log(func):
     """Decorator function to log stdout to log.txt."""
 
@@ -53,11 +67,11 @@ def log(func):
             sys.stdout = original_stdout
 
         # Log the captured output to the file
-        with open(instance.log_path, 'a') as log_file:
+        with open(instance.log_path, "a") as log_file:
             log_file.write(captured_output.getvalue())
 
         # Print the captured output to the console
-        print('\n'.join(captured_output.getvalue().split('\n')[:-1]))
+        print("\n".join(captured_output.getvalue().split("\n")[:-1]))
 
         return result
 
