@@ -156,6 +156,25 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_bias_correction.svg"))
         plt.close()
 
+    def factors_vs_deltas(self, corr, labels):
+        """Plot bar graph for correlation between factors and deltas.
+        
+        Parameters
+        ----------
+        corr: 1D-Array with correlation coefficients; shape=m
+        labels: list of labels for each factor; shape=m"""
+
+        # Plot bar graph
+        plt.figure(figsize=(10, 5))
+        # Order from highest to lowest correlation
+        corr, labels = zip(*sorted(zip(corr, labels), reverse=True))
+        num_factors = len(labels)
+        plt.bar(np.arange(num_factors), corr, tick_label=labels)
+        plt.xlabel("Factor")
+        plt.ylabel("Correlation with delta")
+        plt.savefig(os.path.join(self.path_for_fig, "factors_vs_deltas.svg"))
+        plt.close()
+
     def deltas_by_groups(self, deltas, labels):
         """Plot box plot for deltas in each group.
 
