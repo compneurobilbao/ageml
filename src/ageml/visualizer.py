@@ -16,6 +16,7 @@ from sklearn.linear_model import LinearRegression
 
 from .utils import insert_newlines, create_directory
 
+
 class Visualizer:
 
     """Manages the visualization of data and results.
@@ -47,18 +48,18 @@ class Visualizer:
         self.set_directory(out_dir)
 
         # Make diectory for saving the file
-        self.path_for_fig = os.path.join(self.dir, 'figures')
+        self.path_for_fig = os.path.join(self.dir, "figures")
         create_directory(self.path_for_fig)
 
         # Set color map
-        self.cmap = plt.get_cmap('viridis')
+        self.cmap = plt.get_cmap("viridis")
 
     def set_directory(self, path):
         """Set directory to store results."""
         self.dir = path
 
-    def age_distribution(self, Ys, labels=None, name=''):
-        """ Plot age distribution.
+    def age_distribution(self, Ys, labels=None, name=""):
+        """Plot age distribution.
 
         Parameters
         ----------
@@ -66,12 +67,12 @@ class Visualizer:
 
         # Plot age distribution
         for Y in Ys:
-            plt.hist(Y, bins=20, alpha=1/len(Ys))
+            plt.hist(Y, bins=20, alpha=1 / len(Ys))
         if labels is not None:
             plt.legend(labels)
-        plt.xlabel('Age (years)')        
-        plt.ylabel('Count')
-        plt.savefig(os.path.join(self.path_for_fig, 'age_distribution_%s.svg' % name))
+        plt.xlabel("Age (years)")
+        plt.ylabel("Count")
+        plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
     def features_vs_age(self, X, Y, corr, order, feature_names):
@@ -92,10 +93,10 @@ class Visualizer:
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
             plt.scatter(Y, X[:, o], s=15)
             plt.ylabel(insert_newlines(feature_names[o], 4))
-            plt.xlabel('age (years)')
+            plt.xlabel("age (years)")
             plt.title("Corr:%.2f" % corr[o])
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, 'features_vs_age.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
         plt.close()
 
     def true_vs_pred_age(self, y_true, y_pred):
@@ -111,10 +112,10 @@ class Visualizer:
 
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
-        plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.xlabel('True Age')
-        plt.ylabel('Predicted Age')
-        plt.savefig(os.path.join(self.path_for_fig, 'true_vs_pred_age.svg'))
+        plt.plot(age_range, age_range, color="k", linestyle="dashed")
+        plt.xlabel("True Age")
+        plt.ylabel("Predicted Age")
+        plt.savefig(os.path.join(self.path_for_fig, "true_vs_pred_age.svg"))
         plt.close()
 
     def age_bias_correction(self, y_true, y_pred, y_corrected):
@@ -127,36 +128,37 @@ class Visualizer:
         y_corrected: 1D-Array with predicted age after age bias correction; shape=n"""
 
         # Find min and max age range to fit in graph
-        age_range = np.arange(np.min([y_true, y_pred, y_corrected]),
-                              np.max([y_true, y_pred, y_corrected]))
+        age_range = np.arange(
+            np.min([y_true, y_pred, y_corrected]), np.max([y_true, y_pred, y_corrected])
+        )
 
         # Before age-bias correction
         LR_age_bias = LinearRegression(fit_intercept=True)
         LR_age_bias.fit(y_true.reshape(-1, 1), y_pred)
         plt.subplot(1, 2, 1)
-        plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
+        plt.plot(age_range, age_range, color="k", linestyle="dashed")
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title('Before age-bias correction')
-        plt.ylabel('Predicted Age')
-        plt.xlabel('True Age')
+        plt.title("Before age-bias correction")
+        plt.ylabel("Predicted Age")
+        plt.xlabel("True Age")
 
         # After age-bias correction
         LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
         plt.subplot(1, 2, 2)
-        plt.plot(age_range, age_range, color='k', linestyle='dashed')
-        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color='r')
+        plt.plot(age_range, age_range, color="k", linestyle="dashed")
+        plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title('After age-bias correction')
-        plt.ylabel('Predicted Age')
-        plt.xlabel('True Age')
+        plt.title("After age-bias correction")
+        plt.ylabel("Predicted Age")
+        plt.xlabel("True Age")
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, 'age_bias_correction.svg'))
+        plt.savefig(os.path.join(self.path_for_fig, "age_bias_correction.svg"))
         plt.close()
-    
+
     def deltas_by_groups(self, deltas, labels):
         """Plot box plot for deltas in each group.
-        
+
         Parameters
         ----------
         deltas: 2D-Array with deltas; shape=(n, m)
@@ -166,9 +168,9 @@ class Visualizer:
         plt.figure(figsize=(10, 5))
         num_groups = len(labels)
         boxes = plt.boxplot(deltas, labels=labels, patch_artist=True)
-        for i, box in enumerate(boxes['boxes']):
+        for i, box in enumerate(boxes["boxes"]):
             box.set_facecolor(self.cmap(i / num_groups))
-        plt.xlabel('Gruop')
-        plt.ylabel('Delta')
-        plt.savefig(os.path.join(self.path_for_fig, 'clinical_groups_box_plot.svg'))
+        plt.xlabel("Gruop")
+        plt.ylabel("Delta")
+        plt.savefig(os.path.join(self.path_for_fig, "clinical_groups_box_plot.svg"))
         plt.close()
