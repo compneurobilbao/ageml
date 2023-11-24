@@ -59,6 +59,8 @@ class Interface:
 
     predict_age(self, df, model): Use AgeML to predict age with data.
 
+    deltas_by_group(self, df, labels): Calculate summary metrics of deltas by group.
+
     run_wrapper(self, run): Wrapper for running modelling with log.
 
     run_age(self): Run basic age modelling.
@@ -177,6 +179,8 @@ class Interface:
 
         # Load factors
         self.df_factors = self.load_csv(self.args.factors)
+        if self.df_factors is None and "factors" in required:
+            raise ValueError("Factors file must be provided.")
 
         # Load clinical
         self.df_clinical = self.load_csv(self.args.clinical)
@@ -379,7 +383,42 @@ class Interface:
 
         return df_ages
 
+    def factors_vs_deltas(self, dfs_ages, dfs_factors):
+        """Calculate correlations between factors and deltas.
+
+        Parameters
+        ----------
+        dfs_ages: list of dataframes with delta information; shape=(n,m)
+        dfs_factors: list of dataframes with factor information; shape=(n,m)"""
+
+        # Select age information
+        print("-----------------------------------")
+        print("Correlations between lifestyle factors by group")
+
+        # Iterate over groups
+        for df_ages, df_factors in zip(dfs_ages, dfs_factors):
+            # Select data to visualize
+            deltas = df_ages["delta"].to_numpy()
+            factors = df_factors.to_numpy()
+            factor_names = df_factors.columns.to_list()
+
+            # Calculate correlation between features and age
+            corr, order = find_correlations(factors, deltas)
+            # TODO: Bonferonni corrections and FDR (with print of info)
+            for i, o in enumerate(order):
+                print("%d. %s: %.2f" % (i + 1, factor_names[o], corr[o]))
+
+            # Use visualizer to show bar graph
+            self.visualizer.factors_vs_deltas(corr, factor_names)
+
     def deltas_by_group(self, df, labels):
+        """Calculate summary metrics of deltas by group.
+        
+        Parameters
+        ----------
+        df: list of dataframes with delta information; shape=(n,m)
+        labels: list of labels for each dataframe; shape=(n,)"""
+
         # Select age information
         print("-----------------------------------")
         print("Delta distribution by group")
@@ -395,6 +434,7 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
+        print("*: p-value < 0.01, **: p-value < 0.001")
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
@@ -458,7 +498,26 @@ class Interface:
         """Run age modelling with lifestyle factors."""
 
         print("Running lifestyle factors...")
-        pass
+
+        # Load data
+        self.load_data(required=["factors"])
+
+        # Run age if not ages found
+        if self.df_ages is None:
+            print("No age data detected...")
+            print("-----------------------------------")
+            self.run_age()
+            print("-----------------------------------")
+            print("Resuming lifestyle factors...")
+
+        # Obtain dfs for ages
+        dfs_ages = [self.df_ages]
+        dfs_factors = [self.df_factors]
+
+        # TODO: if clinical data is provided use it to split ages and factors
+
+        # Calculate correlations between factors and deltas
+        self.factors_vs_deltas(dfs_ages, dfs_factors)
 
     def run_clinical(self):
         """Run age modelling with clinical factors."""
