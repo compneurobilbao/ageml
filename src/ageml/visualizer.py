@@ -75,7 +75,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
-    def features_vs_age(self, X, Y, corr, order, feature_names):
+    def features_vs_age(self, X, Y, corr, order, markers, feature_names):
         """Plot correlation between features and age.
 
         Parameters
@@ -84,6 +84,7 @@ class Visualizer:
         Y: 1D-Array with age; shape=n
         corr: 1D-Array with correlation coefficients; shape=m
         order: 1D-Array with order of features; shape=m
+        markers: list of markers for significant features; shape=m
         feature_names: list of names of features, shape=m"""
 
         # Show results
@@ -94,7 +95,7 @@ class Visualizer:
             plt.scatter(Y, X[:, o], s=15)
             plt.ylabel(insert_newlines(feature_names[o], 4))
             plt.xlabel("age (years)")
-            plt.title("Corr:%.2f" % corr[o])
+            plt.title("%s Corr:%.2f" % (markers[o], corr[o]))
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
         plt.close()
@@ -156,22 +157,40 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_bias_correction.svg"))
         plt.close()
 
-    def factors_vs_deltas(self, corr, labels):
+    def factors_vs_deltas(self, corrs, groups, labels, significants):
         """Plot bar graph for correlation between factors and deltas.
         
         Parameters
         ----------
-        corr: 1D-Array with correlation coefficients; shape=m
-        labels: list of labels for each factor; shape=m"""
+        corr: 2D-Array with correlation coefficients; shape=(n, m)
+        labels: list of labels for each factor; shape=m,
+        significant: list of list of significant markers; shape=(n, m)"""
 
         # Plot bar graph
-        plt.figure(figsize=(10, 5))
-        # Order from highest to lowest correlation
-        corr, labels = zip(*sorted(zip(corr, labels), reverse=True))
-        num_factors = len(labels)
-        plt.bar(np.arange(num_factors), corr, tick_label=labels)
-        plt.xlabel("Factor")
-        plt.ylabel("Correlation with delta")
+        fig, axs = plt.subplots(nrows=len(corrs), ncols=1)
+
+        # Plot each group
+        for i, ax in enumerate(axs):
+            # Order from highest to lowest correlation
+            corr, labels, significant = zip(*sorted(zip(corrs[i], labels, significants[i]), reverse=True))
+            # Create a bar graph
+            bars = ax.bar(labels, corr)
+            # Add significant markers
+            for j, marker in enumerate(significant):
+                bar = bars[j]
+                height = bar.get_height()
+                if height > 0:
+                    position = 'center'
+                else:
+                    position = 'top'
+                ax.text(bar.get_x() + bar.get_width() / 2, height, marker, ha='center', va=position, color='red', fontsize=12)
+            # Add labels
+            ax.set_xlabel("Factor")
+            ax.set_ylabel("Correlation with delta")
+            ax.set_title("%s" % groups[i])
+        # Save figure
+        fig.set_size_inches(10, 5 * len(corrs))
+        plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, "factors_vs_deltas.svg"))
         plt.close()
 

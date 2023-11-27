@@ -49,6 +49,23 @@ def feature_extractor(df):
 
     return X, y, feature_names
 
+def significant_markers(bon, fdr):
+    """Returns markers for significant features.
+
+    Parameters
+    ----------
+    bon: 1D-Array with boolean values for Bonferroni correction; shape=m
+    fdr: 1D-Array with boolean values for FDR correction; shape=m"""
+    
+    markers = []
+    for i in range(len(bon)):
+        if bon[i]:
+            markers.append("**")
+        elif fdr[i]:
+            markers.append("*")
+        else:
+            markers.append("")
+    return markers
 
 def log(func):
     """Decorator function to log stdout to log.txt."""

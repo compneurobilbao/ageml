@@ -16,11 +16,12 @@ import os
 import warnings
 
 from datetime import datetime
+from statsmodels.stats.multitest import multipletests
 import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, convert, log, feature_extractor
+from ageml.utils import *
 from ageml.modelling import AgeML
 from ageml.processing import find_correlations
 
@@ -53,11 +54,13 @@ class Interface:
 
     age_distribution(self, dfs, labels=None): Use visualizer to show age distribution.
 
-    features_vs_age(self, df): Use visualizer to explore relationship between features and age.
+    features_vs_age(self, df, significance=0.05): Use visualizer to explore relationship between features and age.
 
     model_age(self, df, model): Use AgeML to fit age model with data.
 
     predict_age(self, df, model): Use AgeML to predict age with data.
+
+    factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
     deltas_by_group(self, df, labels): Calculate summary metrics of deltas by group.
 
@@ -79,7 +82,7 @@ class Interface:
         self.args = args
 
         # Flags
-        self.flags = {"CN": False}
+        self.flags = {"clinical": False}
 
         # Set up directory for storage of results
         self.setup()
@@ -195,7 +198,7 @@ class Interface:
             ].count(False) != 0:
                 raise TypeError("Clinical columns must be boolean type.")
             else:
-                self.flags["CN"] = True
+                self.flags['clinical'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical["cn"]].index
         elif "clinical" in required:
             raise ValueError("Clinical file must be provided.")
@@ -308,25 +311,34 @@ class Interface:
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
 
-    def features_vs_age(self, df):
+    def features_vs_age(self, df, significance=0.05):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
         ----------
-        df: dataframe with features and age; shape=(n,m+1)"""
+        df: dataframe with features and age; shape=(n,m+1)
+        significance: significance level for correlation"""
 
         # Select data to visualize
         print("-----------------------------------")
         print("Features by correlation with Age")
+        print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
         X, y, feature_names = feature_extractor(df)
 
         # Calculate correlation between features and age
-        corr, order = find_correlations(X, y)
+        corr, order, p_values = find_correlations(X, y)
+        
+        # Reject null hypothesis of no correlation
+        reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
+        reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+        significant = significant_markers(reject_bon, reject_fdr)
+
+        # Print results
         for i, o in enumerate(order):
-            print("%d. %s: %.2f" % (i + 1, feature_names[o], corr[o]))
+            print("%d. %s %s: %.2f" % (i + 1, significant[o], feature_names[o], corr[o]))
 
         # Use visualizer to show
-        self.visualizer.features_vs_age(X, y, corr, order, feature_names)
+        self.visualizer.features_vs_age(X, y, corr, order, significant, feature_names)
 
     def model_age(self, df, model):
         """Use AgeML to fit age model with data.
@@ -383,33 +395,46 @@ class Interface:
 
         return df_ages
 
-    def factors_vs_deltas(self, dfs_ages, dfs_factors):
+    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
         ----------
         dfs_ages: list of dataframes with delta information; shape=(n,m)
-        dfs_factors: list of dataframes with factor information; shape=(n,m)"""
+        dfs_factors: list of dataframes with factor information; shape=(n,m)
+        significance: significance level for correlation"""
 
         # Select age information
         print("-----------------------------------")
         print("Correlations between lifestyle factors by group")
+        print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Iterate over groups
-        for df_ages, df_factors in zip(dfs_ages, dfs_factors):
+        corrs, significants = [], []
+        for group, df_ages, df_factors in zip(groups, dfs_ages, dfs_factors):
+            print(group)
+
             # Select data to visualize
             deltas = df_ages["delta"].to_numpy()
             factors = df_factors.to_numpy()
             factor_names = df_factors.columns.to_list()
 
             # Calculate correlation between features and age
-            corr, order = find_correlations(factors, deltas)
-            # TODO: Bonferonni corrections and FDR (with print of info)
-            for i, o in enumerate(order):
-                print("%d. %s: %.2f" % (i + 1, factor_names[o], corr[o]))
+            corr, order, p_values = find_correlations(factors, deltas)
+            corrs.append(corr)
 
-            # Use visualizer to show bar graph
-            self.visualizer.factors_vs_deltas(corr, factor_names)
+            # Reject null hypothesis of no correlation
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            significant = significant_markers(reject_bon, reject_fdr)
+            significants.append(significant)
+
+            # Print results
+            for i, o in enumerate(order):
+                print("%d. %s %s: %.2f" % (i + 1, significant[o], factor_names[o], corr[o]))
+
+        # Use visualizer to show bar graph
+        self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants)
 
     def deltas_by_group(self, df, labels):
         """Calculate summary metrics of deltas by group.
@@ -467,7 +492,7 @@ class Interface:
         self.load_data(required=["features"])
 
         # Select controls
-        if self.flags["CN"]:
+        if self.flags["clinical"]:
             df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
         else:
             df_cn = self.df_features
@@ -482,10 +507,8 @@ class Interface:
         self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
 
         # Apply to clinical data
-        if self.flags["CN"]:
-            df_clinical = self.df_features.loc[
-                ~self.df_features.index.isin(self.cn_subjects)
-            ]
+        if self.flags["clinical"]:
+            df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
             df_ages_clinical = self.predict_age(df_clinical, self.ageml)
             self.df_ages = pd.concat([df_ages_cn, df_ages_clinical])
         else:
@@ -510,14 +533,19 @@ class Interface:
             print("-----------------------------------")
             print("Resuming lifestyle factors...")
 
-        # Obtain dfs for ages
-        dfs_ages = [self.df_ages]
-        dfs_factors = [self.df_factors]
-
-        # TODO: if clinical data is provided use it to split ages and factors
+        if self.flags["clinical"]:
+            groups = self.df_clinical.columns.to_list()
+            dfs_ages, dfs_factors = [], []
+            for g in groups:
+                dfs_ages.append(self.df_ages.loc[self.df_clinical[g]])
+                dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
+        else:
+            dfs_ages = [self.df_ages]
+            dfs_factors = [self.df_factors]
+            groups = ["all"]
 
         # Calculate correlations between factors and deltas
-        self.factors_vs_deltas(dfs_ages, dfs_factors)
+        self.factors_vs_deltas(dfs_ages, dfs_factors, groups)
 
     def run_clinical(self):
         """Run age modelling with clinical factors."""
