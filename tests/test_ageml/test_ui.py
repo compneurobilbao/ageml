@@ -276,7 +276,7 @@ def test_load_data_nan_values_warning(dummy_interface, features):
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = f"Subjects with missing data: {[2, 3]}"
+    expected = f"Subjects with missing data in features: {[2, 3]}"
     assert warn_record.list[0].message.args[0] == expected
 
 
@@ -292,8 +292,11 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = "Subjects not shared between dataframes: [%d, %d, %d]" % (4, 2, 3)
+    expected = "Subjects in dataframe features not in dataframe clinical: [%d]" % (4)
     assert warn_record.list[0].message.args[0] == expected
+    assert isinstance(warn_record.list[1].message, UserWarning)
+    expected = "Subjects in dataframe clinical not in dataframe features: [%d, %d]" % (2, 3)
+    assert warn_record.list[1].message.args[0] == expected
 
 
 def test_age_distribution_warning(dummy_interface):
