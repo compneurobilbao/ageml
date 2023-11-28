@@ -349,6 +349,7 @@ def test_run_age(dummy_interface, features):
         ]
     )
 
+
 def test_run_lifestyle(dummy_interface, ages, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -370,6 +371,7 @@ def test_run_lifestyle(dummy_interface, ages, factors):
     # Check for the existence of the log
     log_path = os.path.join(dummy_interface.dir_path, "log.txt")
     assert os.path.exists(log_path)
+
 
 def test_run_clinical(dummy_interface, ages, clinical):
     # Run the clinical pipeline

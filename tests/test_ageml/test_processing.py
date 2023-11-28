@@ -16,6 +16,7 @@ def test_find_correlations():
     assert np.array_equal(order, order_expected) is True
     assert np.allclose(p_values, p_values_expected, atol=1e-7) is True
 
+
 @pytest.mark.parametrize('X, Y, exception_msg', [
     (np.array([[2, 4, np.nan], [4, 8, -12], [6, 12, -18], [8, 16, -24]]), np.array([1, 2, 3, 4]), "NaN entrie(s) found in X."),
     (np.array([[2, 4, -6], [4, 8, -12], [6, 12, -18], [8, 16, -24]]), np.array([1, 2, 3, np.nan]), "NaN entrie(s) found in Y.")

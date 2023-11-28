@@ -90,6 +90,7 @@ def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
 
+
 def test_factors_vs_deltas(dummy_viz):
     # Create dummy data
     corrs = [[0.5, 0.6, 0.7, 0.8, 0.9]]
@@ -103,6 +104,7 @@ def test_factors_vs_deltas(dummy_viz):
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
+
 
 def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     # Separate data in X and Y
