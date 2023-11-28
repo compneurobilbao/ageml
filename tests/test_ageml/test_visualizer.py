@@ -54,8 +54,8 @@ def test_visualizer_age_distribution(dummy_viz, np_test_data):
 def test_features_vs_age(dummy_viz, np_test_data):
     # Plot features vs response variable
     X, Y = np_test_data[:, :3], np_test_data[:, -1]
-    corr, order = find_correlations(X, Y)
-    dummy_viz.features_vs_age(X, Y, corr, order, ["X1", "X2", "X3"])
+    corr, order, p_values = find_correlations(X, Y)
+    dummy_viz.features_vs_age(X, Y, corr, order, p_values, ["X1", "X2", "X3"])
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.svg")
     assert os.path.exists(svg_path)
@@ -90,6 +90,19 @@ def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
 
+def test_factors_vs_deltas(dummy_viz):
+    # Create dummy data
+    corrs = [[0.5, 0.6, 0.7, 0.8, 0.9]]
+    groups = ["Group 1"]
+    labels = ["factor1", "factor2", "factor3", "factor4", "factor5"]
+    markers = [['', '*', '', '*', '**']]
+    # Plot
+    dummy_viz.factors_vs_deltas(corrs, groups, labels, markers)
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas.svg")
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
 
 def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     # Separate data in X and Y
