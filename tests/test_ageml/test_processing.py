@@ -7,10 +7,14 @@ def test_find_correlations():
     # Test a very simple correlation
     X = np.array([[2, 4, -6], [4, 8, -12], [6, 12, -18]])
     Y = np.array([1, 2, 3])
-    result = processing.find_correlations(X, Y)[0]
-    expected = np.array([1, 1, -1])
+    corrs, order, p_values = processing.find_correlations(X, Y)
+    corrs_expected = np.array([1, 1, -1])
+    order_expected = np.array([2, 1, 0])
+    p_values_expected = np.array([0.0, 0.0, 0.0])
     
-    assert np.allclose(result, expected, rtol=1e-10) is True
+    assert np.allclose(corrs, corrs_expected, rtol=1e-10) is True
+    assert np.array_equal(order, order_expected) is True
+    assert np.allclose(p_values, p_values_expected, atol=1e-7) is True
 
 
 @pytest.mark.parametrize('X, Y, exception_msg', [

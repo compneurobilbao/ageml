@@ -44,6 +44,20 @@ def features():
 
 
 @pytest.fixture
+def factors():
+    df = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "factor1": [1.3, 2.2, 3.9, 4.1, 5.7],
+            "factor2": [9.4, 8.2, 7.5, 6.4, 5.3],
+            "factor3": [1.3, 2.2, 3.9, 4.1, 5.7]
+        }
+    )
+    df.set_index("id", inplace=True)
+    return df
+
+
+@pytest.fixture
 def clinical():
     df = pd.DataFrame(
         {
@@ -217,6 +231,12 @@ def test_load_data_required_file_types(dummy_interface):
     assert exc_info.type == ValueError
     assert exc_info.value.args[0] == "Clinical file must be provided."
 
+    dummy_interface.args.factors = None
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.load_data(required=["factors"])
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Factors file must be provided."
+
 
 def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     # Change booleans to other types
@@ -230,9 +250,6 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
         dummy_interface.load_data()
     assert exc_info.type == TypeError
     assert exc_info.value.args[0] == "Clinical columns must be boolean type."
-
-
-# TODO: check boolean type for clinical columns
 
 
 def test_load_data_ages_warning(dummy_interface, ages):
@@ -259,7 +276,7 @@ def test_load_data_nan_values_warning(dummy_interface, features):
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = f"Subjects with missing data: {[2, 3]}"
+    expected = f"Subjects with missing data in features: {[2, 3]}"
     assert warn_record.list[0].message.args[0] == expected
 
 
@@ -275,8 +292,11 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = "Subjects not shared between dataframes: [%d, %d, %d]" % (4, 2, 3)
+    expected = "Subjects in dataframe features not in dataframe clinical: [%d]" % (4)
     assert warn_record.list[0].message.args[0] == expected
+    assert isinstance(warn_record.list[1].message, UserWarning)
+    expected = "Subjects in dataframe clinical not in dataframe features: [%d, %d]" % (2, 3)
+    assert warn_record.list[1].message.args[0] == expected
 
 
 def test_age_distribution_warning(dummy_interface):
@@ -328,6 +348,29 @@ def test_run_age(dummy_interface, features):
             for col in ["age", "predicted age", "corrected age", "delta"]
         ]
     )
+
+
+def test_run_lifestyle(dummy_interface, ages, factors):
+    # Run the lifestyle pipeline
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    factors_path = create_csv(factors, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.factors = factors_path
+    dummy_interface.run_lifestyle()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    figs = ["factors_vs_deltas"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
 
 
 def test_run_clinical(dummy_interface, ages, clinical):

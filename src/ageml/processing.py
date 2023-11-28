@@ -18,6 +18,7 @@ def find_correlations(X, Y):
     elif any(np.isnan(X.flatten())):
         raise ValueError("NaN entrie(s) found in X.")
     else:
-        corr_coefs = [stats.pearsonr(Y, X[:, i])[0] for i in range(X.shape[1])]
+        corrs = [stats.pearsonr(Y, X[:, i]) for i in range(X.shape[1])]
+        corr_coefs, p_values = zip(*corrs)
         order = [o for o in np.argsort(np.abs(corr_coefs))[::-1] if corr_coefs[o] is not np.nan]
-        return corr_coefs, order
+        return corr_coefs, order, p_values
