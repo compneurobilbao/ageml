@@ -49,6 +49,7 @@ def feature_extractor(df):
 
     return X, y, feature_names
 
+
 def significant_markers(bon, fdr):
     """Returns markers for significant features.
 
@@ -66,6 +67,7 @@ def significant_markers(bon, fdr):
         else:
             markers.append("")
     return markers
+
 
 def log(func):
     """Decorator function to log stdout to log.txt."""

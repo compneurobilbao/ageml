@@ -21,7 +21,7 @@ import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import *
+from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log
 from ageml.modelling import AgeML
 from ageml.processing import find_correlations
 
@@ -259,9 +259,8 @@ class Interface:
                         non_shared_subjects = [s for s in dfs[i].index.to_list()
                                                if s not in dfs[j].index.to_list()]
                         if non_shared_subjects.__len__() != 0:
-                            warn_message = (
-                            "Subjects in dataframe %s not in dataframe %s: %s" % (labels[i], labels[j], non_shared_subjects)
-                            )
+                            warn_message = ("Subjects in dataframe %s not in dataframe %s: %s"
+                                            % (labels[i], labels[j], non_shared_subjects))
                             print(warn_message)
                             warnings.warn(warn_message, category=UserWarning)
                             self.subjects_missing_data = (
