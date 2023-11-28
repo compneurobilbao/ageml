@@ -395,13 +395,15 @@ class Interface:
 
         return df_ages
 
-    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05):
+    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, factor_names, significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
         ----------
         dfs_ages: list of dataframes with delta information; shape=(n,m)
         dfs_factors: list of dataframes with factor information; shape=(n,m)
+        groups: list of labels for each dataframe; shape=(n,),
+        factor_names: list of factor names; shape=(m,)
         significance: significance level for correlation"""
 
         # Select age information
@@ -417,7 +419,6 @@ class Interface:
             # Select data to visualize
             deltas = df_ages["delta"].to_numpy()
             factors = df_factors.to_numpy()
-            factor_names = df_factors.columns.to_list()
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
@@ -545,7 +546,7 @@ class Interface:
             groups = ["all"]
 
         # Calculate correlations between factors and deltas
-        self.factors_vs_deltas(dfs_ages, dfs_factors, groups)
+        self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
     def run_clinical(self):
         """Run age modelling with clinical factors."""
