@@ -237,40 +237,39 @@ class Interface:
             self.df_clinical,
             self.df_ages,
         ]
+        labels = ['features', 'covariates', 'factors', 'clinical', 'ages']
         self.subjects_missing_data = []
-        for df in dfs:
+        for label, df in zip(labels, dfs):
             if df is not None:
+                missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
                 self.subjects_missing_data = (
-                    self.subjects_missing_data + df[df.isnull().any(axis=1)].index.to_list()
+                    self.subjects_missing_data + missing_subjects
                 )
-        if self.subjects_missing_data.__len__() != 0:
-            warn_message = "Subjects with missing data: %s" % self.subjects_missing_data
-            print(warn_message)
-            warnings.warn(warn_message, category=UserWarning)
+                if missing_subjects.__len__() != 0:
+                    warn_message = "Subjects with missing data in %s: %s" % (label, missing_subjects)
+                    print(warn_message)
+                    warnings.warn(warn_message, category=UserWarning)
 
         # Check that all dataframes have the same subjects
-        non_shared_subjects = []
         for i in range(len(dfs)):
             for j in range(len(dfs)):
                 if i != j:
                     if dfs[i] is not None and dfs[j] is not None:
                         # Find subjects in one dataframe but not the other
-                        non_shared_subjects = non_shared_subjects + [
-                            s
-                            for s in dfs[i].index.to_list()
-                            if s not in dfs[j].index.to_list()
-                        ]
-        if non_shared_subjects.__len__() != 0:
-            warn_message = (
-                "Subjects not shared between dataframes: %s" % non_shared_subjects
-            )
-            print(warn_message)
-            warnings.warn(warn_message, category=UserWarning)
-            self.subjects_missing_data = (
-                self.subjects_missing_data + non_shared_subjects
-            )
+                        non_shared_subjects = [s for s in dfs[i].index.to_list()
+                                               if s not in dfs[j].index.to_list()]
+                        if non_shared_subjects.__len__() != 0:
+                            warn_message = (
+                            "Subjects in dataframe %s not in dataframe %s: %s" % (labels[i], labels[j], non_shared_subjects)
+                            )
+                            print(warn_message)
+                            warnings.warn(warn_message, category=UserWarning)
+                            self.subjects_missing_data = (
+                                self.subjects_missing_data + non_shared_subjects
+                            )
 
         # Remove subjects with missing values
+        self.subjects_missing_data = set(self.subjects_missing_data)
         for df in dfs:
             if df is not None:
                 df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
