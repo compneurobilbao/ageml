@@ -1,5 +1,7 @@
-# Data folder
+# Data folder (for devs)
 /data
+# Posible AgeML runs
+/ageml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
