@@ -370,7 +370,7 @@ class Classifier:
 
         # Check that model has previously been fit
         if not self.modelFit:
-            raise ValueError("Must fit the pipline before calling predict.")
+            raise ValueError("Must fit the classifier before calling predict.")
 
         # Predict class labels
         y_pred = self.model.predict_proba(X)[::, 1]
