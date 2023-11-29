@@ -58,12 +58,14 @@ class Visualizer:
         """Set directory to store results."""
         self.dir = path
 
-    def age_distribution(self, Ys, labels=None, name=""):
+    def age_distribution(self, Ys, labels=None, name: str = ""):
         """Plot age distribution.
 
         Parameters
         ----------
-        Ys: 2D-Array with list of ages; shape=(m, n)."""
+        Ys: 2D-Array with list of ages; shape=(m, n).
+        labels: # TODO
+        name: # TODO"""
 
         # Plot age distribution
         for Y in Ys:
@@ -75,7 +77,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
-    def features_vs_age(self, X, Y, corr, order, markers, feature_names):
+    def features_vs_age(self, X, Y, corr, order, markers, feature_names, idxs: list = None, labels: list = None):
         """Plot correlation between features and age.
 
         Parameters
@@ -85,17 +87,34 @@ class Visualizer:
         corr: 1D-Array with correlation coefficients; shape=m
         order: 1D-Array with order of features; shape=m
         markers: list of markers for significant features; shape=m
-        feature_names: list of names of features, shape=m"""
-
+        feature_names: list of names of features, shape=m
+        idxs: list of list of indexes of features in each group; list of lists.
+              outer list shape=(n_dfs), inner list shape=(n_points_in_df)
+        labels: list of labels for each group; shape=n_dfs"""
+        # Get the unique color set. Get color for each point in the data
+        if idxs is not None:
+            color_set = [self.cmap(unique_color) for unique_color in np.linspace(0, 1, len(idxs))]
+            color_list = [(color_set[group_index]) for group_index, group_elements in enumerate(idxs) for _ in group_elements]
+        else:
+            idxs = [np.arange(len(Y)).tolist()]
+            color_set = [self.cmap(0)]
+            color_list = [self.cmap(0) for _ in range(len(Y))]
+        if labels is None:
+            labels = ['population']
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
         for i, o in enumerate(order):
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
-            plt.scatter(Y, X[:, o], s=15)
-            plt.ylabel(insert_newlines(feature_names[o], 4))
-            plt.xlabel("age (years)")
-            plt.title("%s Corr:%.2f" % (markers[o], corr[o]))
+            ax = plt.gca()  # Get current axis
+            for i in range(len(color_set)):  # Remap indexes to be consecutive
+                color = [color_list[n] for n in idxs[i]]  # Take colors from list
+                ax.scatter(Y[idxs[i]], X[idxs[i], o],
+                           s=15, c=color, label=labels[i])
+            ax.set_ylabel(insert_newlines(feature_names[o], 4))
+            ax.set_xlabel("age (years)")
+            ax.set_title("%s Corr:%.2f" % (markers[o], corr[o]))
+            ax.legend(labels)
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
         plt.close()

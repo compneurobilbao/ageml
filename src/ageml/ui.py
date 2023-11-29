@@ -82,7 +82,7 @@ class Interface:
         self.args = args
 
         # Flags
-        self.flags = {"clinical": False}
+        self.flags = {"clinical": False, "covariates": False}
 
         # Set up directory for storage of results
         self.setup()
@@ -179,6 +179,14 @@ class Interface:
 
         # Load covariates
         self.df_covariates = self.load_csv(self.args.covariates)
+        if self.df_covariates is not None:
+            # Check that the selected covariate is nominal.
+            numeric_columns = self.df_covariates._get_numeric_data().columns
+            if self.args.covar_name in numeric_columns:
+                raise TypeError("Covariate provided for separation must be categorical."
+                                "The data type must be string, bool, or int.")
+            else:
+                self.flags['covariates'] = True
 
         # Load factors
         self.df_factors = self.load_csv(self.args.factors)
@@ -273,12 +281,14 @@ class Interface:
             if df is not None:
                 df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
 
-    def age_distribution(self, dfs, labels=None, name=""):
+    def age_distribution(self, dfs: list, labels=None, name=""):
         """Use visualizer to show age distribution.
 
         Parameters
         ----------
-        dfs: list of dataframes with age information; shape=(n,m)"""
+        dfs: list of dataframes with age information; shape=(n,m)
+        labels: # TODO
+        name: # TODO"""
 
         # Select age information
         print("-----------------------------------")
@@ -309,20 +319,37 @@ class Interface:
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
 
-    def features_vs_age(self, df, significance=0.05):
+    def features_vs_age(self, dfs, labels: list = None, significance: float = 0.05, name: str = ""):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
         ----------
-        df: dataframe with features and age; shape=(n,m+1)
+        dfs: list of dataframes with features and age; shape=(n,m+1)
+        labels: # TODO
         significance: significance level for correlation"""
 
         # Select data to visualize
         print("-----------------------------------")
         print("Features by correlation with Age")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
-        X, y, feature_names = feature_extractor(df)
 
+        # If a list of dataframes is provided, concatenate them vertically
+        if isinstance(dfs, list):
+            df = pd.concat(dfs, axis=0).reset_index()  # Reset index to avoid mapping problems
+            # Get the indices of each dataframe. This way we know which is which
+            indices = [frame.index.to_list() for frame in dfs]  # list of lists. Absolute indices
+            flat_indices = df['index'].to_list()
+            # Remap the indices so they can be later sliced within the X and Y arrays
+            indices = [[flat_indices.index(num) for num in sublist] for sublist in indices]
+        else:
+            # If only one dataframe provided, variable change and indices are None.
+            df = dfs
+            indices = None
+
+        if labels is not None:
+            print(labels)
+        # ages = df["age"].to_numpy()
+        X, y, feature_names = feature_extractor(df)
         # Calculate correlation between features and age
         corr, order, p_values = find_correlations(X, y)
         
@@ -330,13 +357,11 @@ class Interface:
         reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
         reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
         significant = significant_markers(reject_bon, reject_fdr)
-
         # Print results
-        for i, o in enumerate(order):
-            print("%d. %s %s: %.2f" % (i + 1, significant[o], feature_names[o], corr[o]))
-
+        for idx, order_element in enumerate(order):
+            print("%d. %s %s: %.2f" % (idx + 1, significant[order_element], feature_names[order_element], corr[order_element]))
         # Use visualizer to show
-        self.visualizer.features_vs_age(X, y, corr, order, significant, feature_names)
+        self.visualizer.features_vs_age(X, y, corr, order, significant, feature_names, indices, labels)
 
     def model_age(self, df, model):
         """Use AgeML to fit age model with data.
@@ -499,8 +524,20 @@ class Interface:
         # Use visualizer to show age distribution
         self.age_distribution([df_cn], name="controls")
 
-        # Relationship between features and age
-        self.features_vs_age(df_cn)
+        # Check for covariate information. Make dataframes by covariates
+        if self.flags["covariates"]:
+            print("Separating data by covariates...")
+            categories = pd.unique(self.df_covariates[self.args.covar_name])
+            covar_df_dict = {}
+            for category in categories:
+                covar_df_dict[category] = self.df_features[self.df_covariates[self.args.covar_name] == category]
+            # Make list of dataframes
+            dfs_covars = [covar_df_dict[category] for category in categories]
+            # Relationship between features and age
+            self.features_vs_age(dfs_covars, labels=categories, name="covariates")
+        else:
+            # If no covariates found, do not separate data
+            self.features_vs_age(df_cn)
 
         # Model age
         self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
@@ -665,6 +702,9 @@ class CLI(Interface):
         )
         self.parser.add_argument(
             "--covariates", metavar="FILE", help=messages.covar_long_description
+        )
+        self.parser.add_argument(
+            "--covar_name", metavar="COVAR_NAME", help=messages.covar_name_long_description
         )
         self.parser.add_argument(
             "--factors", metavar="FILE", help=messages.factors_long_description

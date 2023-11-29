@@ -54,6 +54,12 @@ covar_long_description = (
     "covariates. The first row should be the header for column names."
 )
 
+covar_name_long_description = (
+    "Name of the column (covariate) in the CSV file containing covariates, to make different models for each category of the covariate. \n"
+    "The name must be written exactly as it is in the CSV file. \n"
+    "If no covariate name is given, no covariate separation will be done."
+)
+
 factors_long_description = (
     "Path to input CSV file containing factors (Required: run lifestyle). \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
