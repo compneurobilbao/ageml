@@ -241,7 +241,7 @@ def test_load_data_required_file_types(dummy_interface):
 def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     # Change booleans to other types
     clinical.loc[2, "CN"] = 1.3
-    clinical.loc[3, "group1"] = "mondongo"
+    clinical.loc[3, "group1"] = "mondongo"  # excellent placeholder
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -348,6 +348,9 @@ def test_run_age(dummy_interface, features):
             for col in ["age", "predicted age", "corrected age", "delta"]
         ]
     )
+
+
+# TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):
 
 
 def test_run_lifestyle(dummy_interface, ages, factors):

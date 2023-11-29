@@ -2,10 +2,12 @@ import pytest
 import os
 import shutil
 import pandas as pd
+from statsmodels.stats.multitest import multipletests
 
 import ageml.modelling as modelling
 import ageml.ui as ui
 import ageml.utils as utils
+from ageml.utils import significant_markers
 import ageml.visualizer as viz
 from ageml.datasets import SyntheticData
 from .test_modelling import AgeMLTest
@@ -55,7 +57,12 @@ def test_features_vs_age(dummy_viz, np_test_data):
     # Plot features vs response variable
     X, Y = np_test_data[:, :3], np_test_data[:, -1]
     corr, order, p_values = find_correlations(X, Y)
-    dummy_viz.features_vs_age(X, Y, corr, order, p_values, ["X1", "X2", "X3"])
+    # Reject null hypothesis of no correlation
+    reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
+    reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
+    significant = significant_markers(reject_bon, reject_fdr)
+    dummy_viz.features_vs_age(X, Y, corr, order, significant, ["X1", "X2", "X3"])
+    
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.svg")
     assert os.path.exists(svg_path)
