@@ -16,6 +16,8 @@ from sklearn.linear_model import LinearRegression
 
 from .utils import insert_newlines, create_directory
 
+plt.rcParams.update({'font.size': 8})
+
 
 class Visualizer:
 
@@ -119,7 +121,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
         plt.close()
 
-    def true_vs_pred_age(self, y_true, y_pred):
+    def true_vs_pred_age(self, y_true, y_pred, name: str = ""):
         """Plot true age vs predicted age.
 
         Parameters
@@ -133,12 +135,17 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
+        plt.title(f"True vs Predicted Age {name}")
         plt.xlabel("True Age")
         plt.ylabel("Predicted Age")
-        plt.savefig(os.path.join(self.path_for_fig, "true_vs_pred_age.svg"))
+        if name == "":
+            filename = "true_vs_pred_age.svg"
+        else:
+            filename = f"true_vs_pred_age_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def age_bias_correction(self, y_true, y_pred, y_corrected):
+    def age_bias_correction(self, y_true, y_pred, y_corrected, name: str = ""):
         """Plot before and after age bias correction procedure.
 
         Parameters
@@ -159,7 +166,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title("Before age-bias correction")
+        plt.title(f"Before age-bias correction {name}")
         plt.ylabel("Predicted Age")
         plt.xlabel("True Age")
 
@@ -169,11 +176,15 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title("After age-bias correction")
+        plt.title(f"After age-bias correction {name}")
         plt.ylabel("Predicted Age")
         plt.xlabel("True Age")
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "age_bias_correction.svg"))
+        if name == "":
+            filename = "age_bias_correction.svg"
+        else:
+            filename = f"age_bias_correction_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def factors_vs_deltas(self, corrs, groups, labels, markers):

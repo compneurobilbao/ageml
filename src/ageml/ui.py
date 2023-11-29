@@ -365,7 +365,7 @@ class Interface:
         # Use visualizer to show
         self.visualizer.features_vs_age(X, y, corr, order, significant, feature_names, indices, labels)
 
-    def model_age(self, df, model):
+    def model_age(self, df, model, name: str = ""):
         """Use AgeML to fit age model with data.
 
         Parameters
@@ -375,7 +375,10 @@ class Interface:
 
         # Show training pipeline
         print("-----------------------------------")
-        print("Training Age Model")
+        if name == "":
+            print("Training Age Model")
+        else:
+            print("Training Model for covariate %s" % name)
         print(self.ageml.pipeline)
 
         # Select data to model
@@ -383,8 +386,8 @@ class Interface:
 
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
-        self.visualizer.true_vs_pred_age(y, y_pred)
-        self.visualizer.age_bias_correction(y, y_pred, y_corrected)
+        self.visualizer.true_vs_pred_age(y, y_pred, name)
+        self.visualizer.age_bias_correction(y, y_pred, y_corrected, name)
 
         # Calculate deltas
         deltas = y_corrected - y
@@ -537,12 +540,21 @@ class Interface:
             dfs_covars = [covar_df_dict[category] for category in categories]
             # Relationship between features and age
             self.features_vs_age(dfs_covars, labels=categories, name="covariates")
+            
+            # Model age for each covariate. # TODO: Plot for each model? Or do the same as in features_vs_age?
+            self.covar_ageml = {}
+            dfs_ages_covar = {}
+            for category, df in zip(categories, dfs_covars):
+                model_name = f"{self.args.covar_name}_{category}"
+                self.covar_ageml[model_name], dfs_ages_covar[model_name] = self.model_age(df, self.ageml, category)
+            
+            # Concatenate all dfs in dfs_ages_covar
+            df_ages_cn = pd.concat(dfs_ages_covar.values(), axis=0)
         else:
             # If no covariates found, do not separate data
             self.features_vs_age(df_cn)
-
-        # Model age
-        self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
+            # Model age
+            self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
 
         # Apply to clinical data
         if self.flags["clinical"]:
@@ -553,7 +565,11 @@ class Interface:
             self.df_ages = df_ages_cn
 
         # Save dataframe
-        self.df_ages.to_csv(os.path.join(self.dir_path, "predicted_age.csv"))
+        if self.flags["covariates"]:
+            filename = f"predicted_age_{self.args.covar_name}.csv"
+        else:
+            filename = "predicted_age.csv"
+        self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def run_lifestyle(self):
         """Run age modelling with lifestyle factors."""
