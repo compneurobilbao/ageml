@@ -341,6 +341,8 @@ class Interface:
             flat_indices = df['index'].to_list()
             # Remap the indices so they can be later sliced within the X and Y arrays
             indices = [[flat_indices.index(num) for num in sublist] for sublist in indices]
+            # Drop the 'index' column
+            df.drop('index', axis=1, inplace=True)
         else:
             # If only one dataframe provided, variable change and indices are None.
             df = dfs
