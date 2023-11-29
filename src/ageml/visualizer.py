@@ -247,5 +247,5 @@ class Visualizer:
         plt.ylabel('True Positive Rate')
         plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
         plt.legend(loc="lower right")
-        plt.savefig(os.path.join(self.path_for_fig, "classification_auc_%s_vs_%s.svg" % (groups[0], groups[1])))
+        plt.savefig(os.path.join(self.path_for_fig, "roc_curve_%s_vs_%s.svg" % (groups[0], groups[1])))
         plt.close()

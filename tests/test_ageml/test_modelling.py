@@ -1,8 +1,10 @@
 import pytest
 import os
+import numpy as np
 import ageml.modelling as modelling
 
 
+# TODO: Do this as a fixture
 # Class for quickly initializing
 class AgeMLTest(modelling.AgeML):
     def __init__(
@@ -28,6 +30,11 @@ class AgeMLTest(modelling.AgeML):
             self.CV_split,
             self.seed,
         )
+
+
+@pytest.fixture
+def dummy_classifier():
+    return modelling.Classifier()
 
 
 def test_set_unavailable_scaler():
@@ -79,4 +86,33 @@ def test_set_pipeline_none_model():
 def test_fit_age():
     pass
 
-# TODO: test classifier fit_age
+
+def test_classifier_fit_age(dummy_classifier):
+    # Create data
+    x = np.concatenate((np.zeros(1000), np.ones(1000)))
+    y = np.concatenate((np.zeros(1000), np.ones(1000)))
+
+    # Modify x
+    x[0] = 1
+    x[1000] = 0
+    x = x.reshape(-1, 1)
+
+    # Fit
+    y_pred = dummy_classifier.fit_model(x, y)
+
+    # Assert
+    assert y_pred[0] > 0.5
+    assert y_pred[1000] < 0.5
+    for i in range(1, 1000):
+        assert y_pred[i] < 0.5
+        assert y_pred[i + 1000] > 0.5
+
+
+def test_predict_age_error(dummy_classifier):
+    # Data
+    x = [1, 2, 3]
+    with pytest.raises(ValueError) as exc_info:
+        dummy_classifier.predict(x)
+    assert exc_info.type == ValueError
+    error_message = "Must fit the classifier before calling predict."
+    assert str(exc_info.value) == error_message
