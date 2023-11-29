@@ -776,6 +776,16 @@ def test_run_command_interactiveCLI(dummy_cli):
     error = dummy_cli.run_command()
     assert error == "For run type classification two arguments should be given"
 
+    # Test passing run type with more arguments than required
+    dummy_cli.line = "r age 1"
+    error = dummy_cli.run_command()
+    assert error == "Too many arguments given for run type age"
+
+    # Test passing run type with less arguments than required
+    dummy_cli.line = "r classification 1 2 3"
+    error = dummy_cli.run_command()
+    assert error == "For run type classification two arguments should be given"
+
     # Test passing correct arguments
     dummy_cli.line = "r age"
     error = dummy_cli.run_command()
