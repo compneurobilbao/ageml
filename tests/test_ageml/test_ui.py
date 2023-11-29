@@ -686,10 +686,7 @@ def test_run_command_interactiveCLI(dummy_cli):
     # Test no input or mutiple arguments
     dummy_cli.line = "r"
     error = dummy_cli.run_command()
-    assert error == "Must provide one argument only."
-    dummy_cli.line = "r type1 type1"
-    error = dummy_cli.run_command()
-    assert error == "Must provide one argument only."
+    assert error == "Must provide at least one argument."
 
     # Test passing invalid run type
     dummy_cli.line = "r type1"
