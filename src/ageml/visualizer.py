@@ -79,7 +79,8 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
-    def features_vs_age(self, X, Y, corr, order, markers, feature_names, idxs: list = None, labels: list = None):
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers, 
+                        feature_names, labels: list = None, name: str = ""):
         """Plot correlation between features and age.
 
         Parameters
@@ -93,32 +94,45 @@ class Visualizer:
         idxs: list of list of indexes of features in each group; list of lists.
               outer list shape=(n_dfs), inner list shape=(n_points_in_df)
         labels: list of labels for each group; shape=n_dfs"""
+        covar_lens = [len(y) for y in Y]
         # Get the unique color set. Get color for each point in the data
-        if idxs is not None:
-            color_set = [self.cmap(unique_color) for unique_color in np.linspace(0, 1, len(idxs))]
-            color_list = [(color_set[group_index]) for group_index, group_elements in enumerate(idxs) for _ in group_elements]
-        else:
-            idxs = [np.arange(len(Y)).tolist()]
+        if len(Y) == 0 or len(X) == 0:
+            raise TypeError("X and Y must be non-empty lists")
+        elif len(Y) > 1:
+            color_set = [self.cmap(unique_color) for unique_color in np.arange(len(Y))]
+        else:  # If only one covariate, use the same color for all points
             color_set = [self.cmap(0)]
-            color_list = [self.cmap(0) for _ in range(len(Y))]
+        # Color array for each covariate
+        color_list = [len*[color_set[i]] for i, len in enumerate(covar_lens)]
+
         if labels is None:
             labels = ['population']
+
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
-        for i, o in enumerate(order):
+        
+        for i, o in enumerate(order[0]):  # Default to order[0] because each covar may have different order
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
             ax = plt.gca()  # Get current axis
-            for i in range(len(color_set)):  # Remap indexes to be consecutive
-                color = [color_list[n] for n in idxs[i]]  # Take colors from list
-                ax.scatter(Y[idxs[i]], X[idxs[i], o],
-                           s=15, c=color, label=labels[i])
+            for i in range(len(color_set)):
+                ax.scatter(Y[i][:], X[i][:, o],
+                           s=15, c=color_list[i], label=labels[i])
+            # Set axis labels, title, and legend
             ax.set_ylabel(insert_newlines(feature_names[o], 4))
             ax.set_xlabel("age (years)")
-            ax.set_title("%s Corr:%.2f" % (markers[o], corr[o]))
+            title = "Correlation values:"
+            for n, label in enumerate(labels):
+                title+= "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
+            ax.set_title(title)
             ax.legend(labels)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
+
+        if name == "":
+            filename = "features_vs_age.svg"
+        else:
+            filename = f"features_vs_age_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def true_vs_pred_age(self, y_true, y_pred, name: str = ""):
