@@ -287,8 +287,8 @@ class Interface:
         Parameters
         ----------
         dfs: list of dataframes with age information; shape=(n,m)
-        labels: # TODO
-        name: # TODO"""
+        labels: categories of separation criterion 
+        name: name to give to visualizer to save file"""
 
         # Select age information
         print("-----------------------------------")
@@ -319,7 +319,7 @@ class Interface:
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
 
-    def features_vs_age(self, dfs, labels: list = None, significance: float = 0.05, name: str = ""):
+    def features_vs_age(self, dfs: list, labels: list = None, significance: float = 0.05, name: str = ""):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
@@ -334,7 +334,7 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # If a list of dataframes is provided, concatenate them vertically
-        if isinstance(dfs, list):
+        if isinstance(dfs, list): # TODO flow assuming input is list. If list not given, raise TypeError
             df = pd.concat(dfs, axis=0).reset_index()  # Reset index to avoid mapping problems
             # Get the indices of each dataframe. This way we know which is which
             indices = [frame.index.to_list() for frame in dfs]  # list of lists. Absolute indices
@@ -525,7 +525,11 @@ class Interface:
             df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
         else:
             df_cn = self.df_features
-
+        # TODO: Create dataframe list of controls (df_cn_male, df_cn_fem)
+        # TODO: Create dataframe list of clinical cases (df_clinical_male, df_clinical_fem)
+        # TODO: If not covariate, df list of controsl is [df_cn] and [df_clinical]
+        # TODO: Age distribution and featuresvsage only gets df_cn list
+        # 
         # Use visualizer to show age distribution
         self.age_distribution([df_cn], name="controls")
 
@@ -537,16 +541,16 @@ class Interface:
             for category in categories:
                 covar_df_dict[category] = self.df_features[self.df_covariates[self.args.covar_name] == category]
             # Make list of dataframes
-            dfs_covars = [covar_df_dict[category] for category in categories]
+            dfs_covars = [covar_df_dict[category] for category in categories] # TODO REDUNDANT DICT TO LIST
             # Relationship between features and age
             self.features_vs_age(dfs_covars, labels=categories, name="covariates")
             
             # Model age for each covariate. # TODO: Plot for each model? Or do the same as in features_vs_age?
-            self.covar_ageml = {}
+            self.models = {}
             dfs_ages_covar = {}
             for category, df in zip(categories, dfs_covars):
                 model_name = f"{self.args.covar_name}_{category}"
-                self.covar_ageml[model_name], dfs_ages_covar[model_name] = self.model_age(df, self.ageml, category)
+                self.models[model_name], dfs_ages_covar[model_name] = self.model_age(df, self.ageml, category)
             
             # Concatenate all dfs in dfs_ages_covar
             df_ages_cn = pd.concat(dfs_ages_covar.values(), axis=0)
@@ -719,22 +723,22 @@ class CLI(Interface):
             help=messages.cv_long_description,
         )
         self.parser.add_argument(
-            "--covariates", metavar="FILE", help=messages.covar_long_description
+            "--covariates", nargs=1, metavar="FILE", help=messages.covar_long_description
         )
         self.parser.add_argument(
-            "--covar_name", metavar="COVAR_NAME", help=messages.covar_name_long_description
+            "--covar_name", nargs=1, metavar="COVAR_NAME", help=messages.covar_name_long_description
         )
         self.parser.add_argument(
-            "--factors", metavar="FILE", help=messages.factors_long_description
+            "--factors", nargs=1, metavar="FILE", help=messages.factors_long_description
         )
         self.parser.add_argument(
-            "--clinical", metavar="FILE", help=messages.clinical_long_description
+            "--clinical", nargs=1, metavar="FILE", help=messages.clinical_long_description
         )
         self.parser.add_argument(
-            "--systems", metavar="FILE", help=messages.systems_long_description
+            "--systems", nargs=1, metavar="FILE", help=messages.systems_long_description
         )
         self.parser.add_argument(
-            "--ages", metavar="FILE", help=messages.ages_long_description
+            "--ages", nargs=1, metavar="FILE", help=messages.ages_long_description
         )
 
     def configure_args(self, args):

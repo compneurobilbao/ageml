@@ -54,18 +54,18 @@ class Visualizer:
         create_directory(self.path_for_fig)
 
         # Set color map
-        self.cmap = plt.get_cmap("viridis")
+        self.cmap = plt.get_cmap("tab10")
 
     def set_directory(self, path):
         """Set directory to store results."""
         self.dir = path
 
-    def age_distribution(self, Ys, labels=None, name: str = ""):
+    def age_distribution(self, Ys: list, labels=None, name: str = ""):
         """Plot age distribution.
 
         Parameters
         ----------
-        Ys: 2D-Array with list of ages; shape=(m, n).
+        Ys: list of np.arrays containing ages; shape=(m, n).
         labels: # TODO
         name: # TODO"""
 
