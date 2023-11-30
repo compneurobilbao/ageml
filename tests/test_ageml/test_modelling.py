@@ -108,7 +108,7 @@ def test_classifier_fit_age(dummy_classifier):
         assert y_pred[i + 1000] > 0.5
 
 
-def test_predict_age_error(dummy_classifier):
+def test_classification_predict_error(dummy_classifier):
     # Data
     x = [1, 2, 3]
     with pytest.raises(ValueError) as exc_info:

@@ -437,7 +437,7 @@ def test_run_classification(dummy_interface, ages, clinical):
     assert os.path.exists(log_path)
 
 
-def test_clinical_group_not_given(dummy_interface, ages, clinical):
+def test_classification_group_not_given(dummy_interface, ages, clinical):
 
     # Run create classification pipeline with no groups
     ages_path = create_csv(ages, dummy_interface.dir_path)
