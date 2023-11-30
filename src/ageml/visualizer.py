@@ -13,6 +13,7 @@ import numpy as np
 import os
 
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import roc_curve, roc_auc_score
 
 from .utils import insert_newlines, create_directory
 
@@ -38,7 +39,11 @@ class Visualizer:
 
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
 
+    factors_vs_deltas(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
+
     deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
+
+    classification_auc(self, y, y_pred, groups): Plot ROC curve.
     """
 
     def __init__(self, out_dir):
@@ -221,4 +226,26 @@ class Visualizer:
         plt.xlabel("Gruop")
         plt.ylabel("Delta")
         plt.savefig(os.path.join(self.path_for_fig, "clinical_groups_box_plot.svg"))
+        plt.close()
+
+    def classification_auc(self, y, y_pred, groups):
+        """Plot ROC curve.
+
+        Parameters
+        ----------
+        y: 1D-Array with true labels; shape=n
+        y_pred: 1D-Array with predicted labels; shape=n"""
+
+        # Compute ROC curve and AUC
+        fpr, tpr, _ = roc_curve(y, y_pred)
+        auc = roc_auc_score(y, y_pred)
+
+        # Plot ROC curve
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % auc)
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
+        plt.legend(loc="lower right")
+        plt.savefig(os.path.join(self.path_for_fig, "roc_curve_%s_vs_%s.svg" % (groups[0], groups[1])))
         plt.close()

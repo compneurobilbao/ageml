@@ -111,7 +111,7 @@ def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     X = np_test_data[:, :3]
     Y = np_test_data[:, -1]
     # Fit Age
-    Y_pred, Y_corrected = dummy_ml.fit_age(X, Y)
+    _, Y_corrected = dummy_ml.fit_age(X, Y)
     # Compute deltas
     deltas = Y_corrected - Y
     # Create dummy labels
@@ -120,6 +120,20 @@ def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     dummy_viz.deltas_by_groups(deltas, labels)
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/clinical_groups_box_plot.svg")
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
+
+
+def test_classification_auc(dummy_viz):
+    # Create false labels
+    y = [0, 0, 1, 1, 0, 1, 0, 0, 0, 1]
+    y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.6, 0.8, 0.9, 0.99]
+    groups = ["group1", "group2"]
+    # Plot
+    dummy_viz.classification_auc(y, y_pred, groups)
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir, "figures/roc_curve_%s_vs_%s.svg" % (groups[0], groups[1]))
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))

@@ -5,9 +5,11 @@ Used in the AgeML project to enable the modelling of age.
 Classes:
 --------
 AgeML - able to fit age models and predict age.
+Classifier - classifier of class labels based on deltas.
 """
 
 import numpy as np
+import scipy.stats as st
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
 from scipy import stats
@@ -264,3 +266,113 @@ class AgeML:
             y_corrected = y_pred
 
         return y_pred, y_corrected
+
+
+class Classifier:
+    
+    """Classifier of class labels based on deltas.
+    
+    This class allows the differentiation of two groups based
+    on differences in their deltas based on a logistic regresor.
+
+    Public methods:
+    ---------------
+    set_model(self): Sets the model to use in the pipeline.
+
+    fit_model(self, X, y): Fit the model.
+    """
+
+    def __init__(self):
+        """Initialise variables."""
+
+        # Set required modelling parts
+        self.set_model()
+
+        # Set default parameters
+        # TODO: let user choose this
+        self.CV_split = 5
+        self.seed = 0
+        self.thr = 0.5
+        self.ci_val = 0.95
+
+        # Initialise flags
+        self.modelFit = False
+
+    def set_model(self):
+        """Sets the model to use in the pipeline."""
+
+        self.model = linear_model.LogisticRegression()
+    
+    def fit_model(self, X, y):
+        """Fit the model.
+
+        Parameters
+        ----------
+        X: 2D-Array with features; shape=(n,m)
+        y: 1D-Array with labbels; shape=n"""
+
+        # Arrays to store  values
+        accs, aucs, spes, sens = [], [], [], []
+        y_preds = np.empty(shape=y.shape)
+    
+        kf = model_selection.KFold(n_splits=self.CV_split, shuffle=True, random_state=self.seed)
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+    
+            # Fit the model using the training data
+            self.model.fit(X_train, y_train)
+
+            # Use model to predict probability of tests
+            y_pred = self.model.predict_proba(X_test)[::, 1]
+            y_preds[test_index] = y_pred
+
+            # Calculate AUC of model
+            auc = metrics.roc_auc_score(y_test, y_pred)
+            aucs.append(auc)
+    
+            # Calculate relevant metrics
+            acc = metrics.accuracy_score(y_test, y_pred > self.thr)
+            tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
+            specificity = tn / (tn + fp)
+            sensitivity = tp / (tp + fp)
+            accs.append(acc)
+            sens.append(sensitivity)
+            spes.append(specificity)
+
+        # Compute confidence intervals
+        ci_accs = st.t.interval(alpha=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
+        ci_aucs = st.t.interval(alpha=self.ci_val, df=len(aucs) - 1, loc=np.mean(aucs), scale=st.sem(aucs))
+        ci_sens = st.t.interval(alpha=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
+        ci_spes = st.t.interval(alpha=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
+
+        # Print results
+        print('Summary metrics over all CV splits (95% CI)')
+        print('AUC: %.3f [%.3f-%.3f]' % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
+        print('Accuracy: %.3f [%.3f-%.3f]' % (np.mean(accs), ci_accs[0], ci_accs[1]))
+        print('Sensitivity: %.3f [%.3f-%.3f]' % (np.mean(sens), ci_sens[0], ci_sens[1]))
+        print('Specificity: %.3f [%.3f-%.3f]' % (np.mean(spes), ci_spes[0], ci_spes[1]))
+
+        # Final model trained on all data
+        self.model.fit(X, y)
+
+        # Set flag
+        self.modelFit = True
+
+        return y_preds
+    
+    def predict(self, X):
+        """Predict class labels with fitted model.
+
+        Parameters:
+        -----------
+        X: 2D-Array with features; shape=(n,m)"""
+
+        # Check that model has previously been fit
+        if not self.modelFit:
+            raise ValueError("Must fit the classifier before calling predict.")
+
+        # Predict class labels
+        y_pred = self.model.predict_proba(X)[::, 1]
+
+        return y_pred
