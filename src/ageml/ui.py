@@ -180,12 +180,8 @@ class Interface:
         # Load covariates
         self.df_covariates = self.load_csv(self.args.covariates)
         if self.df_covariates is not None:
-            # Check that the selected covariate is nominal.
-            numeric_columns = self.df_covariates._get_numeric_data().columns
-            if self.args.covar_name in numeric_columns:
-                raise TypeError("Covariate provided for separation must be categorical."
-                                "The data type must be string, bool, or int.")
-            else:
+            # Check that covar name is given
+            if self.args.covar_name:
                 self.flags['covariates'] = True
 
         # Load factors

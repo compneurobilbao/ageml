@@ -16,7 +16,7 @@ from sklearn.linear_model import LinearRegression
 
 from .utils import insert_newlines, create_directory
 
-plt.rcParams.update({'font.size': 8})
+plt.rcParams.update({'font.size': 12})
 
 
 class Visualizer:
@@ -149,13 +149,13 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.title(f"True vs Predicted Age {name}")
-        plt.xlabel("True Age")
+        plt.title(f"Chronological vs Predicted Age {name}")
+        plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
         if name == "":
-            filename = "true_vs_pred_age.svg"
+            filename = "chronological_vs_pred_age.svg"
         else:
-            filename = f"true_vs_pred_age_{name}.svg"
+            filename = f"chronological_vs_pred_age_{name}.svg"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
@@ -182,7 +182,7 @@ class Visualizer:
         plt.scatter(y_true, y_pred)
         plt.title(f"Before age-bias correction {name}")
         plt.ylabel("Predicted Age")
-        plt.xlabel("True Age")
+        plt.xlabel("Chronological Age")
 
         # After age-bias correction
         LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
@@ -192,7 +192,7 @@ class Visualizer:
         plt.scatter(y_true, y_corrected)
         plt.title(f"After age-bias correction {name}")
         plt.ylabel("Predicted Age")
-        plt.xlabel("True Age")
+        plt.xlabel("Chronological Age")
         plt.tight_layout()
         if name == "":
             filename = "age_bias_correction.svg"
