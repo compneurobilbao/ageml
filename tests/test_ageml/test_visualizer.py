@@ -61,7 +61,7 @@ def test_features_vs_age(dummy_viz, np_test_data):
     reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
     reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
     significant = significant_markers(reject_bon, reject_fdr)
-    dummy_viz.features_vs_age(X, Y, corr, order, significant, ["X1", "X2", "X3"])
+    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"])
     
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.svg")
@@ -75,10 +75,10 @@ def test_true_vs_pred_age(dummy_viz, np_test_data, dummy_ml):
     X = np_test_data[:, :3]
     Y = np_test_data[:, -1]
     # Fit Age
-    Y_pred, Y_corrected = dummy_ml.fit_age(X, Y)
+    Y_pred, _ = dummy_ml.fit_age(X, Y)
     dummy_viz.true_vs_pred_age(Y, Y_pred)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/true_vs_pred_age.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/chronological_vs_pred_age.svg")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))

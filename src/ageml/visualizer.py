@@ -79,7 +79,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
-    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers, 
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers,
                         feature_names, labels: list = None, name: str = ""):
         """Plot correlation between features and age.
 
@@ -103,7 +103,7 @@ class Visualizer:
         else:  # If only one covariate, use the same color for all points
             color_set = [self.cmap(0)]
         # Color array for each covariate
-        color_list = [len*[color_set[i]] for i, len in enumerate(covar_lens)]
+        color_list = [len * [color_set[i]] for i, len in enumerate(covar_lens)]
 
         if labels is None:
             labels = ['population']
@@ -123,7 +123,7 @@ class Visualizer:
             ax.set_xlabel("age (years)")
             title = "Correlation values:"
             for n, label in enumerate(labels):
-                title+= "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
+                title += "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
             ax.set_title(title)
             ax.legend(labels)
         plt.tight_layout()

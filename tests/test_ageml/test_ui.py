@@ -322,10 +322,10 @@ def test_run_age(dummy_interface, features):
 
     # Check for the existence of the output figures
     figs = [
-        "age_bias_correction",
+        "age_bias_correction_all",
         "age_distribution_controls",
-        "features_vs_age",
-        "true_vs_pred_age",
+        "features_vs_age_controls",
+        "chronological_vs_pred_age_all",
     ]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs

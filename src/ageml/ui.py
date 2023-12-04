@@ -283,7 +283,7 @@ class Interface:
         Parameters
         ----------
         dfs: list of dataframes with age information; shape=(n,m)
-        labels: categories of separation criterion 
+        labels: categories of separation criterion
         name: name to give to visualizer to save file"""
 
         # Select age information
@@ -351,8 +351,8 @@ class Interface:
             significant = significant_markers(reject_bon, reject_fdr)
             # Print results
             for idx, order_element in enumerate(order):
-                print("%d.%s %s %s: %.2f" % (idx + 1, label, significant[order_element], 
-                                              feature_names[order_element], corr[order_element]))
+                print("%d.%s %s %s: %.2f" % (idx + 1, label, significant[order_element],
+                                             feature_names[order_element], corr[order_element]))
             # Append all the values
             X_list.append(X)
             y_list.append(y)
