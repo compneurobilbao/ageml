@@ -413,52 +413,6 @@ def test_run_clinical(dummy_interface, ages, clinical):
     assert os.path.exists(log_path)
 
 
-def test_run_lifestyle(dummy_interface, ages, factors):
-    # Run the lifestyle pipeline
-    ages_path = create_csv(ages, dummy_interface.dir_path)
-    factors_path = create_csv(factors, dummy_interface.dir_path)
-    dummy_interface.args.ages = ages_path
-    dummy_interface.args.factors = factors_path
-    dummy_interface.run_lifestyle()
-
-    # Check for the existence of the output directory
-    assert os.path.exists(dummy_interface.dir_path)
-
-    # Check for the existence of the output figures
-    figs = ["factors_vs_deltas"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
-    ]
-    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-
-    # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
-    assert os.path.exists(log_path)
-
-
-def test_run_clinical(dummy_interface, ages, clinical):
-    # Run the clinical pipeline
-    ages_path = create_csv(ages, dummy_interface.dir_path)
-    clinical_path = create_csv(clinical, dummy_interface.dir_path)
-    dummy_interface.args.ages = ages_path
-    dummy_interface.args.clinical = clinical_path
-    dummy_interface.run_clinical()
-
-    # Check for the existence of the output directory
-    assert os.path.exists(dummy_interface.dir_path)
-
-    # Check for the existence of the output figures
-    figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
-    ]
-    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-
-    # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
-    assert os.path.exists(log_path)
-
-
 def test_run_classification(dummy_interface, ages, clinical):
     # Run the classification pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -806,10 +760,10 @@ def test_run_command_interactiveCLI(dummy_cli):
     # Test no input or mutiple arguments
     dummy_cli.line = "r"
     error = dummy_cli.run_command()
-    assert error == "Must provide one argument only."
+    assert error == "Must provide at least one argument."
     dummy_cli.line = "r type1 type1"
     error = dummy_cli.run_command()
-    assert error == "Must provide one argument only."
+    assert error == "Choose a valid run type: age, lifestyle, clinical, classification"
 
     # Test passing invalid run type
     dummy_cli.line = "r type1"
