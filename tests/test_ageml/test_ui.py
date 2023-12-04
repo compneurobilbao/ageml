@@ -27,16 +27,22 @@ class ExampleArguments(object):
         self.factors = None
         self.clinical = None
         self.ages = None
+        self.group1 = None
+        self.group2 = None
 
 
 @pytest.fixture
 def features():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
-            "age": [50, 60, 70, 80, 90],
-            "feature1": [1.3, 2.2, 3.9, 4.1, 5.7],
-            "feature2": [9.4, 8.2, 7.5, 6.4, 5.3],
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                    53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "feature1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.7,
+                         1.4, 2.2, 3.8, 4.5, 5.4, 6.2, 7.8, 8.2, 9.2, 2.6],
+            "feature2": [9.4, 8.2, 7.5, 6.4, 5.3, 4.1, 3.9, 2.2, 1.3, 9.4,
+                         9.3, 8.1, 7.9, 6.5, 5.0, 4.0, 3.7, 2.1, 1.4, 8.3],
         }
     )
     df.set_index("id", inplace=True)
@@ -47,10 +53,12 @@ def features():
 def factors():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
-            "factor1": [1.3, 2.2, 3.9, 4.1, 5.7],
-            "factor2": [9.4, 8.2, 7.5, 6.4, 5.3],
-            "factor3": [1.3, 2.2, 3.9, 4.1, 5.7]
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "factor1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.3,
+                        1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 2.2],
+            "factor2": [0.1, 1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4,
+                        4.7, 3.7, 2.3, 1.2, 0.9, 0.3, 0.2, 0.1, 0.1, 0.1],
         }
     )
     df.set_index("id", inplace=True)
@@ -61,9 +69,12 @@ def factors():
 def clinical():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
-            "CN": [True, False, True, False, True],
-            "group1": [False, True, False, True, False],
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "CN": [True, False, True, False, True, False, True, False, True, False,
+                   True, False, True, False, True, False, True, False, True, False],
+            "group1": [False, True, False, True, False, True, False, True, False, True,
+                       False, True, False, True, False, True, False, True, False, True],
         }
     )
     df.set_index("id", inplace=True)
@@ -74,11 +85,16 @@ def clinical():
 def ages():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
-            "age": [50, 60, 70, 80, 90],
-            "predicted age": [55, 67, 57, 75, 85],
-            "corrected age": [51, 58, 73, 80, 89],
-            "delta": [1, -2, 3, 0, -1],
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                    53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "predicted age": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                              58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected age": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                              87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                      2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
     df.set_index("id", inplace=True)
@@ -351,6 +367,50 @@ def test_run_age(dummy_interface, features):
 
 
 # TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):
+def test_run_lifestyle(dummy_interface, ages, factors):
+    # Run the lifestyle pipeline
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    factors_path = create_csv(factors, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.factors = factors_path
+    dummy_interface.run_lifestyle()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    figs = ["factors_vs_deltas"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+
+def test_run_clinical(dummy_interface, ages, clinical):
+    # Run the clinical pipeline
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_clinical()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
 
 
 def test_run_lifestyle(dummy_interface, ages, factors):
@@ -397,6 +457,63 @@ def test_run_clinical(dummy_interface, ages, clinical):
     # Check for the existence of the log
     log_path = os.path.join(dummy_interface.dir_path, "log.txt")
     assert os.path.exists(log_path)
+
+
+def test_run_classification(dummy_interface, ages, clinical):
+    # Run the classification pipeline
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.group1 = 'cn'
+    dummy_interface.args.group2 = 'group1'
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_classification()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    figs = ["roc_curve_cn_vs_group1"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+
+def test_classification_group_not_given(dummy_interface, ages, clinical):
+
+    # Run create classification pipeline with no groups
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+
+    # Run classification and capture error
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.run_classification()
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Must provide two groups to classify."
+
+
+def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
+    # Run create classification pipeline with no groups
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.args.group1 = 'cn'
+    dummy_interface.args.group2 = 'group3'
+    
+    # Run classification and capture error
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.run_classification()
+    assert exc_info.type == ValueError
+    error_msg = "Classes must be one of the following: ['%s', '%s']" % ('cn', 'group1')
+    assert exc_info.value.args[0] == error_msg
 
 
 def test_interface_setup_dir_existing_warning(dummy_interface):
@@ -698,6 +815,26 @@ def test_run_command_interactiveCLI(dummy_cli):
     dummy_cli.line = "r type1"
     error = dummy_cli.run_command()
     assert error == "Choose a valid run type: age, lifestyle, clinical, classification"
+
+    # Test passing run type with more arguments than required
+    dummy_cli.line = "r age 1"
+    error = dummy_cli.run_command()
+    assert error == "Too many arguments given for run type age"
+
+    # Test passing run type with less arguments than required
+    dummy_cli.line = "r classification 1 2 3"
+    error = dummy_cli.run_command()
+    assert error == "For run type classification two arguments should be given"
+
+    # Test passing run type with more arguments than required
+    dummy_cli.line = "r age 1"
+    error = dummy_cli.run_command()
+    assert error == "Too many arguments given for run type age"
+
+    # Test passing run type with less arguments than required
+    dummy_cli.line = "r classification 1 2 3"
+    error = dummy_cli.run_command()
+    assert error == "For run type classification two arguments should be given"
 
     # Test passing correct arguments
     dummy_cli.line = "r age"

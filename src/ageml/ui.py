@@ -7,6 +7,7 @@ Classes:
 --------
 Interface - reads, parses and executes user commands.
 CLI - reads and parsers user commands via command line.
+InteractiveCLI - reads and parsers user commands via command line via an interactive interface.
 """
 
 import argparse
@@ -22,7 +23,7 @@ import scipy.stats as stats
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log
-from ageml.modelling import AgeML
+from ageml.modelling import AgeML, Classifier
 from ageml.processing import find_correlations
 
 
@@ -46,6 +47,8 @@ class Interface:
 
     set_model(self): Set model with parameters.
 
+    set_classifier(self): Set classifier with parameters.
+
     check_file(self, file): Check that file exists.
 
     load_csv(self, file): Use panda to load csv into dataframe.
@@ -63,6 +66,8 @@ class Interface:
     factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
     deltas_by_group(self, df, labels): Calculate summary metrics of deltas by group.
+
+    classify(self, df1, df2, groups): Classify two groups based on deltas.
 
     run_wrapper(self, run): Wrapper for running modelling with log.
 
@@ -90,6 +95,7 @@ class Interface:
         # Initialise objects form library
         self.set_visualizer()
         self.set_model()
+        self.set_classifier()
 
     def setup(self):
         """Create required directories and files to store results."""
@@ -126,6 +132,11 @@ class Interface:
             self.args.cv_split,
             self.args.seed,
         )
+
+    def set_classifier(self):
+        """Set classifier with parameters."""
+
+        self.classifier = Classifier()
 
     def check_file(self, file):
         """Check that file exists."""
@@ -505,6 +516,33 @@ class Interface:
         # Use visualizer
         self.visualizer.deltas_by_groups(deltas, labels)
 
+    def classify(self, df1, df2, groups):
+        """Classify two groups based on deltas.
+
+        Parameters
+        ----------
+        df1: dataframe with delta information; shape=(n,m)
+        df2: dataframe with delta information; shape=(n,m)
+        groups: list of labels for each dataframe; shape=(2,)"""
+
+        # Classification
+        print("-----------------------------------")
+        print("Classification between groups %s and %s" % (groups[0], groups[1]))
+
+        # Select delta information
+        deltas1 = df1["delta"].to_numpy()
+        deltas2 = df2["delta"].to_numpy()
+
+        # Create X and y for classification
+        X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
+        y = np.concatenate((np.zeros(deltas1.shape), np.ones(deltas2.shape)))
+
+        # Calculate classification
+        y_pred = self.classifier.fit_model(X, y)
+
+        # Visualize AUC
+        self.visualizer.classification_auc(y, y_pred, groups)
+
     @log
     def run_wrapper(self, run):
         """Wrapper for running modelling with log."""
@@ -654,7 +692,33 @@ class Interface:
         """Run classification between two different clinical groups."""
 
         print("Running classification...")
-        pass
+
+        # Load data
+        self.load_data(required=["clinical"])
+
+        # Run age if not ages found
+        if self.df_ages is None:
+            print("No age data detected...")
+            print("-----------------------------------")
+            self.run_age()
+            print("-----------------------------------")
+            print("Resuming clinical outcomes...")
+
+        # Check that arguments given for each group
+        if self.args.group1 is None or self.args.group2 is None:
+            raise ValueError("Must provide two groups to classify.")
+        
+        # Check that those groups exist
+        groups = [self.args.group1.lower(), self.args.group2.lower()]
+        if groups[0] not in self.df_clinical.columns or groups[1] not in self.df_clinical.columns:
+            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+
+        # Obtain dataframes for each clinical group
+        df_group1 = self.df_ages.loc[self.df_clinical[groups[0]]]
+        df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
+
+        # Classify between groups
+        self.classify(df_group1, df_group2, groups)
 
 
 class CLI(Interface):
@@ -757,6 +821,9 @@ class CLI(Interface):
         self.parser.add_argument(
             "--ages", metavar="FILE", help=messages.ages_long_description
         )
+        self.parser.add_argument(
+            "--groups", metavar="GROUP", nargs=2, help=messages.groups_long_description
+        )
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -810,6 +877,12 @@ class CLI(Interface):
             args.model_params = model_params
         else:
             args.model_params = {}
+
+        # Set groups
+        if args.groups is not None:
+            args.group1, args.group2 = args.groups
+        else:
+            args.group1, args.group2 = None, None
 
         return args
 
@@ -1159,9 +1232,15 @@ class InteractiveCLI(Interface):
         # Split into items and remove  command
         self.line = self.line.split()[1:]
 
-        # Check that only one argument input
-        if len(self.line) != 1:
-            error = "Must provide one argument only."
+        # Check that at least one argument given
+        if len(self.line) < 1:
+            error = "Must provide at least one argument."
+            return error
+        elif len(self.line) > 1 and self.line[0] in ['age', 'lifestyle', 'clinical']:
+            error = "Too many arguments given for run type %s" % self.line[0]
+            return error
+        elif len(self.line) != 3 and self.line[0] in ['classification']:
+            error = "For run type %s two arguments should be given" % self.line[0]
             return error
 
         # Run specificed modelling
@@ -1174,6 +1253,8 @@ class InteractiveCLI(Interface):
             self.run = self.run_clinical
         elif case == "classification":
             self.run = self.run_classification
+            self.args.group1 = self.line[1]
+            self.args.group2 = self.line[2]
         else:
             error = "Choose a valid run type: age, lifestyle, clinical, classification"
 

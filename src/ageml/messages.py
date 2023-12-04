@@ -87,6 +87,23 @@ ages_long_description = (
     "the third column should be the predicted age, fourth age is corrected age and last \n"
     "column is the delta. The first row should be the header for column names."
 )
+
+groups_long_description = (
+    "Clinical groups to do classification on (Required: run classification). \n"
+    "Two groups are required. (e.g. --groups cn ad)"
+)
+
+ages_long_description = (
+    "Path to input CSV file containing the ages of the subjects. \n"
+    "In the file the first column should be the ID, the second column should be the age, \n"
+    "the third column should be the predicted age, fourth age is corrected age and last \n"
+    "column is the delta. The first row should be the header for column names."
+)
+
+groups_long_description = (
+    "Clinical groups to do classification on (Required: run classification). \n"
+    "Two groups are required. (e.g. --groups cn ad)"
+)
 # UI information
 
 emblem = """
