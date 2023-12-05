@@ -257,7 +257,7 @@ def test_load_data_required_file_types(dummy_interface):
 def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     # Change booleans to other types
     clinical.loc[2, "CN"] = 1.3
-    clinical.loc[3, "group1"] = "mondongo"
+    clinical.loc[3, "group1"] = "mondongo"  # excellent placeholder
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -338,10 +338,10 @@ def test_run_age(dummy_interface, features):
 
     # Check for the existence of the output figures
     figs = [
-        "age_bias_correction",
+        "age_bias_correction_all",
         "age_distribution_controls",
-        "features_vs_age",
-        "true_vs_pred_age",
+        "features_vs_age_controls",
+        "chronological_vs_pred_age_all",
     ]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
@@ -366,6 +366,7 @@ def test_run_age(dummy_interface, features):
     )
 
 
+# TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):
 def test_run_lifestyle(dummy_interface, ages, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -467,8 +468,8 @@ def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
     assert exc_info.type == ValueError
     error_msg = "Classes must be one of the following: ['%s', '%s']" % ('cn', 'group1')
     assert exc_info.value.args[0] == error_msg
-   
-   
+
+
 def test_interface_setup_dir_existing_warning(dummy_interface):
     # Setup another dummy_interface in the newly created directory
     with pytest.warns(UserWarning) as warn_record:
@@ -760,6 +761,9 @@ def test_run_command_interactiveCLI(dummy_cli):
     dummy_cli.line = "r"
     error = dummy_cli.run_command()
     assert error == "Must provide at least one argument."
+    dummy_cli.line = "r type1 type1"
+    error = dummy_cli.run_command()
+    assert error == "Choose a valid run type: age, lifestyle, clinical, classification"
 
     # Test passing invalid run type
     dummy_cli.line = "r type1"

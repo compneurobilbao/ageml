@@ -43,3 +43,6 @@ flake8-broken-line = "*"
 flake8-comprehensions = "*"
 # Formatting
 black = {version = "^23.1a1", allow-prereleases = true}
+
+[tool.poetry.scripts]
+ageml = "ageml.__main__:main"

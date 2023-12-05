@@ -54,6 +54,12 @@ covar_long_description = (
     "covariates. The first row should be the header for column names."
 )
 
+covar_name_long_description = (
+    "Name of the column (covariate) in the CSV file containing covariates, to make different models for each category of the covariate. \n"
+    "The name must be written exactly as it is in the CSV file. \n"
+    "If no covariate name is given, no covariate separation will be done."
+)
+
 factors_long_description = (
     "Path to input CSV file containing factors (Required: run lifestyle). \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
@@ -87,6 +93,17 @@ groups_long_description = (
     "Two groups are required. (e.g. --groups cn ad)"
 )
 
+ages_long_description = (
+    "Path to input CSV file containing the ages of the subjects. \n"
+    "In the file the first column should be the ID, the second column should be the age, \n"
+    "the third column should be the predicted age, fourth age is corrected age and last \n"
+    "column is the delta. The first row should be the header for column names."
+)
+
+groups_long_description = (
+    "Clinical groups to do classification on (Required: run classification). \n"
+    "Two groups are required. (e.g. --groups cn ad)"
+)
 # UI information
 
 emblem = """

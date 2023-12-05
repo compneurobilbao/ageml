@@ -128,7 +128,7 @@ class SyntheticData():
         self._data = self._load_data()
 
     def _load_data(self):
-        # TODO: Maybe change to parquet format, faster loading to compensate pandas slowness.
+        # TODO: Maybe change to a faster format (parquet, feather, etc.), faster loading to compensate pandas import slowness.
         df = pd.read_csv(self.path_to_data, index_col=0)
         return df
 

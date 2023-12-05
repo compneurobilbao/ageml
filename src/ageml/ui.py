@@ -87,7 +87,7 @@ class Interface:
         self.args = args
 
         # Flags
-        self.flags = {"clinical": False}
+        self.flags = {"clinical": False, "covariates": False}
 
         # Set up directory for storage of results
         self.setup()
@@ -190,6 +190,10 @@ class Interface:
 
         # Load covariates
         self.df_covariates = self.load_csv(self.args.covariates)
+        if self.df_covariates is not None:
+            # Check that covar name is given
+            if self.args.covar_name:
+                self.flags['covariates'] = True
 
         # Load factors
         self.df_factors = self.load_csv(self.args.factors)
@@ -284,12 +288,14 @@ class Interface:
             if df is not None:
                 df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
 
-    def age_distribution(self, dfs, labels=None, name=""):
+    def age_distribution(self, dfs: list, labels=None, name=""):
         """Use visualizer to show age distribution.
 
         Parameters
         ----------
-        dfs: list of dataframes with age information; shape=(n,m)"""
+        dfs: list of dataframes with age information; shape=(n,m)
+        labels: categories of separation criterion
+        name: name to give to visualizer to save file"""
 
         # Select age information
         print("-----------------------------------")
@@ -320,36 +326,56 @@ class Interface:
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
 
-    def features_vs_age(self, df, significance=0.05):
+    def features_vs_age(self, dfs: list, labels: list = None, significance: float = 0.05, name: str = ""):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
         ----------
-        df: dataframe with features and age; shape=(n,m+1)
+        dfs: list of dataframes with features and age; shape=(n,m+1)
+        labels: # TODO
         significance: significance level for correlation"""
 
         # Select data to visualize
         print("-----------------------------------")
         print("Features by correlation with Age")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
-        X, y, feature_names = feature_extractor(df)
+        if not isinstance(dfs, list):
+            raise TypeError("Input to 'Interface.features_vs_age' must be a list of dataframes.")
 
-        # Calculate correlation between features and age
-        corr, order, p_values = find_correlations(X, y)
-        
-        # Reject null hypothesis of no correlation
-        reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
-        reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
-        significant = significant_markers(reject_bon, reject_fdr)
+        if labels is not None:
+            print(labels)
 
-        # Print results
-        for i, o in enumerate(order):
-            print("%d. %s %s: %.2f" % (i + 1, significant[o], feature_names[o], corr[o]))
+        # Make lists to store covariate info for each dataframe
+        X_list = []
+        y_list = []
+        corr_list = []
+        order_list = []
+        significance_list = []
+        for df, label in zip(dfs, labels):
+            # Extract features
+            X, y, feature_names = feature_extractor(df)
+            # Calculate correlation between features and age
+            corr, order, p_values = find_correlations(X, y)
+            # Reject null hypothesis of no correlation
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            significant = significant_markers(reject_bon, reject_fdr)
+            # Print results
+            for idx, order_element in enumerate(order):
+                print("%d.%s %s %s: %.2f" % (idx + 1, label, significant[order_element],
+                                             feature_names[order_element], corr[order_element]))
+            # Append all the values
+            X_list.append(X)
+            y_list.append(y)
+            corr_list.append(corr)
+            order_list.append(order)
+            significance_list.append(significant)
 
-        # Use visualizer to show
-        self.visualizer.features_vs_age(X, y, corr, order, significant, feature_names)
+        # Use visualizer to show results
+        self.visualizer.features_vs_age(X_list, y_list, corr_list, order_list,
+                                        significance_list, feature_names, labels, name)
 
-    def model_age(self, df, model):
+    def model_age(self, df, model, name: str = ""):
         """Use AgeML to fit age model with data.
 
         Parameters
@@ -359,7 +385,10 @@ class Interface:
 
         # Show training pipeline
         print("-----------------------------------")
-        print("Training Age Model")
+        if name == "":
+            print("Training Age Model")
+        else:
+            print("Training Model for covariate %s" % name)
         print(self.ageml.pipeline)
 
         # Select data to model
@@ -367,8 +396,8 @@ class Interface:
 
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
-        self.visualizer.true_vs_pred_age(y, y_pred)
-        self.visualizer.age_bias_correction(y, y_pred, y_corrected)
+        self.visualizer.true_vs_pred_age(y, y_pred, name)
+        self.visualizer.age_bias_correction(y, y_pred, y_corrected, name)
 
         # Calculate deltas
         deltas = y_corrected - y
@@ -531,28 +560,75 @@ class Interface:
         # Select controls
         if self.flags["clinical"]:
             df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
+            df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
         else:
             df_cn = self.df_features
+            df_clinical = None
 
-        # Use visualizer to show age distribution
-        self.age_distribution([df_cn], name="controls")
+        if self.flags["covariates"] and self.args.covar_name is not None:
+            # Check that covariate column exists
+            if self.args.covar_name not in self.df_covariates.columns:
+                raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
+
+            # Create dataframe list of controls by covariate
+            labels_covar = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
+            df_covar_cn = self.df_covariates.loc[df_cn.index]
+            dfs_cn = []
+            for label_covar in labels_covar:
+                dfs_cn.append(df_cn[df_covar_cn[self.args.covar_name] == label_covar])
+
+            if self.flags["clinical"]:
+                # Create dataframe list of clinical cases by covariate
+                df_clinical_cov = []
+                for label_covar in labels_covar:
+                    df_covar_clinical = self.df_covar.loc[df_clinical.index]
+                    df_clinical_cov.append(df_clinical[df_covar_clinical[self.args.covar_name] == label_covar])
+
+        else:  # No covariates, so df list of controls is [df_cn] and [df_clinical]
+            dfs_cn = [df_cn]
+            dfs_clinical = [df_clinical]
+            labels_covar = ["all"]
+            self.args.covar_name = "all"
 
         # Relationship between features and age
-        self.features_vs_age(df_cn)
-
+        if self.flags["covariates"]:
+            initial_plots_names = f"controls_{self.args.covar_name}"
+        else:
+            initial_plots_names = "controls"
+            
+        # Use visualizer to show age distribution
+        self.age_distribution(dfs_cn, labels=labels_covar, name=initial_plots_names)
+    
+        self.features_vs_age(dfs_cn, labels=labels_covar, name=initial_plots_names)
+        
         # Model age
-        self.ageml, df_ages_cn = self.model_age(df_cn, self.ageml)
+        self.models = {}
+        dfs_ages = {}
+        for label_covar, df_cn in zip(labels_covar, dfs_cn):
+            model_name = f"{self.args.covar_name}_{label_covar}"
+            self.models[model_name], dfs_ages[model_name] = self.model_age(df_cn, self.ageml, label_covar)
+            df_ages_cn = pd.concat(dfs_ages.values(), axis=0)
+
+        # NOTE: Matching dataframes that cannot be indexed by their name and models could be dangerous and prone to mismatches.
+        # TODO: Discuss about alternatives. Use dicts for all dataframes and models?
 
         # Apply to clinical data
+        dfs_predicted_ages = {}
         if self.flags["clinical"]:
-            df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
-            df_ages_clinical = self.predict_age(df_clinical, self.ageml)
-            self.df_ages = pd.concat([df_ages_cn, df_ages_clinical])
+            for df_age_clinical, label_covar in zip(dfs_clinical, labels_covar):
+                model_name = f"{self.args.covar_name}_{label_covar}"
+                dfs_predicted_ages[model_name] = self.predict_age(df_age_clinical, self.models[model_name])
+            # Concatenate all the predicted ages
+            self.df_ages = pd.concat([dfs_predicted_ages.values()])
         else:
             self.df_ages = df_ages_cn
 
         # Save dataframe
-        self.df_ages.to_csv(os.path.join(self.dir_path, "predicted_age.csv"))
+        if self.flags["covariates"]:
+            filename = f"predicted_age_{self.args.covar_name}.csv"
+        else:
+            filename = "predicted_age.csv"
+        self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def run_lifestyle(self):
         """Run age modelling with lifestyle factors."""
@@ -731,6 +807,9 @@ class CLI(Interface):
             "--covariates", metavar="FILE", help=messages.covar_long_description
         )
         self.parser.add_argument(
+            "--covar_name", metavar="COVAR_NAME", help=messages.covar_name_long_description
+        )
+        self.parser.add_argument(
             "--factors", metavar="FILE", help=messages.factors_long_description
         )
         self.parser.add_argument(
@@ -742,7 +821,6 @@ class CLI(Interface):
         self.parser.add_argument(
             "--ages", metavar="FILE", help=messages.ages_long_description
         )
-
         self.parser.add_argument(
             "--groups", metavar="GROUP", nargs=2, help=messages.groups_long_description
         )

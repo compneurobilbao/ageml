@@ -17,6 +17,8 @@ from sklearn.metrics import roc_curve, roc_auc_score
 
 from .utils import insert_newlines, create_directory
 
+plt.rcParams.update({'font.size': 12})
+
 
 class Visualizer:
 
@@ -57,18 +59,20 @@ class Visualizer:
         create_directory(self.path_for_fig)
 
         # Set color map
-        self.cmap = plt.get_cmap("viridis")
+        self.cmap = plt.get_cmap("tab10")
 
     def set_directory(self, path):
         """Set directory to store results."""
         self.dir = path
 
-    def age_distribution(self, Ys, labels=None, name=""):
+    def age_distribution(self, Ys: list, labels=None, name: str = ""):
         """Plot age distribution.
 
         Parameters
         ----------
-        Ys: 2D-Array with list of ages; shape=(m, n)."""
+        Ys: list of np.arrays containing ages; shape=(m, n).
+        labels: # TODO
+        name: # TODO"""
 
         # Plot age distribution
         for Y in Ys:
@@ -80,7 +84,8 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
-    def features_vs_age(self, X, Y, corr, order, markers, feature_names):
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers,
+                        feature_names, labels: list = None, name: str = ""):
         """Plot correlation between features and age.
 
         Parameters
@@ -90,22 +95,52 @@ class Visualizer:
         corr: 1D-Array with correlation coefficients; shape=m
         order: 1D-Array with order of features; shape=m
         markers: list of markers for significant features; shape=m
-        feature_names: list of names of features, shape=m"""
+        feature_names: list of names of features, shape=m
+        idxs: list of list of indexes of features in each group; list of lists.
+              outer list shape=(n_dfs), inner list shape=(n_points_in_df)
+        labels: list of labels for each group; shape=n_dfs"""
+        covar_lens = [len(y) for y in Y]
+        # Get the unique color set. Get color for each point in the data
+        if len(Y) == 0 or len(X) == 0:
+            raise TypeError("X and Y must be non-empty lists")
+        elif len(Y) > 1:
+            color_set = [self.cmap(unique_color) for unique_color in np.arange(len(Y))]
+        else:  # If only one covariate, use the same color for all points
+            color_set = [self.cmap(0)]
+        # Color array for each covariate
+        color_list = [len * [color_set[i]] for i, len in enumerate(covar_lens)]
+
+        if labels is None:
+            labels = ['population']
 
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
-        for i, o in enumerate(order):
+        
+        for i, o in enumerate(order[0]):  # Default to order[0] because each covar may have different order
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
-            plt.scatter(Y, X[:, o], s=15)
-            plt.ylabel(insert_newlines(feature_names[o], 4))
-            plt.xlabel("age (years)")
-            plt.title("%s Corr:%.2f" % (markers[o], corr[o]))
+            ax = plt.gca()  # Get current axis
+            for i in range(len(color_set)):
+                ax.scatter(Y[i][:], X[i][:, o],
+                           s=15, c=color_list[i], label=labels[i])
+            # Set axis labels, title, and legend
+            ax.set_ylabel(insert_newlines(feature_names[o], 4))
+            ax.set_xlabel("age (years)")
+            title = "Correlation values:"
+            for n, label in enumerate(labels):
+                title += "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
+            ax.set_title(title)
+            ax.legend(labels)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "features_vs_age.svg"))
+
+        if name == "":
+            filename = "features_vs_age.svg"
+        else:
+            filename = f"features_vs_age_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def true_vs_pred_age(self, y_true, y_pred):
+    def true_vs_pred_age(self, y_true, y_pred, name: str = ""):
         """Plot true age vs predicted age.
 
         Parameters
@@ -119,12 +154,17 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.xlabel("True Age")
+        plt.title(f"Chronological vs Predicted Age {name}")
+        plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
-        plt.savefig(os.path.join(self.path_for_fig, "true_vs_pred_age.svg"))
+        if name == "":
+            filename = "chronological_vs_pred_age.svg"
+        else:
+            filename = f"chronological_vs_pred_age_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def age_bias_correction(self, y_true, y_pred, y_corrected):
+    def age_bias_correction(self, y_true, y_pred, y_corrected, name: str = ""):
         """Plot before and after age bias correction procedure.
 
         Parameters
@@ -145,9 +185,9 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title("Before age-bias correction")
+        plt.title(f"Before age-bias correction {name}")
         plt.ylabel("Predicted Age")
-        plt.xlabel("True Age")
+        plt.xlabel("Chronological Age")
 
         # After age-bias correction
         LR_age_bias.fit(y_true.reshape(-1, 1), y_corrected)
@@ -155,11 +195,15 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title("After age-bias correction")
+        plt.title(f"After age-bias correction {name}")
         plt.ylabel("Predicted Age")
-        plt.xlabel("True Age")
+        plt.xlabel("Chronological Age")
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "age_bias_correction.svg"))
+        if name == "":
+            filename = "age_bias_correction.svg"
+        else:
+            filename = f"age_bias_correction_{name}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def factors_vs_deltas(self, corrs, groups, labels, markers):
