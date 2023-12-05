@@ -1,6 +1,8 @@
 # AgeModelling
+_AgeML_ is a Python package for Age Modelling with Machine Learning made easy.
 
-
+![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)
+[![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
 ## Description
 
 BrainAge models (Franke et al. 2010, Neuroimage) have had success in exploring the relationship between healthy and pathological ageing of the brain. Furthermore, this type of age modelling can be extended to multiple body systems and modelling of the interactions between them (Tian et al 2023, Nature Medicine). However, there is no standard for age modelling. There have been works attempting to describe proper procedures, especially for age-bias correction (de Lange and Cole 2020, Neuroimage: Clinical). In this work we developed an Open-Source software that allows anyone to do age modelling following well-established and tested methodologies for any type of clinical data. Age modelling with machine learning made easy. 
