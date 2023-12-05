@@ -1,8 +1,10 @@
 # AgeModelling
 _AgeML_ is a Python package for Age Modelling with Machine Learning made easy.
 
-![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)
+[![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/records/10255550)
 [![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
+[![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=task_5_basic_tests)](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml)
+
 ## Description
 
 BrainAge models (Franke et al. 2010, Neuroimage) have had success in exploring the relationship between healthy and pathological ageing of the brain. Furthermore, this type of age modelling can be extended to multiple body systems and modelling of the interactions between them (Tian et al 2023, Nature Medicine). However, there is no standard for age modelling. There have been works attempting to describe proper procedures, especially for age-bias correction (de Lange and Cole 2020, Neuroimage: Clinical). In this work we developed an Open-Source software that allows anyone to do age modelling following well-established and tested methodologies for any type of clinical data. Age modelling with machine learning made easy. 
@@ -14,9 +16,6 @@ De Lange, A.-M. G., & Cole, J. H. (2020). Commentary: Correction procedures in b
 Franke, K., Ziegler, G., Klöppel, S., & Gaser, C. (2010). Estimating the age of healthy subjects from T1-weighted MRI scans using kernel methods: Exploring the influence of various parameters. NeuroImage, 50(3), 883–892. https://doi.org/10.1016/j.neuroimage.2010.01.005
 Tian, Y. E., Cropley, V., Maier, A. B., Lautenschlager, N. T., Breakspear, M., & Zalesky, A. (2023). Heterogeneous aging across multiple organ systems and prediction of chronic disease and mortality. Nature Medicine, 29(5), 1221–1231. https://doi.org/10.1038/s41591-023-02296-6
 
-
-## CI/CD
-[![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=task_5_basic_tests)](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml)
 
 ## License
 Licensed under the [Apache 2.0](./LICENSE)
