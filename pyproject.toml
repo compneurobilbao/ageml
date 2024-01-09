@@ -48,3 +48,7 @@ black = {version = "^23.1a1", allow-prereleases = true}
 
 [tool.poetry.scripts]
 ageml = "ageml.__main__:main"
+model_age = "ageml.commands:model_age"
+factor_analysis = "ageml.commands:factor_analysis"
+clinical_groups = "ageml.commands:clinical_groups"
+clinical_classify = "ageml.commands:clinical_classify"

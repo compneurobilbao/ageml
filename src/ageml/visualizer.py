@@ -7,6 +7,7 @@ Classes:
 Visualizer - manages the visualization of data and results.
 """
 
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import math
 import numpy as np
