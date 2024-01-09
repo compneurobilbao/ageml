@@ -71,13 +71,13 @@ class Interface:
 
     run_wrapper(self, run): Wrapper for running modelling with log.
 
-    run_age(self): Run basic age modelling.
+    run_age(self): Run age modelling.
 
-    run_factor_analysis(self): Run age modelling with lifestyle factors.
+    run_factor_analysis(self): Factor analysis between deltas and factors.
 
-    run_clinical(self): Run age modelling with clinical factors.
+    run_clinical(self): Analyse differences between deltas in clinical groups.
 
-    run_classification(self): Run classification between two different clinical groups.
+    run_classification(self): Classify groups based on deltas.
     """
 
     def __init__(self, args):
@@ -553,7 +553,7 @@ class Interface:
         run()
 
     def run_age(self):
-        """Run basic age modelling."""
+        """Run age modelling."""
 
         # Run age modelling
         print("Running age modelling...")
@@ -637,7 +637,7 @@ class Interface:
         self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def run_factor_analysis(self):
-        """Run age modelling with lifestyle factors."""
+        """Run factor analysis between deltas and factors."""
 
         print("Running lifestyle factors...")
 
@@ -667,7 +667,7 @@ class Interface:
         self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
     def run_clinical(self):
-        """Run age modelling with clinical factors."""
+        """Analyse differences between deltas in clinical groups."""
 
         print("Running clinical outcomes...")
 
@@ -727,7 +727,8 @@ class Interface:
         self.set_classifier()
         self.classify(df_group1, df_group2, groups)
 
-class InteractiveCLI(Interface):
+
+class CLI(Interface):
 
     """Read and parses user commands via command line via an interactive interface
 

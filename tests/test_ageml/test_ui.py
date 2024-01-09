@@ -1,7 +1,6 @@
 import os
 import pytest
 import shutil
-import sys
 import tempfile
 import random
 import string
@@ -9,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 import ageml.messages as messages
-from ageml.ui import Interface, CLI, InteractiveCLI
+from ageml.ui import Interface, CLI
 
 
 class ExampleArguments(object):
@@ -147,7 +146,7 @@ def dummy_cli(monkeypatch):
 
     # Patch the input function
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
-    interface = InteractiveCLI()
+    interface = CLI()
     return interface
 
 
@@ -167,7 +166,8 @@ def test_interface_setup(dummy_interface):
 
 def test_load_csv(dummy_interface, features):
     features_path = create_csv(features, dummy_interface.dir_path)
-    data = dummy_interface.load_csv(features_path)
+    dummy_interface.args.features = features_path
+    data = dummy_interface.load_csv('features')
 
     # Check that the data is a pandas dataframe
     assert isinstance(data, pd.core.frame.DataFrame)
@@ -367,13 +367,13 @@ def test_run_age(dummy_interface, features):
 
 
 # TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):
-def test_run_lifestyle(dummy_interface, ages, factors):
+def test_run_factor_analysis(dummy_interface, ages, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     factors_path = create_csv(factors, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
     dummy_interface.args.factors = factors_path
-    dummy_interface.run_lifestyle()
+    dummy_interface.run_factor_analysis()
 
     # Check for the existence of the output directory
     assert os.path.exists(dummy_interface.dir_path)
@@ -477,35 +477,6 @@ def test_interface_setup_dir_existing_warning(dummy_interface):
     assert isinstance(warn_record.list[0].message, UserWarning)
     error_message = f"Directory {dummy_interface.dir_path} already exists files may be overwritten."
     assert warn_record.list[0].message.args[0] == error_message
-
-
-def test_cli_initialization(features, dummy_interface):
-    # create features file
-    features_data_path = create_csv(features, dummy_interface.dir_path)
-
-    output_path = os.path.dirname(__file__)
-    # Path sys.argv (command line arguments)
-    # sys.argv[0] should be empty, so we set it to ''
-    # TODO: Cleaner way to test CLI?
-    sys.argv = [
-        "",
-        "-f",
-        features_data_path,
-        "-o",
-        output_path,
-        "-r",
-        "age",
-        "--cv",
-        "2",
-        "1",
-    ]
-    cli = CLI()
-
-    # Check correct default initialization
-    assert cli.args.features == features_data_path
-    assert cli.args.model == ["linear"]
-    assert cli.args.scaler_type == "standard"
-    assert cli.args.cv == [2, 1]
 
 
 def test_configure_interactiveCLI(dummy_cli):

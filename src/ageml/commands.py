@@ -1,3 +1,23 @@
+"""Command line commands.
+
+Used in the AgeML project with poetry to create command line commands.
+
+Public classes:
+---------------
+ModelAge: Run age modelling with required parameters.
+FactorAnalysis: Run factor analysis with required parameters.
+ClinicalGroups: Run clinical analysis with age deltas with required parameters.
+ClinicalClassification: Run classification of groups based on age deltas with required parameters.
+
+
+Public functions:
+-----------------
+model_age(): Run ModelAge class.
+factor_analysis(): Run FactorAnalysis class.
+clinical_groups(): Run ClinicalGroups class.
+clinical_classify(): Run ClinicalClassification class.
+"""
+
 import argparse
 
 import ageml.messages as messages
@@ -5,15 +25,9 @@ import ageml.messages as messages
 from ageml.ui import Interface
 from ageml.utils import convert
 
+
 class ModelAge(Interface):
-    """Read and parses user commands via command line.
-
-    Public methods:
-    ---------------
-    configure_parser(self): Configure parser with required arguments for processing.
-
-    configure_args(self, args): Configure arguments with required fromatting for modelling.
-    """
+    """Run age modelling with required parameters."""
 
     def __init__(self):
         """Initialise variables."""
@@ -40,27 +54,27 @@ class ModelAge(Interface):
 
         # Required arguments
         self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-            help=messages.output_long_description,)
+                                 help=messages.output_long_description,)
         self.parser.add_argument("-f", "--features", metavar="FILE", required=True,
-            help=messages.features_long_description)
+                                 help=messages.features_long_description)
         
         # Parameter arguments with defaults
-        self.parser.add_argument("-m","--model", nargs="*", default=["linear"],
-            help=messages.model_long_description)
+        self.parser.add_argument("-m", "--model", nargs="*", default=["linear"],
+                                 help=messages.model_long_description)
         self.parser.add_argument("-s", "--scaler", nargs="*", default=["standard"],
-            help=messages.scaler_long_description)
+                                 help=messages.scaler_long_description)
         self.parser.add_argument("--cv", nargs="+", type=int, default=[5, 0],
-            help=messages.cv_long_description)
+                                 help=messages.cv_long_description)
         
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE",
-            help=messages.covar_long_description)
+                                 help=messages.covar_long_description)
         self.parser.add_argument("--covar_name", metavar="COVAR_NAME",
-            help=messages.covar_name_long_description)
+                                 help=messages.covar_name_long_description)
         self.parser.add_argument("--clinical", metavar="FILE",
-            help=messages.clinical_long_description)
+                                 help=messages.clinical_long_description)
         self.parser.add_argument("--systems", metavar="FILE",
-            help=messages.systems_long_description)
+                                 help=messages.systems_long_description)
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -117,13 +131,9 @@ class ModelAge(Interface):
 
         return args
 
-class FactorAnalsyis(Interface):
-    """Read and parses user commands via command line.
 
-    Public methods:
-    ---------------
-    configure_parser(self): Configure parser with required arguments for processing.
-    """
+class FactorAnalsyis(Interface):
+    """Run factor analysis with required parameters."""
 
     def __init__(self):
         """Initialise variables."""
@@ -149,25 +159,21 @@ class FactorAnalsyis(Interface):
 
         # Required arguments
         self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-            help=messages.output_long_description,)
+                                 help=messages.output_long_description,)
         self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-            help=messages.ages_long_description)
+                                 help=messages.ages_long_description)
         self.parser.add_argument("-f", "--factors", metavar="FILE", required=True,
-            help=messages.factors_long_description)
+                                 help=messages.factors_long_description)
         
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE",
-            help=messages.covar_long_description)
+                                 help=messages.covar_long_description)
         self.parser.add_argument("--clinical", metavar="FILE",
-            help=messages.clinical_long_description)
+                                 help=messages.clinical_long_description)
+
 
 class ClinicalGroups(Interface):
-    """Read and parses user commands via command line.
-
-    Public methods:
-    ---------------
-    configure_parser(self): Configure parser with required arguments for processing.
-    """
+    """Run clinical analysis with age deltas with required parameters."""
 
     def __init__(self):
         """Initialise variables."""
@@ -193,19 +199,15 @@ class ClinicalGroups(Interface):
 
         # Required arguments
         self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-            help=messages.output_long_description,)
+                                 help=messages.output_long_description,)
         self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-            help=messages.ages_long_description)
+                                 help=messages.ages_long_description)
         self.parser.add_argument("--clinical", metavar="FILE", required=True,
-            help=messages.clinical_long_description)
+                                 help=messages.clinical_long_description)
+
 
 class ClinicalClassification(Interface):
-    """Read and parses user commands via command line.
-
-    Public methods:
-    ---------------
-    configure_parser(self): Configure parser with required arguments for processing.
-    """
+    """Run classification of groups based on age deltas with required parameters."""
 
     def __init__(self):
         """Initialise variables."""
@@ -234,30 +236,36 @@ class ClinicalClassification(Interface):
 
         # Required arguments
         self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-            help=messages.output_long_description,)
+                                 help=messages.output_long_description,)
         self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-            help=messages.ages_long_description)
+                                 help=messages.ages_long_description)
         self.parser.add_argument("--clinical", metavar="FILE", required=True,
-            help=messages.clinical_long_description)
+                                 help=messages.clinical_long_description)
         self.parser.add_argument("--groups", nargs=2, metavar="GROUP", required=True,
-            help=messages.groups_long_description)
+                                 help=messages.groups_long_description)
+
+
+# Object wrappers
 
 def model_age():
-    """Run model_age class."""
+    """Run ModelAge class."""
 
     ModelAge()
 
+
 def factor_analysis():
-    """Run factor_analysis class."""
+    """Run FactorAnalysis class."""
 
     FactorAnalsyis()
 
+
 def clinical_groups():
-    """Run clinical_groups class."""
+    """Run ClinicalGroups class."""
 
     ClinicalGroups()
 
+
 def clinical_classify():
-    """Run clinical_classify class."""
+    """Run ClinicalClassification class."""
 
     ClinicalClassification()
