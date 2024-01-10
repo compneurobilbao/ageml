@@ -123,7 +123,7 @@ class Visualizer:
             ax = plt.gca()  # Get current axis
             for i in range(len(color_set)):
                 ax.scatter(Y[i][:], X[i][:, o],
-                           s=15, c=color_list[i], label=labels[i])
+                           s=15, c=color_list[i], label=labels[i], alpha=1 / len(labels))
             # Set axis labels, title, and legend
             ax.set_ylabel(insert_newlines(feature_names[o], 4))
             ax.set_xlabel("age (years)")
