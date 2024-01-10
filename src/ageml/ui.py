@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
+import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
@@ -675,7 +676,7 @@ class Interface:
                     model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
                     # Fit the model.
                     self.models[model_name], dict_ages[label_covar][system_name] = self.model_age(df_cn[system_features + ['age']],
-                                                                                                 self.ageml, model_name)
+                                                                                                  copy.deepcopy(self.ageml), model_name)
                     # Rename all columns in ages dataframe to include the system name.
                     dict_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
             else:
@@ -685,40 +686,40 @@ class Interface:
                 self.models[model_name], dict_ages[model_name] = self.model_age(df_cn, self.ageml, model_name)
         
         # Train Loop (above) and Prediction Loop (below) need to be separated because
-        # the number dfs in dfs_cn and dfs_clinical can be different.
+        # otherwise code get super messy if we have to keep checking for clinical everytime. So we put it in a independent loop.
 
         # Apply to clinical data if clinical data provided
-        dict_predicted_ages = {}
+        dict_clinical_ages = {}
         if self.flags["clinical"]:
             # Iterate over the covariate categories.
-            for df_age_clinical, label_covar in zip(dfs_clinical, labels_covar):
+            for df_clinical, label_covar in zip(dfs_clinical, labels_covar):
                 # If systems file is provided, iterate over the systems.
                 if self.flags['systems']:
-                    dict_predicted_ages[label_covar] = {}
-                    for system_name, _ in self.dict_systems.items():
+                    dict_clinical_ages[label_covar] = {}
+                    for system_name, system_features in self.dict_systems.items():
                         # If covariates and systems are provided, the model name has the covariate name and the system name.
                         model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
                         # Make predictions and store them.
-                        dict_predicted_ages[label_covar][model_name] = self.predict_age(df_age_clinical,
-                                                                                        self.models[label_covar][model_name])
+                        dict_clinical_ages[label_covar][system_name] = self.predict_age(df_clinical[system_features + ['age']],
+                                                                                        self.models[model_name])
                         # Rename all columns in ages dataframe to include the system name.
-                        dict_predicted_ages[label_covar][model_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
+                        dict_clinical_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
 
                 else:
                     # Model name has no system if no systems file is provided.
                     model_name = f"{self.args.covar_name}_{label_covar}"
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
-                    dict_predicted_ages[model_name] = self.predict_age(df_age_clinical, self.models[model_name])
-            # Concatenate all the predicted ages
-            self.df_ages = pd.concat([dict_predicted_ages.values()])
-        else:
-            # If no clinical data provided, concatenate all the predicted ages.
-            self.df_ages = dict_ages
+                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name])
 
         # Concatenate dict_ages into a single DataFrame for storing it cleanly.
         # First, iterate over the covariates and concatenate them along the rows.
         for label_covar, dict_of_systems in dict_ages.items():
-            if self.flags["systems"]:
+            # In case of NO systems, just concatenate the covariates along the rows.
+            if not self.flags["systems"]: # TODO: Bad workaround. Fix this.
+                df_ages_all = dict_ages["all_all"]
+                break
+            # In case of systems, concatenate the systems along the columns.
+            else:
                 # Then, iterate over the systems and concatenate them along the columns.
                 for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
                     # If it is the first iteration, initialize the dataframe.
@@ -727,15 +728,55 @@ class Interface:
                     # Otherwise, concatenate the dataframe.
                     else:
                         df_ages = pd.concat([df_ages, df_system], axis=1)
+            
             # After concatenating the systems along the columns, concatenate the covariates along the rows.
             if label_covar == labels_covar[0]:
                 df_ages_all = df_ages
             else:
                 df_ages_all = pd.concat([df_ages_all, df_ages])
 
-        # Save dataframe
-        if self.flags["covariates"]:
+
+        # Concatenate dict_predicted_ages into a single DataFrame for storing it cleanly.
+        # First, iterate over the covariates and concatenate them along the rows.
+        if self.flags["clinical"]:
+            for label_covar, dict_of_systems in dict_clinical_ages.items():
+                if not self.flags["systems"]: # TODO: Bad workaround. Fix this.
+                    df_clinical_ages_all = dict_clinical_ages["all"]
+                    break
+                # In case of having systems, concatenate the systems along the columns.
+                else:
+                    # Then, iterate over the systems and concatenate them along the columns.
+                    for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
+                        # If it is the first iteration, initialize the dataframe.
+                        if i == 0:
+                            df_clinical_ages = df_system
+                        # Otherwise, concatenate the dataframe.
+                        else:
+                            df_clinical_ages = pd.concat([df_clinical_ages, df_system], axis=1)
+                # After concatenating the systems along the columns, concatenate the covariates along the rows.
+                if label_covar == labels_covar[0]:
+                    df_clinical_ages_all = df_clinical_ages
+                else:
+                    df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_clinical_ages])
+
+        # Now concatenate df_ages_all and df_clinical_ages_all along the rows.
+        if self.flags["clinical"]:
+            self.df_ages = pd.concat([df_ages_all, df_clinical_ages_all])
+        else:
+            self.df_ages = df_ages_all
+
+        if self.flags["systems"]:
+            all_systems = '_'.join(list(self.dict_systems.keys()))
+        # Save dataframe. Give it a proper name depending on the existence of covariates and systems.
+        if self.flags["covariates"] and self.flags["systems"]:
+            filename = f"predicted_age_{self.args.covar_name}_{all_systems}.csv"
+        
+        elif self.flags["covariates"] and not self.flags["systems"]:
             filename = f"predicted_age_{self.args.covar_name}.csv"
+        
+        elif not self.flags["covariates"] and self.flags["systems"]:
+            filename = f"predicted_age_{all_systems}.csv"
+        
         else:
             filename = "predicted_age.csv"
         self.df_ages.to_csv(os.path.join(self.dir_path, filename))
