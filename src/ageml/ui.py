@@ -728,7 +728,7 @@ class CLI(Interface):
 
     classification_command(self): Runs classification.
 
-    clinical_command(self): Runs clinical analysis.                         
+    clinical_command(self): Runs clinical analysis.
 
     covar_command(self): Loads covariate group.
 
@@ -788,7 +788,7 @@ class CLI(Interface):
 
         # Askf for output directory
         print("Output directory path (Required):")
-        self.force_command(self.output_command, required=True) 
+        self.force_command(self.output_command, required=True)
 
     def get_line(self, required=True):
         """Print prompt for the user and update the user entry."""
@@ -869,6 +869,7 @@ class CLI(Interface):
         # Run classification capture any error raised and print
         try:
             self.run_wrapper(self.run_classification)
+            print("Finished classification.")
         except Exception as e:
             print(e)
             error = "Error running classification."
@@ -889,6 +890,7 @@ class CLI(Interface):
         # Run clinical analysis capture any error raised and print
         try:
             self.run_wrapper(self.run_clinical)
+            print("Finished clinical analysis.")
         except Exception as e:
             print(e)
             error = "Error running clinical analysis."
@@ -966,11 +968,12 @@ class CLI(Interface):
         self.force_command(self.load_command, "--covariates")
 
         # Run factor analysis capture any error raised and print
-        #try:
-        self.run_wrapper(self.run_factor_analysis)
-        #except Exception as e:
-        #    print(e)
-        #    error = "Error running factor analysis."
+        try:
+            self.run_wrapper(self.run_factor_analysis)
+            print("Finished factor analysis.")
+        except Exception as e:
+            print(e)
+            error = "Error running factor analysis."
         
         return error
 
@@ -1089,12 +1092,13 @@ class CLI(Interface):
         print("CV parameters (Default: nº splits=5 and seed=0):")
         self.force_command(self.cv_command)
 
-        #Run modelling capture any error raised and print
+        # Run modelling capture any error raised and print
         try:
             self.run_wrapper(self.run_age)
+            print('Finished running age modelling.')
         except Exception as e:
             print(e)
-            error = "Error running modelling."
+            error = "Error running age modelling."
         
         return error
 

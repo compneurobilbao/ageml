@@ -133,16 +133,12 @@ def monkeypatch():
 
 @pytest.fixture
 def dummy_cli(monkeypatch):
-    """Dummy InteractiveCLI fixture"""
-
-    # Create temporary directory and file
+    """Dummy CLI fixture"""
+    # Create temporary directory
     temp_dir = tempfile.TemporaryDirectory()
-    temp_file = tempfile.NamedTemporaryFile(
-        dir=temp_dir.name, suffix=".csv", delete=False
-    )
 
     # Define a list of responses
-    responses = [temp_dir.name, temp_file.name, "", "", "", "", "", "", "", "", "q"]
+    responses = [temp_dir.name, "q"]
 
     # Patch the input function
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
@@ -266,20 +262,6 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
         dummy_interface.load_data()
     assert exc_info.type == TypeError
     assert exc_info.value.args[0] == "Clinical columns must be boolean type."
-
-
-def test_load_data_ages_warning(dummy_interface, ages):
-    ages_path = create_csv(ages, dummy_interface.dir_path)
-    dummy_interface.args.ages = ages_path
-    with pytest.warns(UserWarning) as warn_record:
-        dummy_interface.load_data()
-        dummy_interface.load_data()
-    assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = (
-        "Ages file already loaded, overwriting with  %s provided file."
-        % dummy_interface.args.ages
-    )
-    assert warn_record.list[0].message.args[0] == expected
 
 
 def test_load_data_nan_values_warning(dummy_interface, features):
@@ -479,13 +461,13 @@ def test_interface_setup_dir_existing_warning(dummy_interface):
     assert warn_record.list[0].message.args[0] == error_message
 
 
-def test_configure_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI configured"""
+def test_configure_CLI(dummy_cli):
+    """Test dummy CLI configured"""
     assert dummy_cli.configFlag is True
 
 
-def test_get_line_interactiveCLI(dummy_cli, monkeypatch, capsys):
-    """Test dummy InteractiveCLI getline"""
+def test_get_line_CLI(dummy_cli, monkeypatch, capsys):
+    """Test dummy CLI getline"""
 
     # Test that without required can pass empty string
     monkeypatch.setattr("builtins.input", lambda _: "")
@@ -501,25 +483,25 @@ def test_get_line_interactiveCLI(dummy_cli, monkeypatch, capsys):
     assert dummy_cli.line == "mondong"
 
 
-def test_force_command_interactiveCLI(dummy_cli, monkeypatch):
-    """Test dummy InteractiveCLI force command"""
+def test_force_command_CLI(dummy_cli, monkeypatch):
+    """Test dummy CLI force command"""
 
     # Test when no input is given and not required
     monkeypatch.setattr("builtins.input", lambda _: "")
     error = dummy_cli.force_command(
-        dummy_cli.load_command, "l --systems", required=False
+        dummy_cli.load_command, "--systems", required=False
     )
     assert error is None
     assert dummy_cli.line == ["--systems", "None"]
 
     # Test when correct input is error returned is None
     monkeypatch.setattr("builtins.input", lambda _: "linear")
-    error = dummy_cli.force_command(dummy_cli.model_command, "m", required=True)
+    error = dummy_cli.force_command(dummy_cli.model_command, required=True)
     assert error is None
 
 
-def test_command_interface_interactiveCLI(dummy_cli, monkeypatch, capsys):
-    """Test dummy InteractiveCLI command interface"""
+def test_command_interface_CLI(dummy_cli, monkeypatch, capsys):
+    """Test dummy CLI command interface"""
 
     # Test command that does not exist
     responses = ["mnoang", "q"]
@@ -528,105 +510,208 @@ def test_command_interface_interactiveCLI(dummy_cli, monkeypatch, capsys):
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == "Invalid command. Enter 'h' for help."
 
-    # Test running run command that shouldn't wokr because dummy not well configured
-    responses = ["r age", "q"]
-    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
-    dummy_cli.command_interface()
-    captured = capsys.readouterr().out.split("\n")[:-1]
-    assert captured[-1] == "Error running modelling."
-
-    # Test running output command
-    tempDir = tempfile.TemporaryDirectory()
-    responses = ["o " + tempDir.name, "q"]
+    # Test running quit command
+    responses = ["q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == "Enter 'h' for help."
 
-    # Test running model command with invalid sklearn inputs
-    responses = ["m linear intercept=True", "q"]
+
+def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
+    """Test dummy CLI classification command"""
+
+    # Create temporary directory to store data
+    tempDir = tempfile.TemporaryDirectory()
+    dummy_cli.args.output = tempDir.name
+    dummy_cli.set_visualizer()
+
+    # Create features csv file
+    ages_path = create_csv(ages, tempDir.name)
+    clinical_path = create_csv(clinical, tempDir.name)
+
+    # Test command
+    responses = ["classification", ages_path, clinical_path, "cn group1", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
-    assert captured[-1] == "Error setting up model."
+    assert captured[-1] == 'Finished classification.'
+
+    # Test command with invalid input like incorrect groups
+    responses = ["classification", ages_path, clinical_path, "cn group2", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert captured[-1] == "Error running classification."
 
 
-def test_cv_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI cv command"""
+def test_clinical_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
+    """Test dummy CLI clinical command"""
+
+    # Create temporary directory to store data
+    tempDir = tempfile.TemporaryDirectory()
+    dummy_cli.args.output = tempDir.name
+    dummy_cli.set_visualizer()
+
+    # Create features csv file
+    ages_path = create_csv(ages, tempDir.name)
+    clinical_path = create_csv(clinical, tempDir.name)
+
+    # Test command
+    responses = ["clinical", ages_path, clinical_path, "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    assert captured[-1] == 'Finished clinical analysis.'
+
+    # Test command with invalid input like incorrect file
+    responses = ["clinical", ages_path, ages_path, "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert captured[-1] == "Error running clinical analysis."
+
+
+def test_covar_command_CLI(dummy_cli):
+    """Test dummy CLI covar command"""
+
+    # Test invalid input
+    inputs = ["", "covar1 covar2"]
+    for i in inputs:
+        dummy_cli.line = i
+        error = dummy_cli.covar_command()
+        assert error == "Must provide one covariate name."
+
+    # Test passing one covariate
+    dummy_cli.line = "covar1"
+    error = dummy_cli.covar_command()
+    assert error is None
+    assert dummy_cli.args.covar_name == "covar1"
+
+
+def test_cv_command_CLI(dummy_cli):
+    """Test dummy CLI cv command"""
 
     # Test no input
-    dummy_cli.line = "cv "
+    dummy_cli.line = ""
     error = dummy_cli.cv_command()
     assert error == "Must provide at least one argument or None."
 
     # Test default values
-    dummy_cli.line = "cv None"
+    dummy_cli.line = "None"
     error = dummy_cli.cv_command()
     assert error is None
     assert dummy_cli.args.cv_split == 5
     assert dummy_cli.args.seed == 0
 
     # Test non-integer values
-    dummy_cli.line = "cv 2.5"
+    dummy_cli.line = "2.5"
     error = dummy_cli.cv_command()
     assert error == "CV parameters must be integers"
-    dummy_cli.line = "cv 2 3.5"
+    dummy_cli.line = "2 3.5"
     error = dummy_cli.cv_command()
     assert error == "CV parameters must be integers"
 
     # Test passing too many arguments
-    dummy_cli.line = "cv 1 2 3"
+    dummy_cli.line = "1 2 3"
     error = dummy_cli.cv_command()
     assert error == "Too many values to unpack."
 
     # Test correct parsing
-    dummy_cli.line = "cv 1"
+    dummy_cli.line = "1"
     error = dummy_cli.cv_command()
     assert error is None
     assert dummy_cli.args.cv_split == 1
     assert dummy_cli.args.seed == 0
-    dummy_cli.line = "cv 1 2"
+    dummy_cli.line = "1 2"
     error = dummy_cli.cv_command()
     assert error is None
     assert dummy_cli.args.cv_split == 1
     assert dummy_cli.args.seed == 2
 
 
-def test_help_command_interactiveCLI(dummy_cli, capsys):
-    """Test dummy InteractiveCLI help command"""
+def test_factor_analysis_command_CLI(dummy_cli, ages, factors, monkeypatch, capsys):
+    """Test dummy CLI factor_analysis command"""
+
+    # Create temporary directory to store data
+    tempDir = tempfile.TemporaryDirectory()
+    dummy_cli.args.output = tempDir.name
+    dummy_cli.set_visualizer()
+
+    # Create features csv file
+    ages_path = create_csv(ages, tempDir.name)
+    factors_path = create_csv(factors, tempDir.name)
+    empty_path = create_csv(pd.DataFrame([]), tempDir.name)
+
+    # Test command
+    responses = ["factor_analysis", ages_path, factors_path, "", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert captured[-1] == 'Finished factor analysis.'
+
+    # Test command with invalid input like incorrect file
+    responses = ["factor_analysis", ages_path, empty_path, "", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert captured[-1] == "Error running factor analysis."
+
+
+def test_group_command_CLI(dummy_cli):
+    """Test dummy CLI group command"""
+
+    # Test invalid input
+    inputs = ["", "group1", "group1 group2 group3"]
+    for i in inputs:
+        dummy_cli.line = i
+        error = dummy_cli.group_command()
+        assert error == "Must provide two groups."
+
+    # Test passing two groups
+    dummy_cli.line = "cn group1"
+    error = dummy_cli.group_command()
+    assert error is None
+    assert dummy_cli.args.group1 == "cn"
+    assert dummy_cli.args.group2 == "group1"
+
+
+def test_help_command_CLI(dummy_cli, capsys):
+    """Test dummy CLI help command"""
     dummy_cli.help_command()
     captured = capsys.readouterr().out.split("\n")
     assert captured[0] == "User commands:"
-    assert captured[1] == messages.cv_command_message
-    assert captured[2] == messages.help_command_message
-    assert captured[3] == messages.load_command_message
-    assert captured[4] == messages.model_command_message
-    assert captured[5] == messages.output_command_message
-    assert captured[6] == messages.quit_command_message
-    assert captured[7] == messages.run_command_message
-    assert captured[8] == messages.scaler_command_message
+    assert captured[1] == messages.classification_command_message
+    assert captured[2] == messages.clinical_command_message
+    assert captured[3] == messages.factor_analysis_command_message
+    assert captured[4] == messages.model_age_command_message
+    assert captured[5] == messages.quit_command_message
 
 
-def test_load_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI load command"""
+def test_load_command_CLI(dummy_cli):
+    """Test dummy CLI load command"""
 
     # Test no input
-    dummy_cli.line = "l"
+    dummy_cli.line = ""
     error = dummy_cli.load_command()
     assert error == "Must provide a file type and file path."
 
     # Test passing only one input
-    dummy_cli.line = "l --features"
+    dummy_cli.line = "--features"
     error = dummy_cli.load_command()
     assert error == "Must provide a file path or None when using --file_type."
 
     # Test passing too many arguments
-    dummy_cli.line = "l --features file1 file2"
+    dummy_cli.line = "--features file1 file2"
     error = dummy_cli.load_command()
     assert error == "Too many arguments only two arguments --file_type and file path."
 
     # Test passing non existant file type
-    dummy_cli.line = "l --features file1"
+    dummy_cli.line = "--features file1"
     error = dummy_cli.load_command()
     assert error == "File file1 not found."
 
@@ -635,48 +720,75 @@ def test_load_command_interactiveCLI(dummy_cli):
     tmptxt = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
 
     # Test passing incorrect file type
-    dummy_cli.line = "l --features " + tmptxt.name
+    dummy_cli.line = "--features " + tmptxt.name
     error = dummy_cli.load_command()
     assert error == "File %s must be a .csv file." % tmptxt.name
-    dummy_cli.line = "l --systems " + tmpcsv.name
+    dummy_cli.line = "--systems " + tmpcsv.name
     error = dummy_cli.load_command()
     assert error == "File %s must be a .txt file." % tmpcsv.name
 
     # Test choosing invalid file type
-    dummy_cli.line = "l --flag " + tmpcsv.name
+    dummy_cli.line = "--flag " + tmpcsv.name
     error = dummy_cli.load_command()
     error_message = "Choose a valid file type: --features, --covariates, --factors, --clinical, --systems, --ages"
     assert error == error_message
 
     # Test passing correct arguments
-    dummy_cli.line = "l --features " + tmpcsv.name
+    dummy_cli.line = "--features " + tmpcsv.name
     error = dummy_cli.load_command()
     assert error is None
     assert dummy_cli.args.features == tmpcsv.name
 
 
-def test_model_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI model command"""
+def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
+    """Test dummy CLI model_age command"""
+
+    # Create temporary directory to store data
+    tempDir = tempfile.TemporaryDirectory()
+    dummy_cli.args.output = tempDir.name
+    dummy_cli.set_visualizer()
+
+    # Create features csv file
+    features_path = create_csv(features, tempDir.name)
+
+    # Test command
+    responses = ["model_age", features_path, "", "", "", "", "", "", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    assert captured[-1] == 'Finished running age modelling.'
+
+    # Test command with invalid input like incorrect model parameters
+    responses = ["model_age", features_path, "", "", "", "", "", "linear fitIntercept=True", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert captured[-1] == "Error running age modelling."
+
+
+def test_model_command_CLI(dummy_cli):
+    """Test dummy CLI model command"""
 
     # Test no input
-    dummy_cli.line = "m"
+    dummy_cli.line = ""
     error = dummy_cli.model_command()
     assert error == "Must provide at least one argument or None."
 
     # Test using default
-    dummy_cli.line = "m None"
+    dummy_cli.line = "None"
     error = dummy_cli.model_command()
     assert error is None
     assert dummy_cli.args.model_type == "linear"
     assert dummy_cli.args.model_params == {}
 
     # Test passing invalid model type
-    dummy_cli.line = "m quadratic"
+    dummy_cli.line = "quadratic"
     error = dummy_cli.model_command()
     assert error == "Choose a valid model type: {}".format(["linear"])
 
     # Test empty model params if none given
-    dummy_cli.line = "m linear"
+    dummy_cli.line = "linear"
     error = dummy_cli.model_command()
     assert error is None
     assert dummy_cli.args.model_type == "linear"
@@ -684,112 +796,69 @@ def test_model_command_interactiveCLI(dummy_cli):
 
     # Test passing invalid model params
     message = "Model parameters must be in the format param1=value1 param2=value2 ..."
-    dummy_cli.line = "m linear intercept"
+    dummy_cli.line = "linear intercept"
     error = dummy_cli.model_command()
     assert error == message
-    dummy_cli.line = "m linear intercept==1"
+    dummy_cli.line = "linear intercept==1"
     error = dummy_cli.model_command()
     assert error == message
 
     # Test passing correct model params
-    dummy_cli.line = "m linear fit_intercept=True"
+    dummy_cli.line = "linear fit_intercept=True"
     error = dummy_cli.model_command()
     assert error is None
     assert dummy_cli.args.model_type == "linear"
     assert dummy_cli.args.model_params == {"fit_intercept": True}
 
 
-def test_output_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI output command"""
+def test_output_command_CLI(dummy_cli):
+    """Test dummy CLI output command"""
 
     # Test no input
-    dummy_cli.line = "o"
+    dummy_cli.line = ""
     error = dummy_cli.output_command()
     assert error == "Must provide a path."
 
     # Test passing too many arguments
-    dummy_cli.line = "o path1 path2"
+    dummy_cli.line = "path1 path2"
     error = dummy_cli.output_command()
     assert error == "Too many arguments only one single path."
 
     # Test path exists
-    dummy_cli.line = "o path"
+    dummy_cli.line = "path"
     error = dummy_cli.output_command()
     assert error == "Directory path does not exist."
 
     # Test passing correct arguments
     tempDir = tempfile.TemporaryDirectory()
-    dummy_cli.line = "o " + tempDir.name
+    dummy_cli.line = tempDir.name
     error = dummy_cli.output_command()
     assert error is None
     assert dummy_cli.args.output == tempDir.name
 
 
-def test_run_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI run command"""
-
-    # Test no input or mutiple arguments
-    dummy_cli.line = "r"
-    error = dummy_cli.run_command()
-    assert error == "Must provide at least one argument."
-    dummy_cli.line = "r type1 type1"
-    error = dummy_cli.run_command()
-    assert error == "Choose a valid run type: age, lifestyle, clinical, classification"
-
-    # Test passing invalid run type
-    dummy_cli.line = "r type1"
-    error = dummy_cli.run_command()
-    assert error == "Choose a valid run type: age, lifestyle, clinical, classification"
-
-    # Test passing run type with more arguments than required
-    dummy_cli.line = "r age 1"
-    error = dummy_cli.run_command()
-    assert error == "Too many arguments given for run type age"
-
-    # Test passing run type with less arguments than required
-    dummy_cli.line = "r classification 1 2 3"
-    error = dummy_cli.run_command()
-    assert error == "For run type classification two arguments should be given"
-
-    # Test passing run type with more arguments than required
-    dummy_cli.line = "r age 1"
-    error = dummy_cli.run_command()
-    assert error == "Too many arguments given for run type age"
-
-    # Test passing run type with less arguments than required
-    dummy_cli.line = "r classification 1 2 3"
-    error = dummy_cli.run_command()
-    assert error == "For run type classification two arguments should be given"
-
-    # Test passing correct arguments
-    dummy_cli.line = "r age"
-    error = dummy_cli.run_command()
-    assert error is None
-    assert dummy_cli.run == dummy_cli.run_age
-
-
-def test_scaler_command_interactiveCLI(dummy_cli):
-    """Test dummy InteractiveCLI scaler command"""
+def test_scaler_command_CLI(dummy_cli):
+    """Test dummy CLI scaler command"""
 
     # Test no input
-    dummy_cli.line = "s"
+    dummy_cli.line = ""
     error = dummy_cli.scaler_command()
     assert error == "Must provide at least one argument or None."
 
     # Test using default
-    dummy_cli.line = "s None"
+    dummy_cli.line = "None"
     error = dummy_cli.scaler_command()
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
     assert dummy_cli.args.scaler_params == {}
 
     # Test passing invalid scaler type
-    dummy_cli.line = "s minmax"
+    dummy_cli.line = "minmax"
     error = dummy_cli.scaler_command()
     assert error == "Choose a valid scaler type: {}".format(["standard"])
 
     # Test empty scaler params if none given
-    dummy_cli.line = "s standard"
+    dummy_cli.line = "standard"
     error = dummy_cli.scaler_command()
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
@@ -797,15 +866,15 @@ def test_scaler_command_interactiveCLI(dummy_cli):
 
     # Test passing invalid scaler params
     message = "Scaler parameters must be in the format param1=value1 param2=value2 ..."
-    dummy_cli.line = "s standard mean==0"
+    dummy_cli.line = "standard mean==0"
     error = dummy_cli.scaler_command()
     assert error == message
-    dummy_cli.line = "s standard mean"
+    dummy_cli.line = "standard mean"
     error = dummy_cli.scaler_command()
     assert error == message
 
     # Test passing correct scaler params
-    dummy_cli.line = "s standard mean=0"
+    dummy_cli.line = "standard mean=0"
     error = dummy_cli.scaler_command()
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
