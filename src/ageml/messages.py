@@ -1,24 +1,13 @@
 """Messages for the AgeML package."""
 
 # Help command messeages
-cv_command_message = "cv [nº splits] [seed]               - set CV parameters (Default: 5, 0)"
-help_command_message = "h                                   - help (this command)"
-load_command_message = "l --flag [file]                     - load file with the specified flag"
-model_command_message = "m model_type [param1, param2, ...]  - set model type and parameters (Default: linear)"
-output_command_message = "o [directory]                       - set output directory"
-quit_command_message = "q                                   - quit the program"
-run_command_message = "r [command]                         - run different programs (Options: age, lifestyle, clinical, classification)"
-scaler_command_message = "s scaler_type [param1, param2, ...] - set scaler type and parameters (Default: standard)"
+model_age_command_message = "model_age           - run age prediction modelling."
+factor_analysis_command_message = "factor_analysis     - run factor analysis on age deltas."
+clinical_command_message = "clinical            - run analysis on clinical groups based on age deltas."
+classification_command_message = "classification      - run classification based on age deltas."
+quit_command_message = "q                   - quit the program"
 
 # Help long messeages
-run_long_description = (
-    "Run type. Choose between: age, lifestyle, clinical, classification. (Required) \n"
-    "age: Predict age from features. \n"
-    "lifestyle: Calculate associations between lifestyle and age gaps. \n"
-    "clinical: Calculate associations between clinical groups and age gaps. \n"
-    "classification: Classify clinicals groups from age gaps."
-)
-
 output_long_description = "Path to output directory where to save results. (Required)"
 
 features_long_description = (
@@ -93,17 +82,6 @@ groups_long_description = (
     "Two groups are required. (e.g. --groups cn ad)"
 )
 
-ages_long_description = (
-    "Path to input CSV file containing the ages of the subjects. \n"
-    "In the file the first column should be the ID, the second column should be the age, \n"
-    "the third column should be the predicted age, fourth age is corrected age and last \n"
-    "column is the delta. The first row should be the header for column names."
-)
-
-groups_long_description = (
-    "Clinical groups to do classification on (Required: run classification). \n"
-    "Two groups are required. (e.g. --groups cn ad)"
-)
 # UI information
 
 emblem = """

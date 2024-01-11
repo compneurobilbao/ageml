@@ -43,6 +43,8 @@ class Interface:
     ---------------
     setup(self): Creates required directories and files to store results.
 
+    set_flags(self): Set flags.
+
     set_visualizer(self): Set visualizer with output directory.
 
     set_model(self): Set model with parameters.
@@ -71,13 +73,13 @@ class Interface:
 
     run_wrapper(self, run): Wrapper for running modelling with log.
 
-    run_age(self): Run basic age modelling.
+    run_age(self): Run age modelling.
 
-    run_lifestyle(self): Run age modelling with lifestyle factors.
+    run_factor_analysis(self): Factor analysis between deltas and factors.
 
-    run_clinical(self): Run age modelling with clinical factors.
+    run_clinical(self): Analyse differences between deltas in clinical groups.
 
-    run_classification(self): Run classification between two different clinical groups.
+    run_classification(self): Classify groups based on deltas.
     """
 
     def __init__(self, args):
@@ -87,15 +89,13 @@ class Interface:
         self.args = args
 
         # Flags
-        self.flags = {"clinical": False, "covariates": False}
+        self.set_flags()
 
         # Set up directory for storage of results
         self.setup()
 
         # Initialise objects form library
         self.set_visualizer()
-        self.set_model()
-        self.set_classifier()
 
     def setup(self):
         """Create required directories and files to store results."""
@@ -115,6 +115,11 @@ class Interface:
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
+
+    def set_flags(self):
+        """Set flags."""
+
+        self.flags = {"clinical": False, "covariates": False}
 
     def set_visualizer(self):
         """Set visualizer with output directory."""
@@ -145,13 +150,19 @@ class Interface:
         else:
             return True
 
-    def load_csv(self, file):
+    def load_csv(self, file_type):
         """Use panda to load csv into dataframe.
 
         Parameters
         ----------
-        file: path to file; must be .csv
+        file_type: type of file to load
         """
+
+        # Obtain file name
+        if hasattr(self.args, file_type):
+            file = getattr(self.args, file_type)
+        else:
+            file = None
 
         if file is not None:
             # Check file exists
@@ -179,7 +190,7 @@ class Interface:
             required = []
 
         # Load features
-        self.df_features = self.load_csv(self.args.features)
+        self.df_features = self.load_csv('features')
         if self.df_features is not None:
             if "age" not in self.df_features.columns:
                 raise KeyError(
@@ -189,20 +200,20 @@ class Interface:
             raise ValueError("Features file must be provided.")
 
         # Load covariates
-        self.df_covariates = self.load_csv(self.args.covariates)
-        if self.df_covariates is not None:
-            # Check that covar name is given
-            if self.args.covar_name:
-                self.flags['covariates'] = True
+        self.df_covariates = self.load_csv('covariates')
+        # Check that covar name is given
+        if self.df_covariates is not None and hasattr(self.args, 'covar_name'):
+            self.flags['covariates'] = True
 
         # Load factors
-        self.df_factors = self.load_csv(self.args.factors)
+        self.df_factors = self.load_csv('factors')
         if self.df_factors is None and "factors" in required:
             raise ValueError("Factors file must be provided.")
 
         # Load clinical
-        self.df_clinical = self.load_csv(self.args.clinical)
+        self.df_clinical = self.load_csv('clinical')
         if self.df_clinical is not None:
+            # Check that CN in columns
             if "cn" not in self.df_clinical.columns:
                 raise KeyError(
                     "Clinical file must contian a column name 'CN' or any other case-insensitive variation."
@@ -219,30 +230,15 @@ class Interface:
             raise ValueError("Clinical file must be provided.")
 
         # Load ages
-        # Check if already has ages loaded
-        if hasattr(self, "df_ages"):
-            if self.df_ages is None:
-                self.df_ages = self.load_csv(self.args.ages)
-            else:
-                # Dont over write if None
-                df = self.load_csv(self.args.ages)
-                if df is not None:
-                    self.df_ages = df
-                    warning_message = (
-                        "Ages file already loaded, overwriting with  %s provided file."
-                        % self.args.ages
-                    )
-                    print(warning_message)
-                    warnings.warn(warning_message, category=UserWarning)
-        else:
-            self.df_ages = self.load_csv(self.args.ages)
-
+        self.df_ages = self.load_csv('ages')
         # Check that ages file has required columns
         if self.df_ages is not None:
             cols = ["age", "predicted age", "corrected age", "delta"]
             for col in cols:
                 if col not in self.df_ages.columns:
                     raise KeyError("Ages file must contain a column name %s" % col)
+        elif "ages" in required:
+            raise ValueError("Ages file must be provided.")
 
         # Remove subjects with missing values
         dfs = [
@@ -549,10 +545,13 @@ class Interface:
         run()
 
     def run_age(self):
-        """Run basic age modelling."""
+        """Run age modelling."""
 
         # Run age modelling
         print("Running age modelling...")
+
+        # Reset flags
+        self.set_flags()
 
         # Load data
         self.load_data(required=["features"])
@@ -579,10 +578,10 @@ class Interface:
 
             if self.flags["clinical"]:
                 # Create dataframe list of clinical cases by covariate
-                df_clinical_cov = []
+                dfs_clinical = []
                 for label_covar in labels_covar:
-                    df_covar_clinical = self.df_covar.loc[df_clinical.index]
-                    df_clinical_cov.append(df_clinical[df_covar_clinical[self.args.covar_name] == label_covar])
+                    df_covar_clinical = self.df_covariates.loc[df_clinical.index]
+                    dfs_clinical.append(df_clinical[df_covar_clinical[self.args.covar_name] == label_covar])
 
         else:  # No covariates, so df list of controls is [df_cn] and [df_clinical]
             dfs_cn = [df_cn]
@@ -606,6 +605,8 @@ class Interface:
         dfs_ages = {}
         for label_covar, df_cn in zip(labels_covar, dfs_cn):
             model_name = f"{self.args.covar_name}_{label_covar}"
+            # Reinitialise model for each covariate to ensure same initial state
+            self.set_model()
             self.models[model_name], dfs_ages[model_name] = self.model_age(df_cn, self.ageml, label_covar)
             df_ages_cn = pd.concat(dfs_ages.values(), axis=0)
 
@@ -613,13 +614,14 @@ class Interface:
         # TODO: Discuss about alternatives. Use dicts for all dataframes and models?
 
         # Apply to clinical data
-        dfs_predicted_ages = {}
+        dict_predicted_ages = {}
         if self.flags["clinical"]:
             for df_age_clinical, label_covar in zip(dfs_clinical, labels_covar):
                 model_name = f"{self.args.covar_name}_{label_covar}"
-                dfs_predicted_ages[model_name] = self.predict_age(df_age_clinical, self.models[model_name])
+                dict_predicted_ages[model_name] = self.predict_age(df_age_clinical, self.models[model_name])
             # Concatenate all the predicted ages
-            self.df_ages = pd.concat([dfs_predicted_ages.values()])
+            self.df_ages = pd.concat(list(dict_predicted_ages.values()))
+            self.df_ages = pd.concat([self.df_ages, df_ages_cn])
         else:
             self.df_ages = df_ages_cn
 
@@ -630,22 +632,18 @@ class Interface:
             filename = "predicted_age.csv"
         self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
-    def run_lifestyle(self):
-        """Run age modelling with lifestyle factors."""
+    def run_factor_analysis(self):
+        """Run factor analysis between deltas and factors."""
 
         print("Running lifestyle factors...")
 
+        # Reset flags
+        self.set_flags()
+
         # Load data
-        self.load_data(required=["factors"])
+        self.load_data(required=["ages", "factors"])
 
-        # Run age if not ages found
-        if self.df_ages is None:
-            print("No age data detected...")
-            print("-----------------------------------")
-            self.run_age()
-            print("-----------------------------------")
-            print("Resuming lifestyle factors...")
-
+        # Check wether to split by clinical groups
         if self.flags["clinical"]:
             groups = self.df_clinical.columns.to_list()
             dfs_ages, dfs_factors = [], []
@@ -661,20 +659,15 @@ class Interface:
         self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
     def run_clinical(self):
-        """Run age modelling with clinical factors."""
+        """Analyse differences between deltas in clinical groups."""
 
         print("Running clinical outcomes...")
 
-        # Load data
-        self.load_data(required=["clinical"])
+        # Reset flags
+        self.set_flags()
 
-        # Run age if not ages found
-        if self.df_ages is None:
-            print("No age data detected...")
-            print("-----------------------------------")
-            self.run_age()
-            print("-----------------------------------")
-            print("Resuming clinical outcomes...")
+        # Load data
+        self.load_data(required=["ages", "clinical"])
 
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
@@ -693,16 +686,11 @@ class Interface:
 
         print("Running classification...")
 
-        # Load data
-        self.load_data(required=["clinical"])
+        # Reset flags
+        self.set_flags()
 
-        # Run age if not ages found
-        if self.df_ages is None:
-            print("No age data detected...")
-            print("-----------------------------------")
-            self.run_age()
-            print("-----------------------------------")
-            print("Resuming clinical outcomes...")
+        # Load data
+        self.load_data(required=["ages", "clinical"])
 
         # Check that arguments given for each group
         if self.args.group1 is None or self.args.group2 is None:
@@ -718,176 +706,11 @@ class Interface:
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
         # Classify between groups
+        self.set_classifier()
         self.classify(df_group1, df_group2, groups)
 
 
 class CLI(Interface):
-
-    """Read and parses user commands via command line.
-
-    Public methods:
-    ---------------
-    configure_parser(self): Configure parser with required arguments for processing.
-
-    configure_args(self, args): Configure argumens with required fromatting for modelling.
-    """
-
-    def __init__(self):
-        """Initialise variables."""
-        self.parser = argparse.ArgumentParser(
-            description="Age Modelling using python.",
-            formatter_class=argparse.RawTextHelpFormatter,
-        )
-        self.configure_parser()
-        args = self.parser.parse_args()
-        args = self.configure_args(args)
-
-        # Initialise parent class
-        super().__init__(args)
-
-        # Run modelling
-        case = args.run
-        if case == "age":
-            self.run = self.run_age
-        elif case == "lifestyle":
-            self.run = self.run_lifestyle
-        elif case == "clinical":
-            self.run = self.run_clinical
-        elif case == "classification":
-            self.run = self.run_classification
-        else:
-            raise ValueError(
-                "Choose a valid run type: age, lifestyle, clinical, classification"
-            )
-
-        self.run_wrapper(self.run)
-
-    def configure_parser(self):
-        """Configure parser with required arguments for processing."""
-        self.parser.add_argument(
-            "-r",
-            "--run",
-            metavar="RUN",
-            default="age",
-            required=True,
-            help=messages.run_long_description,
-        )
-        self.parser.add_argument(
-            "-o",
-            "--output",
-            metavar="DIR",
-            required=True,
-            help=messages.output_long_description,
-        )
-        self.parser.add_argument(
-            "-f", "--features", metavar="FILE", help=messages.features_long_description
-        )
-        self.parser.add_argument(
-            "-m",
-            "--model",
-            nargs="*",
-            default=["linear"],
-            help=messages.model_long_description,
-        )
-        self.parser.add_argument(
-            "-s",
-            "--scaler",
-            nargs="*",
-            default=["standard"],
-            help=messages.scaler_long_description,
-        )
-        self.parser.add_argument(
-            "--cv",
-            nargs="+",
-            type=int,
-            default=[5, 0],
-            help=messages.cv_long_description,
-        )
-        self.parser.add_argument(
-            "--covariates", metavar="FILE", help=messages.covar_long_description
-        )
-        self.parser.add_argument(
-            "--covar_name", metavar="COVAR_NAME", help=messages.covar_name_long_description
-        )
-        self.parser.add_argument(
-            "--factors", metavar="FILE", help=messages.factors_long_description
-        )
-        self.parser.add_argument(
-            "--clinical", metavar="FILE", help=messages.clinical_long_description
-        )
-        self.parser.add_argument(
-            "--systems", metavar="FILE", help=messages.systems_long_description
-        )
-        self.parser.add_argument(
-            "--ages", metavar="FILE", help=messages.ages_long_description
-        )
-        self.parser.add_argument(
-            "--groups", metavar="GROUP", nargs=2, help=messages.groups_long_description
-        )
-
-    def configure_args(self, args):
-        """Configure argumens with required fromatting for modelling.
-
-        Parameters
-        ----------
-        args: arguments object from parser
-        """
-
-        # Set CV params first item is the number of CV splits
-        if len(args.cv) == 1:
-            args.cv_split = args.cv[0]
-            args.seed = self.parser.get_default("cv")[1]
-        elif len(args.cv) == 2:
-            args.cv_split, args.seed = args.cv
-        else:
-            raise ValueError("Too many values to unpack")
-
-        # Set Scaler parameters first item is the scaler type
-        # The rest of the arguments conform a dictionary for **kwargs
-        args.scaler_type = args.scaler[0]
-        if len(args.scaler) > 1:
-            scaler_params = {}
-            for item in args.scaler[1:]:
-                # Check that item has one = to split
-                if item.count("=") != 1:
-                    raise ValueError(
-                        "Scaler parameters must be in the format param1=value1 param2=value2 ..."
-                    )
-                key, value = item.split("=")
-                value = convert(value)
-                scaler_params[key] = value
-            args.scaler_params = scaler_params
-        else:
-            args.scaler_params = {}
-
-        # Set Model parameters first item is the model type
-        # The rest of the arguments conform a dictionary for **kwargs
-        args.model_type = args.model[0]
-        if len(args.model) > 1:
-            model_params = {}
-            for item in args.model[1:]:
-                # Check that item has one = to split
-                if item.count("=") != 1:
-                    raise ValueError(
-                        "Model parameters must be in the format param1=value1 param2=value2 ..."
-                    )
-                key, value = item.split("=")
-                value = convert(value)
-                model_params[key] = value
-            args.model_params = model_params
-        else:
-            args.model_params = {}
-
-        # Set groups
-        if args.groups is not None:
-            args.group1, args.group2 = args.groups
-        else:
-            args.group1, args.group2 = None, None
-
-        return args
-
-
-class InteractiveCLI(Interface):
 
     """Read and parses user commands via command line via an interactive interface
 
@@ -898,12 +721,22 @@ class InteractiveCLI(Interface):
 
     get_line(self): Prints a prompt for the user and updates the user entry.
 
-    force_command(self, func, command = None): Force the user to enter a valid command.
+    force_command(self, flag="", command = None): Force the user to enter a valid command.
 
     command_interface(self): Reads in the commands and calls the corresponding
                              functions.
 
+    classification_command(self): Runs classification.
+
+    clinical_command(self): Runs clinical analysis.
+
+    covar_command(self): Loads covariate group.
+
     cv_command(self): Loads CV parameters.
+
+    factor_analysis_command(self): Runs factor analysis.
+
+    group_command(self): Loads groups.
 
     help_command(self): Prints a list of valid commands.
 
@@ -911,9 +744,9 @@ class InteractiveCLI(Interface):
 
     model_command(self): Loads model parameters.
 
-    output_command(self): Loads output directory.
+    model_age_command(self): Runs age modelling.
 
-    run_command(self): Runs the modelling.
+    output_command(self): Loads output directory.
 
     scaler_command(self): Loads scaler parameters.
     """
@@ -955,30 +788,7 @@ class InteractiveCLI(Interface):
 
         # Askf for output directory
         print("Output directory path (Required):")
-        self.force_command(self.output_command, "o", required=True)
-        # Ask for input files
-        print("Input features file path (Required for run age):")
-        self.force_command(self.load_command, "l --features")
-        print("Input covariates file path (Optional):")
-        self.force_command(self.load_command, "l --covariates")
-        print("Input factors file path (Reqruired for run lifestyle):")
-        self.force_command(self.load_command, "l --factors")
-        print(
-            "Input clinical file path (Required for run clinical or run classification):"
-        )
-        self.force_command(self.load_command, "l --clinical")
-        print("Input systems file path (Optional):")
-        self.force_command(self.load_command, "l --systems")
-        print("Input ages file path (Optional):")
-        self.force_command(self.load_command, "l --ages")
-
-        # Ask for scaler, model and CV parameters
-        print("Scaler type and parameters (Default:standard):")
-        self.force_command(self.scaler_command, "s")
-        print("Model type and parameters (Default:linear):")
-        self.force_command(self.model_command, "m")
-        print("CV parameters (Default: nº splits=5 and seed=0):")
-        self.force_command(self.cv_command, "cv")
+        self.force_command(self.output_command, required=True)
 
     def get_line(self, required=True):
         """Print prompt for the user and update the user entry."""
@@ -987,18 +797,25 @@ class InteractiveCLI(Interface):
             print("Must provide a value.")
             self.line = input("#: ")
 
-    def force_command(self, func, command, required=False):
+    def force_command(self, func, flag="", required=False):
         """Force the user to enter a valid command."""
         while True:
             self.get_line(required=required)
             if self.line == "":
                 self.line = "None"
-            self.line = command + " " + self.line
+            self.line = flag + " " + self.line
             error = func()
             if error is None:
                 return None
             else:
                 print(error)
+
+    def reset_args(self):
+        """Reset arguments to None except output directory."""
+
+        for attr_name in vars(self.args):
+            if attr_name != 'output':
+                setattr(self.args, attr_name, None)
 
     def command_interface(self):
         """Read the command entered and call the corresponding function."""
@@ -1008,57 +825,103 @@ class InteractiveCLI(Interface):
         self.get_line()  # get the user entry
         command = self.line.split()[0]  # read the first item
         while command != "q":
+            # Reset arguments
+            self.reset_args()
+
+            # Run command
             error = None
-            if command == "cv":
-                error = self.cv_command()
+            if command == "classification":
+                error = self.classification_command()
+            elif command == "clinical":
+                error = self.clinical_command()
+            elif command == "factor_analysis":
+                error = self.factor_analysis_command()
+            elif command == "model_age":
+                error = self.model_age_command()
             elif command == "h":
                 self.help_command()
-            elif command == "l":
-                error = self.load_command()
-            elif command == "m":
-                error = self.model_command()
-            elif command == "o":
-                error = self.output_command()
-            elif command == "r":
-                error = self.run_command()
-            elif command == "s":
-                error = self.scaler_command()
             else:
                 print("Invalid command. Enter 'h' for help.")
 
             # Check error and if not make updates
             if error is not None:
                 print(error)
-            elif command == "r":
-                # Capture any error raised and print
-                try:
-                    self.run_wrapper(self.run)
-                except Exception as e:
-                    print(e)
-                    print("Error running modelling.")
-            elif command == "o":
-                try:
-                    self.setup()
-                    self.set_visualizer()
-                except Exception as e:
-                    print(e)
-                    print("Error setting up output directory.")
-            elif command in ["cv", "m", "s"]:
-                try:
-                    self.set_model()
-                except Exception as e:
-                    print(e)
-                    print("Error setting up model.")
 
             # Get next command
             self.get_line()  # get the user entry
             command = self.line.split()[0]  # read the first item
 
+    def classification_command(self):
+        """Run classification."""
+
+        error = None
+
+        # Ask for input files
+        print("Input ages file path (Required):")
+        self.force_command(self.load_command, "--ages", required=True)
+        print("Input clinical file path (Required):")
+        self.force_command(self.load_command, "--clinical", required=True)
+
+        # Ask for groups
+        print("Input groups (Required):")
+        self.force_command(self.group_command, required=True)
+
+        # Run classification capture any error raised and print
+        try:
+            self.run_wrapper(self.run_classification)
+            print("Finished classification.")
+        except Exception as e:
+            print(e)
+            error = "Error running classification."
+        
+        return error
+
+    def clinical_command(self):
+        """Run clinical analysis."""
+
+        error = None
+
+        # Ask for input files
+        print("Input ages file path (Required):")
+        self.force_command(self.load_command, "--ages", required=True)
+        print("Input clinical file path (Required):")
+        self.force_command(self.load_command, "--clinical", required=True)
+
+        # Run clinical analysis capture any error raised and print
+        try:
+            self.run_wrapper(self.run_clinical)
+            print("Finished clinical analysis.")
+        except Exception as e:
+            print(e)
+            error = "Error running clinical analysis."
+        
+        return error
+
+    def covar_command(self):
+        """Load covariate group."""
+
+        # Split into items and remove  command
+        self.line = self.line.split()
+        error = None
+
+        # Check that one argument given
+        if len(self.line) != 1:
+            error = "Must provide one covariate name."
+            return error
+
+        # Set covariate name
+        if self.line[0] == "None":
+            pass
+        else:
+            self.args.covar_name = self.line[0]
+
+        return error
+
     def cv_command(self):
         """Load CV parameters."""
 
         # Split into items and remove  command
-        self.line = self.line.split()[1:]
+        self.line = self.line.split()
         error = None
 
         # Check that at least one argument input
@@ -1089,25 +952,64 @@ class InteractiveCLI(Interface):
 
         return error
 
+    def factor_analysis_command(self):
+        """Run factor analysis."""
+
+        error = None
+
+        # Ask for input files
+        print("Input ages file path (Required):")
+        self.force_command(self.load_command, "--ages", required=True)
+        print("Input factors file path (Required):")
+        self.force_command(self.load_command, "--factors", required=True)
+        print("Input clinical file path (Optional):")
+        self.force_command(self.load_command, "--clinical")
+        print("Input covariates file path (Optional):")
+        self.force_command(self.load_command, "--covariates")
+
+        # Run factor analysis capture any error raised and print
+        try:
+            self.run_wrapper(self.run_factor_analysis)
+            print("Finished factor analysis.")
+        except Exception as e:
+            print(e)
+            error = "Error running factor analysis."
+        
+        return error
+
+    def group_command(self):
+        """Load groups."""
+
+        # Split into items and remove  command
+        self.line = self.line.split()
+        error = None
+
+        # Check that two groups are given
+        if len(self.line) != 2:
+            error = "Must provide two groups."
+            return error
+
+        # Set groups
+        self.args.group1, self.args.group2 = self.line[0], self.line[1]
+
+        return error
+
     def help_command(self):
-        """Print a list of valid commands."""
+        """Print a list of valid commmands."""
 
         # Print possible commands
         print("User commands:")
-        print(messages.cv_command_message)
-        print(messages.help_command_message)
-        print(messages.load_command_message)
-        print(messages.model_command_message)
-        print(messages.output_command_message)
+        print(messages.classification_command_message)
+        print(messages.clinical_command_message)
+        print(messages.factor_analysis_command_message)
+        print(messages.model_age_command_message)
         print(messages.quit_command_message)
-        print(messages.run_command_message)
-        print(messages.scaler_command_message)
 
     def load_command(self):
         """Load file paths."""
 
         # Split into items and remove  command
-        self.line = self.line.split()[1:]
+        self.line = self.line.split()
         error = None
 
         # Determine if correct number of arguments and check file valid
@@ -1161,11 +1063,50 @@ class InteractiveCLI(Interface):
 
         return error
 
+    def model_age_command(self):
+        """Run age modelling."""
+
+        error = None
+        
+        # Ask for input files
+        print("Input features file path (Required):")
+        self.force_command(self.load_command, "--features", required=True)
+        print("Input covariates file path (Optional):")
+        self.force_command(self.load_command, "--covariates")
+        print("Input covariate type to train seperate models (Optional):")
+        self.force_command(self.covar_command)
+        print("Input clinical file path (Optional):")
+        self.force_command(self.load_command, "--clinical")
+        print("Input systems file path (Optional):")
+        self.force_command(self.load_command, "--systems")
+
+        # Ask for scaler, model and CV parameters
+        print("Scaler type and parameters (Default:standard)")
+        print("Available: standard (from sklearn)")
+        print("Example: standard with_mean=True with_std=False")
+        self.force_command(self.scaler_command)
+        print("Model type and parameters (Default:linear)")
+        print("Available: linear (from sklearn)")
+        print("Example: linear fit_intercept=True positive=False")
+        self.force_command(self.model_command)
+        print("CV parameters (Default: nº splits=5 and seed=0):")
+        self.force_command(self.cv_command)
+
+        # Run modelling capture any error raised and print
+        try:
+            self.run_wrapper(self.run_age)
+            print('Finished running age modelling.')
+        except Exception as e:
+            print(e)
+            error = "Error running age modelling."
+        
+        return error
+
     def model_command(self):
         """Load model parameters."""
 
         # Split into items and remove  command
-        self.line = self.line.split()[1:]
+        self.line = self.line.split()
         valid_types = ["linear"]
         error = None
 
@@ -1206,7 +1147,7 @@ class InteractiveCLI(Interface):
         """Load output directory."""
 
         # Split into items and remove  command
-        self.line = self.line.split()[1:]
+        self.line = self.line.split()
         error = None
 
         # Check wether there is a path
@@ -1225,46 +1166,11 @@ class InteractiveCLI(Interface):
 
         return error
 
-    def run_command(self):
-        """Run the modelling."""
-        error = None
-
-        # Split into items and remove  command
-        self.line = self.line.split()[1:]
-
-        # Check that at least one argument given
-        if len(self.line) < 1:
-            error = "Must provide at least one argument."
-            return error
-        elif len(self.line) > 1 and self.line[0] in ['age', 'lifestyle', 'clinical']:
-            error = "Too many arguments given for run type %s" % self.line[0]
-            return error
-        elif len(self.line) != 3 and self.line[0] in ['classification']:
-            error = "For run type %s two arguments should be given" % self.line[0]
-            return error
-
-        # Run specificed modelling
-        case = self.line[0]
-        if case == "age":
-            self.run = self.run_age
-        elif case == "lifestyle":
-            self.run = self.run_lifestyle
-        elif case == "clinical":
-            self.run = self.run_clinical
-        elif case == "classification":
-            self.run = self.run_classification
-            self.args.group1 = self.line[1]
-            self.args.group2 = self.line[2]
-        else:
-            error = "Choose a valid run type: age, lifestyle, clinical, classification"
-
-        return error
-
     def scaler_command(self):
         """Load scaler parameters."""
 
         # Split into items and remove  command
-        self.line = self.line.split()[1:]
+        self.line = self.line.split()
         error = None
         valid_types = ["standard"]
 
