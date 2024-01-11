@@ -155,7 +155,7 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.title(f"Chronological vs Predicted Age {name}")
+        plt.title(f"Chronological vs Predicted Age \n{name}")
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
         if name == "":
@@ -186,7 +186,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title(f"Before age-bias correction {name}")
+        plt.title(f"Before age-bias correction \n{name}")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
 
@@ -196,7 +196,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title(f"After age-bias correction {name}")
+        plt.title(f"After age-bias correction \n{name}")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
         plt.tight_layout()
@@ -207,7 +207,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def factors_vs_deltas(self, corrs, groups, labels, markers):
+    def factors_vs_deltas(self, corrs, groups, labels, markers, system: str = None):
         """Plot bar graph for correlation between factors and deltas.
         
         Parameters
@@ -250,11 +250,18 @@ class Visualizer:
 
         # Save figure
         fig.set_size_inches(10, 5 * len(corrs))
+        if system is not None:
+            fig.suptitle(f"Correlation of factors with age deltas. System: {system}")
+            filename = f"factors_vs_deltas_system_{system}.svg"
+        else:
+            fig.suptitle(f"Correlation of factors with age deltas.")
+            filename ="factors_vs_deltas.svg"
+
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "factors_vs_deltas.svg"))
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def deltas_by_groups(self, deltas, labels):
+    def deltas_by_groups(self, deltas, labels, system: str = None):
         """Plot box plot for deltas in each group.
 
         Parameters
@@ -268,9 +275,13 @@ class Visualizer:
         boxes = plt.boxplot(deltas, labels=labels, patch_artist=True)
         for i, box in enumerate(boxes["boxes"]):
             box.set_facecolor(self.cmap(i / num_groups))
-        plt.xlabel("Gruop")
+        plt.xlabel("Group")
         plt.ylabel("Delta")
-        plt.savefig(os.path.join(self.path_for_fig, "clinical_groups_box_plot.svg"))
+        if system is None:
+            filename = "clinical_groups_box_plot.svg"
+        else:
+            filename = f"clinical_groups_box_plot_{system}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def classification_auc(self, y, y_pred, groups):

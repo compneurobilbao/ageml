@@ -343,7 +343,8 @@ class Interface:
         for i, df in enumerate(dfs):
             if labels is not None:
                 print(labels[i])
-            ages = df["age"].to_numpy()
+            age_col  = [col for col in df.columns if "age" in col][0]
+            ages = df[age_col].to_numpy()
             print("Mean age: %.2f" % np.mean(ages))
             print("Std age: %.2f" % np.std(ages))
             print("Age range: [%d,%d]" % (np.min(ages), np.max(ages)))
@@ -472,7 +473,7 @@ class Interface:
 
         return df_ages
 
-    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, factor_names, significance=0.05):
+    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, factor_names, significance=0.05, system: str = None):
         """Calculate correlations between factors and deltas.
 
         Parameters
@@ -494,7 +495,8 @@ class Interface:
             print(group)
 
             # Select data to visualize
-            deltas = df_ages["delta"].to_numpy()
+            delta_col = [col for col in df_ages.columns if "delta" in col][0]
+            deltas = df_ages[delta_col].to_numpy()
             factors = df_factors.to_numpy()
 
             # Calculate correlation between features and age
@@ -512,9 +514,9 @@ class Interface:
                 print("%d. %s %s: %.2f" % (i + 1, significant[o], factor_names[o], corr[o]))
 
         # Use visualizer to show bar graph
-        self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants)
+        self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants, system)
 
-    def deltas_by_group(self, df, labels):
+    def deltas_by_group(self, df, labels, system: str = None):
         """Calculate summary metrics of deltas by group.
         
         Parameters
@@ -529,7 +531,8 @@ class Interface:
         # Obtain deltas means and stds
         deltas = []
         for i, df_group in enumerate(df):
-            deltas.append(df_group["delta"].to_numpy())
+            delta_col = [col for col in df_group.columns if "delta" in col][0]
+            deltas.append(df_group[delta_col].to_numpy())
             print(labels[i])
             print("Mean delta: %.2f" % np.mean(deltas[i]))
             print("Std delta: %.2f" % np.std(deltas[i]))
@@ -553,7 +556,7 @@ class Interface:
                 print(pval_message)
 
         # Use visualizer
-        self.visualizer.deltas_by_groups(deltas, labels)
+        self.visualizer.deltas_by_groups(deltas, labels, system)
 
     def classify(self, df1, df2, groups):
         """Classify two groups based on deltas.
@@ -811,20 +814,52 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "factors"])
 
+<<<<<<< HEAD
         # Check wether to split by clinical groups
         if self.flags["clinical"]:
+=======
+        if self.flags["clinical"] and not self.flags["systems"]:
+            # Extract groups from clinical data
+>>>>>>> 8a36b2a ([ENH] Implemented systems functionality in run_clinical and run_lifestyle)
             groups = self.df_clinical.columns.to_list()
             dfs_ages, dfs_factors = [], []
             for g in groups:
                 dfs_ages.append(self.df_ages.loc[self.df_clinical[g]])
                 dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
-        else:
+            # Compute correlations between factors and deltas for each group
+            self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
+
+        elif not self.flags["clinical"] and self.flags["systems"]:
+            systems_list = list(self.dict_systems.keys())
+            for system in systems_list:
+                cols = [col for col in systems_list if system in self.df_ages.columns.to_list()]
+                dfs_ages = [self.df_ages[cols]]
+                dfs_factors = [self.df_factors]
+                groups = ["all"]
+                self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
+                                       self.df_factors.columns.to_list(), system=system)
+
+        elif self.flags["clinical"] and self.flags["systems"]:
+            # Extract systems from systems file
+            groups = self.df_clinical.columns.to_list()
+            dfs_ages, dfs_factors = [], []
+            systems_list = list(self.dict_systems.keys())
+            for system in systems_list:
+                for g in groups:
+                    cols = [col for col in self.df_ages.columns.to_list() if system in col]
+                    dfs_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
+                    dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
+                # Compute correlations between factors and deltas for each system
+                self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
+                                       self.df_factors.columns.to_list(), system=system)
+
+        elif not self.flags["clinical"] and not self.flags["systems"]:
             dfs_ages = [self.df_ages]
             dfs_factors = [self.df_factors]
             groups = ["all"]
+            # Compute correlations between factors and deltas
+            self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
-        # Calculate correlations between factors and deltas
-        self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
     def run_clinical(self):
         """Analyse differences between deltas in clinical groups."""
@@ -839,15 +874,25 @@ class Interface:
 
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
-        group_ages = []
-        for g in groups:
-            group_ages.append(self.df_ages.loc[self.df_clinical[g]])
+        
+        # If systems file provided, iterate over systems.
+        if self.flags["systems"]:
+            systems_list = list(self.dict_systems.keys())
+            for system in systems_list:
+                group_ages = []
+                cols = [col for col in self.df_ages.columns.to_list() if system in col]
+                for g in groups:
+                    group_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
+                # Use visualizer to show box plots of deltas by group
+                self.deltas_by_group(group_ages, groups, system=system)
+            # Use visualizer to show age distribution per system
+            self.age_distribution(group_ages, groups, name=f"clinical_groups")
+        else:
+            group_ages = []
+            for g in groups:
+                group_ages.append(self.df_ages.loc[self.df_clinical[g]])
+            self.age_distribution(group_ages, groups, name="clinical_groups")
 
-        # Use visualizer to show age distribution
-        self.age_distribution(group_ages, groups, name="clinical_groups")
-
-        # Use visualizer to show box plots of deltas by group
-        self.deltas_by_group(group_ages, groups)
 
     def run_classification(self):
         """Run classification between two different clinical groups."""
