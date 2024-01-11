@@ -43,6 +43,8 @@ class Interface:
     ---------------
     setup(self): Creates required directories and files to store results.
 
+    set_flags(self): Set flags.
+
     set_visualizer(self): Set visualizer with output directory.
 
     set_model(self): Set model with parameters.
@@ -87,7 +89,7 @@ class Interface:
         self.args = args
 
         # Flags
-        self.flags = {"clinical": False, "covariates": False}
+        self.set_flags()
 
         # Set up directory for storage of results
         self.setup()
@@ -113,6 +115,11 @@ class Interface:
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
+
+    def set_flags(self):
+        """Set flags."""
+
+        self.flags = {"clinical": False, "covariates": False}
 
     def set_visualizer(self):
         """Set visualizer with output directory."""
@@ -194,10 +201,9 @@ class Interface:
 
         # Load covariates
         self.df_covariates = self.load_csv('covariates')
-        if self.df_covariates is not None:
-            # Check that covar name is given
-            if hasattr(self.args, 'covar_name'):
-                self.flags['covariates'] = True
+        # Check that covar name is given
+        if self.df_covariates is not None and hasattr(self.args, 'covar_name'):
+            self.flags['covariates'] = True
 
         # Load factors
         self.df_factors = self.load_csv('factors')
@@ -225,13 +231,14 @@ class Interface:
 
         # Load ages
         self.df_ages = self.load_csv('ages')
-
         # Check that ages file has required columns
         if self.df_ages is not None:
             cols = ["age", "predicted age", "corrected age", "delta"]
             for col in cols:
                 if col not in self.df_ages.columns:
                     raise KeyError("Ages file must contain a column name %s" % col)
+        elif "ages" in required:
+            raise ValueError("Ages file must be provided.")
 
         # Remove subjects with missing values
         dfs = [
@@ -543,6 +550,9 @@ class Interface:
         # Run age modelling
         print("Running age modelling...")
 
+        # Reset flags
+        self.set_flags()
+
         # Load data
         self.load_data(required=["features"])
 
@@ -611,6 +621,7 @@ class Interface:
                 dict_predicted_ages[model_name] = self.predict_age(df_age_clinical, self.models[model_name])
             # Concatenate all the predicted ages
             self.df_ages = pd.concat(list(dict_predicted_ages.values()))
+            self.df_ages = pd.concat([self.df_ages, df_ages_cn])
         else:
             self.df_ages = df_ages_cn
 
@@ -626,8 +637,11 @@ class Interface:
 
         print("Running lifestyle factors...")
 
+        # Reset flags
+        self.set_flags()
+
         # Load data
-        self.load_data(required=["factors"])
+        self.load_data(required=["ages", "factors"])
 
         # Check wether to split by clinical groups
         if self.flags["clinical"]:
@@ -649,8 +663,11 @@ class Interface:
 
         print("Running clinical outcomes...")
 
+        # Reset flags
+        self.set_flags()
+
         # Load data
-        self.load_data(required=["clinical"])
+        self.load_data(required=["ages", "clinical"])
 
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
@@ -669,8 +686,11 @@ class Interface:
 
         print("Running classification...")
 
+        # Reset flags
+        self.set_flags()
+
         # Load data
-        self.load_data(required=["clinical"])
+        self.load_data(required=["ages", "clinical"])
 
         # Check that arguments given for each group
         if self.args.group1 is None or self.args.group2 is None:
@@ -790,6 +810,13 @@ class CLI(Interface):
             else:
                 print(error)
 
+    def reset_args(self):
+        """Reset arguments to None except output directory."""
+
+        for attr_name in vars(self.args):
+            if attr_name != 'output':
+                setattr(self.args, attr_name, None)
+
     def command_interface(self):
         """Read the command entered and call the corresponding function."""
 
@@ -798,6 +825,10 @@ class CLI(Interface):
         self.get_line()  # get the user entry
         command = self.line.split()[0]  # read the first item
         while command != "q":
+            # Reset arguments
+            self.reset_args()
+
+            # Run command
             error = None
             if command == "classification":
                 error = self.classification_command()
@@ -935,11 +966,11 @@ class CLI(Interface):
         self.force_command(self.load_command, "--covariates")
 
         # Run factor analysis capture any error raised and print
-        try:
-            self.run_wrapper(self.run_factor_analysis)
-        except Exception as e:
-            print(e)
-            error = "Error running factor analysis."
+        #try:
+        self.run_wrapper(self.run_factor_analysis)
+        #except Exception as e:
+        #    print(e)
+        #    error = "Error running factor analysis."
         
         return error
 
@@ -961,7 +992,7 @@ class CLI(Interface):
         return error
 
     def help_command(self):
-        """Print a list of valid commands."""
+        """Print a list of valid commmands."""
 
         # Print possible commands
         print("User commands:")
