@@ -421,7 +421,8 @@ class Interface:
         Parameters
         ----------
         df: dataframe with features and age; shape=(n,m+1)
-        model: AgeML object"""
+        model: AgeML object
+        name: name of the model"""
 
         # Show training pipeline
         print("-----------------------------------")
@@ -482,7 +483,8 @@ class Interface:
         dfs_factors: list of dataframes with factor information; shape=(n,m)
         groups: list of labels for each dataframe; shape=(n,),
         factor_names: list of factor names; shape=(m,)
-        significance: significance level for correlation"""
+        significance: significance level for correlation
+        system: name of the system from which the variables come from"""
 
         # Select age information
         print("-----------------------------------")
@@ -522,7 +524,8 @@ class Interface:
         Parameters
         ----------
         df: list of dataframes with delta information; shape=(n,m)
-        labels: list of labels for each dataframe; shape=(n,)"""
+        labels: list of labels for each dataframe; shape=(n,)
+        system: name of the system from which the variables come from"""
 
         # Select age information
         print("-----------------------------------")
@@ -558,22 +561,24 @@ class Interface:
         # Use visualizer
         self.visualizer.deltas_by_groups(deltas, labels, system)
 
-    def classify(self, df1, df2, groups):
+    def classify(self, df1, df2, groups, system: str = None):
         """Classify two groups based on deltas.
 
         Parameters
         ----------
         df1: dataframe with delta information; shape=(n,m)
         df2: dataframe with delta information; shape=(n,m)
-        groups: list of labels for each dataframe; shape=(2,)"""
+        groups: list of labels for each dataframe; shape=(2,)
+        system: name of the system from which the variables come from"""
 
         # Classification
         print("-----------------------------------")
         print("Classification between groups %s and %s" % (groups[0], groups[1]))
 
         # Select delta information
-        deltas1 = df1["delta"].to_numpy()
-        deltas2 = df2["delta"].to_numpy()
+        delta_col = [col for col in df1.columns if "delta" in col][0]
+        deltas1 = df1[delta_col].to_numpy()
+        deltas2 = df2[delta_col].to_numpy()
 
         # Create X and y for classification
         X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
@@ -583,7 +588,7 @@ class Interface:
         y_pred = self.classifier.fit_model(X, y)
 
         # Visualize AUC
-        self.visualizer.classification_auc(y, y_pred, groups)
+        self.visualizer.classification_auc(y, y_pred, groups, system)
 
     @log
     def run_wrapper(self, run):
@@ -919,8 +924,20 @@ class Interface:
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
         # Classify between groups
+<<<<<<< HEAD
         self.set_classifier()
         self.classify(df_group1, df_group2, groups)
+=======
+        if self.flags["systems"]:
+            systems_list = list(self.dict_systems.keys())
+            for system in systems_list:
+                cols = [col for col in self.df_ages.columns.to_list() if system in col]
+                df_group1_system = df_group1[cols]
+                df_group2_system = df_group2[cols]
+                self.classify(df_group1_system, df_group2_system, groups, system=system)
+        else:
+            self.classify(df_group1, df_group2, groups)
+>>>>>>> 8f9e4d4 ([ENH] Adjusted ui & visualizer to fully support systems in all pipelines)
 
 
 class CLI(Interface):
