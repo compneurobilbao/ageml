@@ -203,6 +203,8 @@ class Interface:
         self.df_covariates = self.load_csv('covariates')
         # Check that covar name is given
         if self.df_covariates is not None and hasattr(self.args, 'covar_name'):
+            # Force covar_name to be lower case
+            self.args.covar_name = self.args.covar_name.lower()
             self.flags['covariates'] = True
 
         # Load factors
@@ -252,6 +254,7 @@ class Interface:
         self.subjects_missing_data = []
         for label, df in zip(labels, dfs):
             if df is not None:
+                print("Number of subjects in dataframe %s: %d" % (label, df.shape[0]))
                 missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
                 self.subjects_missing_data = (
                     self.subjects_missing_data + missing_subjects
@@ -280,9 +283,14 @@ class Interface:
 
         # Remove subjects with missing values
         self.subjects_missing_data = set(self.subjects_missing_data)
+        flag_subjects = True
         for df in dfs:
             if df is not None:
                 df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
+                # Print only once number of final subjects
+                if flag_subjects:
+                    print("Number of subjects without any missing data: %d" % len(df))
+                    flag_subjects = False
 
     def age_distribution(self, dfs: list, labels=None, name=""):
         """Use visualizer to show age distribution.
@@ -306,18 +314,18 @@ class Interface:
             print("Age range: [%d,%d]" % (np.min(ages), np.max(ages)))
             list_ages.append(ages)
 
-        # Check that distributions of ages are similar
-        print("Checking that age distributions are similar...")
-        for i in range(len(list_ages)):
-            for j in range(i + 1, len(list_ages)):
-                _, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
-                if p_val < 0.05:
-                    warn_message = "Age distributions %s and %s are not similar." % (
-                        labels[i],
-                        labels[j],
-                    )
-                    print(warn_message)
-                    warnings.warn(warn_message, category=UserWarning)
+        # Check that distributions of ages are similar if more than one
+        if len(list_ages) > 1:
+            print("Checking that age distributions are similar using T-test: T-stat (p_value)")
+            print("If p_value > 0.05 distributions are considered simiilar and not displayed...")
+            for i in range(len(list_ages)):
+                for j in range(i + 1, len(list_ages)):
+                    t_stat, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
+                    if p_val < 0.05:
+                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (
+                            labels[i], labels[j], t_stat, p_val)
+                        print(warn_message)
+                        warnings.warn(warn_message, category=UserWarning)
 
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
@@ -333,7 +341,7 @@ class Interface:
 
         # Select data to visualize
         print("-----------------------------------")
-        print("Features by correlation with Age")
+        print("Features by correlation with Age of Controls")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
         if not isinstance(dfs, list):
             raise TypeError("Input to 'Interface.features_vs_age' must be a list of dataframes.")
@@ -382,9 +390,9 @@ class Interface:
         # Show training pipeline
         print("-----------------------------------")
         if name == "":
-            print("Training Age Model")
+            print("Training Age Model for all controls")
         else:
-            print("Training Model for covariate %s" % name)
+            print("Training Model for Controls with covariate %s" % name)
         print(self.ageml.pipeline)
 
         # Select data to model
@@ -471,7 +479,7 @@ class Interface:
         # Use visualizer to show bar graph
         self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants)
 
-    def deltas_by_group(self, df, labels):
+    def deltas_by_group(self, df, labels, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
         
         Parameters
@@ -494,19 +502,29 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
-        print("*: p-value < 0.01, **: p-value < 0.001")
+        print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
+
+        # Calculate p-values
+        p_vals_matrix = np.zeros((len(deltas), len(deltas)))
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
+                p_vals_matrix[i, j] = p_val
+        
+        # Reject null hypothesis of no correlation
+        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
+        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='fdr_bh')
+        reject_bon = reject_bon.reshape((len(deltas), len(deltas)))
+        reject_fdr = reject_fdr.reshape((len(deltas), len(deltas)))
+
+        # Print results
+        for i in range(len(deltas)):
+            significant = significant_markers(reject_bon[i], reject_fdr[i])
+            for j in range(i + 1, len(deltas)):
                 pval_message = "p-value between %s and %s: %.2g" % (
-                    labels[i],
-                    labels[j],
-                    p_val,
-                )
-                if p_val < 0.001:
-                    pval_message = "*" + pval_message
-                elif p_val < 0.01:
-                    pval_message = "**" + pval_message
+                    labels[i], labels[j], p_vals_matrix[i, j])
+                if significant[j] != "":
+                    pval_message = significant[j] + " " + pval_message
                 print(pval_message)
 
         # Use visualizer
@@ -558,6 +576,8 @@ class Interface:
 
         # Select controls
         if self.flags["clinical"]:
+            print('Controls found in clinical file, selecting controls from clinical file.')
+            print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
             df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
             df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
         else:
@@ -598,6 +618,7 @@ class Interface:
         # Use visualizer to show age distribution
         self.age_distribution(dfs_cn, labels=labels_covar, name=initial_plots_names)
     
+        # Analyse relationship between features and age
         self.features_vs_age(dfs_cn, labels=labels_covar, name=initial_plots_names)
         
         # Model age

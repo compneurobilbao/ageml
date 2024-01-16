@@ -124,7 +124,7 @@ def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     # Create dummy labels
     labels = ["Group 1"]
     # Plot
-    dummy_viz.deltas_by_groups(deltas, labels)
+    dummy_viz.deltas_by_groups([deltas], labels)
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/clinical_groups_box_plot.svg")
     assert os.path.exists(svg_path)

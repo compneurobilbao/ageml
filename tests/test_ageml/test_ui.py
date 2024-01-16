@@ -305,8 +305,8 @@ def test_age_distribution_warning(dummy_interface):
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.age_distribution([df1, df2], labels=["dist1", "dist2"])
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = "Age distributions %s and %s are not similar." % ("dist1", "dist2")
-    assert warn_record.list[0].message.args[0] == expected
+    expected = "Age distributions %s and %s are not similar" % ("dist1", "dist2")
+    assert warn_record.list[0].message.args[0].startswith(expected)
 
 
 def test_run_age(dummy_interface, features):
