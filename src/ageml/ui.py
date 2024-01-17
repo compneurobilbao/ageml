@@ -202,8 +202,9 @@ class Interface:
         # Load covariates
         self.df_covariates = self.load_csv('covariates')
         # Check that covar name is given
-        if self.df_covariates is not None and hasattr(self.args, 'covar_name'):
-            self.flags['covariates'] = True
+        if self.df_covariates is not None and hasattr(self.args, "covar_name"):
+            if self.args.covar_name is not None:
+                self.flags['covariates'] = True
 
         # Load factors
         self.df_factors = self.load_csv('factors')
@@ -212,7 +213,7 @@ class Interface:
 
         # Load SYSTEMS file. txt expected. Format: system_name:feature1,feature2,...
         # Check that the file exists. If not, raise error. If yes, load line by line into a dict
-        if hasattr(self.args, "systems"):
+        if hasattr(self.args, "systems") and self.args.systems is not None:
             self.dict_systems = {}
             if not self.check_file(self.args.systems):
                 ValueError("Systems file '%s' not found." % self.args.systems)
@@ -236,7 +237,7 @@ class Interface:
                 # Check that the dictionary has at least one entry
                 if len(self.dict_systems) == 0:
                     raise ValueError("Systems file is probably incorrectly formatted. Check it please.")
-        if not hasattr(self.args, "systems") and "systems" in required:
+        elif "systems" in required:
             raise ValueError("Systems file must be provided.")
 
         # Load CLINICAL file
@@ -251,7 +252,7 @@ class Interface:
             else:
                 self.flags['clinical'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical["cn"]].index
-        elif "clinical" in required and not hasattr(self.args, "clinical"):
+        elif "clinical" in required or not hasattr(self.args, "clinical"):
             raise ValueError("Clinical file must be provided.")
 
         # Load AGES file
@@ -275,9 +276,8 @@ class Interface:
         # Check that ages file has required columns
         if self.df_ages is not None:
             cols = ["age", "predicted age", "corrected age", "delta"]
-            for col in cols:
-                if not any([col in column for column in self.df_ages.columns]):
-                    raise KeyError("Ages file must contain a column name %s" % col)
+            if len(self.df_ages.columns) % 4 != 0:
+                raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
         elif "ages" in required:
             raise ValueError("Ages file must be provided.")
 
@@ -616,7 +616,7 @@ class Interface:
             df_cn = self.df_features
             df_clinical = None
 
-        if self.flags["covariates"] and hasattr(self.args, "covar_name"):
+        if self.flags["covariates"] and self.args.covar_name is not None:
             # Check that covariate column exists
             if self.args.covar_name not in self.df_covariates.columns:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
@@ -697,9 +697,6 @@ class Interface:
                 # If no systems file is provided, fit a model for each covariate category. Fit model.
                 ageml_model = self.generate_model()
                 self.models[model_name], dict_ages[label_covar] = self.model_age(df_cn, ageml_model, model_name)
-        
-        # Train Loop (above) and Prediction Loop (below) need to be separated because
-        # otherwise code get super messy if we have to keep checking for clinical everytime. So we put it in a independent loop.
 
         # Apply to clinical data if clinical data provided
         dict_clinical_ages = {}
@@ -753,11 +750,11 @@ class Interface:
                     else:
                         df_ages = pd.concat([df_ages, df_system], axis=1)
             
-            # After concatenating the systems along the columns, concatenate the covariates along the rows.
-            if label_covar == labels_covar[0]:
-                df_ages_all = df_ages
-            else:
-                df_ages_all = pd.concat([df_ages_all, df_ages])
+                # After concatenating the systems along the columns, concatenate the covariates along the rows.
+                if label_covar == labels_covar[0]:
+                    df_ages_all = df_ages
+                else:
+                    df_ages_all = pd.concat([df_ages_all, df_ages])
 
         # If no systems and no covariate only 1 df
         if self.flags["clinical"]:
@@ -788,11 +785,11 @@ class Interface:
                         # Otherwise, concatenate the dataframe.
                         else:
                             df_clinical_ages = pd.concat([df_clinical_ages, df_system], axis=1)
-                # After concatenating the systems along the columns, concatenate the covariates along the rows.
-                if label_covar == labels_covar[0]:
-                    df_clinical_ages_all = df_clinical_ages
-                else:
-                    df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_clinical_ages])
+                    # After concatenating the systems along the columns, concatenate the covariates along the rows.
+                    if label_covar == labels_covar[0]:
+                        df_clinical_ages_all = df_clinical_ages
+                    else:
+                        df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_clinical_ages])
 
         # Now concatenate df_ages_all and df_clinical_ages_all along the rows.
         if self.flags["clinical"]:
@@ -826,7 +823,13 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "factors"])
 
-        # Check wether to split by clinical groups
+        # Check if systems are provided in the ages file
+        if any(["system" in col for col in self.df_ages.columns]):
+            self.flags["systems"] = True
+            # Make systems list
+            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+
+        # Check whether to split by clinical groups
         if self.flags["clinical"] and not self.flags["systems"]:
             groups = self.df_clinical.columns.to_list()
             dfs_ages, dfs_factors = [], []
@@ -837,7 +840,6 @@ class Interface:
             self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
         elif not self.flags["clinical"] and self.flags["systems"]:
-            systems_list = list(self.dict_systems.keys())
             for system in systems_list:
                 cols = [col for col in systems_list if system in self.df_ages.columns.to_list()]
                 dfs_ages = [self.df_ages[cols]]
@@ -850,7 +852,6 @@ class Interface:
             # Extract systems from systems file
             groups = self.df_clinical.columns.to_list()
             dfs_ages, dfs_factors = [], []
-            systems_list = list(self.dict_systems.keys())
             for system in systems_list:
                 for g in groups:
                     cols = [col for col in self.df_ages.columns.to_list() if system in col]
@@ -882,9 +883,14 @@ class Interface:
         # Obtain dataframes for each clinical group
         groups = self.df_clinical.columns.to_list()
         
+        # Check if systems are provided in the ages file
+        if any(["system" in col for col in self.df_ages.columns]):
+            self.flags["systems"] = True
+            # Make systems list
+            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+
         # If systems file provided, iterate over systems.
         if self.flags["systems"]:
-            systems_list = list(self.dict_systems.keys())
             for system in systems_list:
                 group_ages = []
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
@@ -898,6 +904,7 @@ class Interface:
             group_ages = []
             for g in groups:
                 group_ages.append(self.df_ages.loc[self.df_clinical[g]])
+            self.deltas_by_group(group_ages, groups)
             self.age_distribution(group_ages, groups, name="clinical_groups")
 
 
@@ -925,9 +932,14 @@ class Interface:
         df_group1 = self.df_ages.loc[self.df_clinical[groups[0]]]
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
+        # Check if systems are provided in the ages file
+        if any(["system" in col for col in self.df_ages.columns]):
+            self.flags["systems"] = True
+            # Make systems list
+            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+
         # Classify between groups
         if self.flags["systems"]:
-            systems_list = list(self.dict_systems.keys())
             for system in systems_list:
                 self.set_classifier()
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]

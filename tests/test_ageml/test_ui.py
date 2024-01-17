@@ -208,7 +208,7 @@ def test_load_data_cn_not_column(dummy_interface, clinical):
     with pytest.raises(KeyError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == KeyError
-    error_message = "Clinical file must contian a column name 'CN' or any other case-insensitive variation."
+    error_message = "Clinical file must contain a column name 'CN' or any other case-insensitive variation."
     assert exc_info.value.args[0] == error_message
 
 
@@ -226,7 +226,7 @@ def test_load_data_ages_missing_column(dummy_interface, ages):
         with pytest.raises(KeyError) as exc_info:
             dummy_interface.load_data()
         assert exc_info.type == KeyError
-        error_message = "Ages file must contain a column name %s" % col
+        error_message = "Ages file must contain the following columns %s, or derived names." % cols
         assert exc_info.value.args[0] == error_message
 
 
@@ -261,7 +261,7 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    assert exc_info.value.args[0] == "Clinical columns must be boolean type."
+    assert exc_info.value.args[0] == "Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'."
 
 
 def test_load_data_nan_values_warning(dummy_interface, features):
@@ -320,10 +320,10 @@ def test_run_age(dummy_interface, features):
 
     # Check for the existence of the output figures
     figs = [
-        "age_bias_correction_all",
+        "age_bias_correction_all_all",
         "age_distribution_controls",
         "features_vs_age_controls",
-        "chronological_vs_pred_age_all",
+        "chronological_vs_pred_age_all_all",
     ]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
@@ -340,12 +340,7 @@ def test_run_age(dummy_interface, features):
 
     # Check that the output CSV has the right columns
     df = pd.read_csv(csv_path, header=0, index_col=0)
-    assert all(
-        [
-            col in df.columns
-            for col in ["age", "predicted age", "corrected age", "delta"]
-        ]
-    )
+    assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
 
 
 # TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):

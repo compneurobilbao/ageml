@@ -255,10 +255,10 @@ class Visualizer:
         # Save figure
         fig.set_size_inches(10, 5 * len(corrs))
         if system is not None:
-            fig.suptitle(f"Correlation of factors with age deltas. System: {system}")
+            fig.suptitle(f"Correlation of factors with age deltas. System: {system}", y=0.99)
             filename = f"factors_vs_deltas_system_{system}.svg"
         else:
-            fig.suptitle(f"Correlation of factors with age deltas.")
+            fig.suptitle(f"Correlation of factors with age deltas.", y=0.99)
             filename ="factors_vs_deltas.svg"
 
         plt.tight_layout()
@@ -283,8 +283,11 @@ class Visualizer:
         plt.ylabel("Delta")
         if system is None:
             filename = "clinical_groups_box_plot.svg"
+            plt.suptitle("Age Delta by clinical group.")
         else:
             filename = f"clinical_groups_box_plot_{system}.svg"
+            plt.suptitle(f"Age Delta by clinical group. System: {system}", y=0.99)
+
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
