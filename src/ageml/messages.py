@@ -8,10 +8,10 @@ classification_command_message = "classification      - run classification based
 quit_command_message = "q                   - quit the program"
 
 # Help long messeages
-output_long_description = "Path to output directory where to save results. (Required)"
+output_long_description = "Path to output directory where to save results."
 
 features_long_description = (
-    "Path to input CSV file containing features. (Required: run age) \n"
+    "Path to input CSV file containing features. \n"
     "In the file the first column should be the ID, the second column should be the AGE, \n"
     "and the following columns the features. The first row should be the header for \n"
     "column names."
@@ -50,13 +50,13 @@ covar_name_long_description = (
 )
 
 factors_long_description = (
-    "Path to input CSV file containing factors (Required: run lifestyle). \n"
+    "Path to input CSV file containing factors. \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
     "factors. The first row should be the header for column names."
 )
 
 clinical_long_description = (
-    "Path to input CSV file containing conditions (Required: run clinical or classification).\n"
+    "Path to input CSV file containing conditions.\n"
     "In the file, the first column should be the ID, the second column should be whether the \n"
     "subject is a CONTROL, and the following columns are binary variables for different \n"
     "conditions. The first row should be the header for column names."
@@ -78,9 +78,16 @@ ages_long_description = (
 )
 
 groups_long_description = (
-    "Clinical groups to do classification on (Required: run classification). \n"
+    "Clinical groups to do classification. \n"
     "Two groups are required. (e.g. --groups cn ad)"
 )
+
+thr_long_description = (
+    "Threshold for classification. Default: 0.5 \n"
+    "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"
+)
+
+ci_long_description = ("""Confidence interval for classification metrics. Default: 0.95 \n""")
 
 # UI information
 
