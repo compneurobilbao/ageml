@@ -134,14 +134,20 @@ class Interface:
             self.args.scaler_params,
             self.args.model_type,
             self.args.model_params,
-            self.args.cv_split,
-            self.args.seed,
+            self.args.model_cv_split,
+            self.args.model_seed,
         )
 
-    def set_classifier(self):
+    def generate_classifier(self):
         """Set classifier with parameters."""
 
-        self.classifier = Classifier()
+        classifier = Classifier(
+            self.args.classifier_cv_split,
+            self.args.classifier_seed,
+            self.args.classifier_thr,
+            self.args.classifier_ci)
+        
+        return classifier
 
     def check_file(self, file):
         """Check that file exists."""
@@ -202,7 +208,7 @@ class Interface:
         # Load covariates
         self.df_covariates = self.load_csv('covariates')
         # Check that covar name is given
-        if self.df_covariates is not None and hasattr(self.args, 'covar_name'):
+        if self.df_covariates is not None and hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
             # Force covar_name to be lower case
             self.args.covar_name = self.args.covar_name.lower()
             self.flags['covariates'] = True
@@ -551,6 +557,9 @@ class Interface:
         X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
         y = np.concatenate((np.zeros(deltas1.shape), np.ones(deltas2.shape)))
 
+        # Generate classifier
+        self.classifier = self.generate_classifier()
+
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
 
@@ -727,7 +736,6 @@ class Interface:
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
         # Classify between groups
-        self.set_classifier()
         self.classify(df_group1, df_group2, groups)
 
 
@@ -872,6 +880,43 @@ class CLI(Interface):
             self.get_line()  # get the user entry
             command = self.line.split()[0]  # read the first item
 
+    def classifier_command(self):
+        """Set classifier parameters."""
+
+        # Split into items
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) == 0:
+            error = "Must provide two arguments or None."
+            return error
+        
+        # Set defaults
+        if len(self.line) == 1 and self.line[0] == 'None':
+            self.args.classifier_thr = 0.5
+            self.args.classifier_ci = 0.95
+            return error
+        
+        # Check wether items are floats
+        for item in self.line:
+            try:
+                float(item)
+            except ValueError:
+                error = "Parameters must be floats."
+                return error
+            
+        # Set parameters
+        if len(self.line) == 2:
+            self.args.classifier_thr = float(self.line[0])
+            self.args.classifier_ci = float(self.line[1])
+        elif len(self.line) > 2:
+            error = "Too many values to unpack."
+        elif len(self.line) == 1:
+            error = "Must provide two arguments or None."
+        
+        return error
+            
     def classification_command(self):
         """Run classification."""
 
@@ -886,6 +931,12 @@ class CLI(Interface):
         # Ask for groups
         print("Input groups (Required):")
         self.force_command(self.group_command, required=True)
+
+        # Ask for CV parameters adn classifier parameters
+        print("CV parameters (Default: nº splits=5 and seed=0):")
+        self.force_command(self.cv_command, 'classifier')
+        print("Classifier parameters (Default: thr=0.5 and ci=0.95):")
+        self.force_command(self.classifier_command)
 
         # Run classification capture any error raised and print
         try:
@@ -921,7 +972,7 @@ class CLI(Interface):
     def covar_command(self):
         """Load covariate group."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -941,33 +992,43 @@ class CLI(Interface):
     def cv_command(self):
         """Load CV parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
         # Check that at least one argument input
         if len(self.line) == 0:
-            error = "Must provide at least one argument or None."
+            error = "Must provide at least one argument."
             return error
 
+        # Check that first argument is model or classifier
+        if self.line[0] not in ['model', 'classifier']:
+            error = "Must provide either model or classifier flag."
+            return error
+        elif self.line[0] == 'model':
+            arg_type = 'model'
+        elif self.line[0] == 'classifier':
+            arg_type = 'classifier'
+
         # Set default values
-        if self.line[0] == "None":
-            self.args.cv_split = 5
-            self.args.seed = 0
+        if len(self.line) == 2 and self.line[1] == 'None':
+            setattr(self.args, arg_type + '_cv_split', 5)
+            setattr(self.args, arg_type + '_seed', 0)
             return error
 
         # Check wether items are integers
-        for item in self.line:
+        for item in self.line[1:]:
             if not item.isdigit():
                 error = "CV parameters must be integers"
                 return error
 
         # Set CV parameters
-        if len(self.line) == 1:
-            self.args.cv_split = int(self.line[0])
-            self.args.seed = 0
-        elif len(self.line) == 2:
-            self.args.cv_split, self.args.seed = int(self.line[0]), int(self.line[1])
+        if len(self.line) == 2:
+            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
+            setattr(self.args, arg_type + '_seed', 0)
+        elif len(self.line) == 3:
+            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
+            setattr(self.args, arg_type + '_seed', int(self.line[2]))
         else:
             error = "Too many values to unpack."
 
@@ -1001,7 +1062,7 @@ class CLI(Interface):
     def group_command(self):
         """Load groups."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1029,7 +1090,7 @@ class CLI(Interface):
     def load_command(self):
         """Load file paths."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1111,7 +1172,7 @@ class CLI(Interface):
         print("Example: linear fit_intercept=True positive=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
-        self.force_command(self.cv_command)
+        self.force_command(self.cv_command, 'model')
 
         # Run modelling capture any error raised and print
         try:
@@ -1126,7 +1187,7 @@ class CLI(Interface):
     def model_command(self):
         """Load model parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         valid_types = ["linear"]
         error = None
@@ -1167,7 +1228,7 @@ class CLI(Interface):
     def output_command(self):
         """Load output directory."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1190,7 +1251,7 @@ class CLI(Interface):
     def scaler_command(self):
         """Load scaler parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
         valid_types = ["standard"]
