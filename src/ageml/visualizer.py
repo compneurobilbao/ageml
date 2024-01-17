@@ -189,7 +189,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title(f"Before age-bias correction")
+        plt.title("Before age-bias correction")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
 
@@ -199,7 +199,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title(f"After age-bias correction")
+        plt.title("After age-bias correction")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
         plt.tight_layout()
@@ -258,8 +258,8 @@ class Visualizer:
             fig.suptitle(f"Correlation of factors with age deltas. System: {system}", y=0.99)
             filename = f"factors_vs_deltas_system_{system}.svg"
         else:
-            fig.suptitle(f"Correlation of factors with age deltas.", y=0.99)
-            filename ="factors_vs_deltas.svg"
+            fig.suptitle("Correlation of factors with age deltas.", y=0.99)
+            filename = "factors_vs_deltas.svg"
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, filename))

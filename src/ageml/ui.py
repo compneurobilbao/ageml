@@ -341,7 +341,7 @@ class Interface:
         for i, df in enumerate(dfs):
             if labels is not None:
                 print(labels[i])
-            age_col  = [col for col in df.columns if "age" in col][0]
+            age_col = [col for col in df.columns if "age" in col][0]
             ages = df[age_col].to_numpy()
             print("Mean age: %.2f" % np.mean(ages))
             print("Std age: %.2f" % np.std(ages))
@@ -721,7 +721,7 @@ class Interface:
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
                     dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name])
 
-        # Concatenate dict_ages into a single DataFrame. 
+        # Concatenate dict_ages into a single DataFrame.
         # If no systems and no covariate only 1 df
         if not self.flags["systems"] and not self.flags["covariates"]:
             df_ages_all = dict_ages["all"]
@@ -734,7 +734,7 @@ class Interface:
                     df_ages_all = pd.concat([df_ages_all, dict_ages[label_covar]])
         # If yes systems and no covariates, iterate over systems and concatenate
         elif self.flags["systems"] and not self.flags["covariates"]:
-            for i, (system_name, df_system) in enumerate(dict_ages["all"].items()):
+            for i, (_, df_system) in enumerate(dict_ages["all"].items()):
                 if i == 0:
                     df_ages_all = df_system
                 else:
@@ -743,7 +743,7 @@ class Interface:
         elif self.flags["systems"] and self.flags["covariates"]:
             # Iterate over covariates and concatenate along rows
             for label_covar, dict_of_systems in dict_ages.items():
-                for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
+                for i, (_, df_system) in enumerate(dict_of_systems.items()):
                     if i == 0:
                         df_ages = df_system
                     # Otherwise, concatenate the dataframe.
@@ -769,7 +769,7 @@ class Interface:
                         df_clinical_ages_all = pd.concat([df_clinical_ages_all, dict_clinical_ages[label_covar]])
             # If yes systems and no covariates, iterate over systems and concatenate
             elif self.flags["systems"] and not self.flags["covariates"]:
-                for i, (system_name, df_system) in enumerate(dict_clinical_ages["all"].items()):
+                for i, (_, df_system) in enumerate(dict_clinical_ages["all"].items()):
                     if i == 0:
                         df_clinical_ages_all = df_system
                     else:
@@ -778,7 +778,7 @@ class Interface:
             elif self.flags["systems"] and self.flags["covariates"]:
                 # Iterate over covariates and concatenate along rows
                 for label_covar, dict_of_systems in dict_clinical_ages.items():
-                    for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
+                    for i, (_, df_system) in enumerate(dict_of_systems.items()):
                         # If it is the first iteration, initialize the dataframe.
                         if i == 0:
                             df_clinical_ages = df_system
@@ -805,7 +805,7 @@ class Interface:
             filename = f"predicted_age_{self.args.covar_name}.csv"
         
         elif not self.flags["covariates"] and self.flags["systems"]:
-            filename = f"predicted_age_multisystem.csv"
+            filename = "predicted_age_multisystem.csv"
         
         else:
             filename = "predicted_age.csv"
@@ -827,7 +827,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Check whether to split by clinical groups
         if self.flags["clinical"] and not self.flags["systems"]:
@@ -868,7 +868,6 @@ class Interface:
             # Compute correlations between factors and deltas
             self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
 
-
     def run_clinical(self):
         """Analyse differences between deltas in clinical groups."""
 
@@ -887,7 +886,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # If systems file provided, iterate over systems.
         if self.flags["systems"]:
@@ -899,14 +898,13 @@ class Interface:
                 # Use visualizer to show box plots of deltas by group
                 self.deltas_by_group(group_ages, groups, system=system)
             # Use visualizer to show age distribution per system
-            self.age_distribution(group_ages, groups, name=f"clinical_groups")
+            self.age_distribution(group_ages, groups, name="clinical_groups")
         else:
             group_ages = []
             for g in groups:
                 group_ages.append(self.df_ages.loc[self.df_clinical[g]])
             self.deltas_by_group(group_ages, groups)
             self.age_distribution(group_ages, groups, name="clinical_groups")
-
 
     def run_classification(self):
         """Run classification between two different clinical groups."""
@@ -936,7 +934,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list(set([col.split("system_")[-1] for col in self.df_ages.columns if "system" in col]))
+            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Classify between groups
         if self.flags["systems"]:
