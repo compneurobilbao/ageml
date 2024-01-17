@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
+import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
@@ -97,9 +98,6 @@ class Interface:
         # Initialise objects form library
         self.set_visualizer()
 
-        self.set_classifier()
-        self.models = {}
-
     def setup(self):
         """Create required directories and files to store results."""
 
@@ -122,7 +120,7 @@ class Interface:
     def set_flags(self):
         """Set flags."""
 
-        self.flags = {"clinical": False, "covariates": False}
+        self.flags = {"clinical": False, "covariates": False, "systems": False}
 
     def set_visualizer(self):
         """Set visualizer with output directory."""
@@ -214,7 +212,7 @@ class Interface:
 
         # Load SYSTEMS file. txt expected. Format: system_name:feature1,feature2,...
         # Check that the file exists. If not, raise error. If yes, load line by line into a dict
-        if self.args.systems is not None:
+        if hasattr(self.args, "systems"):
             self.dict_systems = {}
             if not self.check_file(self.args.systems):
                 ValueError("Systems file '%s' not found." % self.args.systems)
@@ -238,7 +236,7 @@ class Interface:
                 # Check that the dictionary has at least one entry
                 if len(self.dict_systems) == 0:
                     raise ValueError("Systems file is probably incorrectly formatted. Check it please.")
-        if self.args.systems is None and "systems" in required:
+        if not hasattr(self.args, "systems") and "systems" in required:
             raise ValueError("Systems file must be provided.")
 
         # Load CLINICAL file
@@ -253,7 +251,7 @@ class Interface:
             else:
                 self.flags['clinical'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical["cn"]].index
-        elif "clinical" in required and self.args.clinical is None:
+        elif "clinical" in required and not hasattr(self.args, "clinical"):
             raise ValueError("Clinical file must be provided.")
 
         # Load AGES file
@@ -278,7 +276,7 @@ class Interface:
         if self.df_ages is not None:
             cols = ["age", "predicted age", "corrected age", "delta"]
             for col in cols:
-                if col not in self.df_ages.columns:
+                if not any([col in column for column in self.df_ages.columns]):
                     raise KeyError("Ages file must contain a column name %s" % col)
         elif "ages" in required:
             raise ValueError("Ages file must be provided.")
@@ -604,6 +602,9 @@ class Interface:
         # Reset flags
         self.set_flags()
 
+        # Initialize models dict
+        self.models = {}
+
         # Load data
         self.load_data(required=["features"])
 
@@ -615,7 +616,7 @@ class Interface:
             df_cn = self.df_features
             df_clinical = None
 
-        if self.flags["covariates"] and self.args.covar_name is not None:
+        if self.flags["covariates"] and hasattr(self.args, "covar_name"):
             # Check that covariate column exists
             if self.args.covar_name not in self.df_covariates.columns:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
@@ -629,10 +630,10 @@ class Interface:
 
             if self.flags["clinical"]:
                 # Create dataframe list of clinical cases by covariate
-                df_clinical_cov = []
+                dfs_clinical = []
                 for label_covar in labels_covar:
-                    df_covar_clinical = self.df_covar.loc[df_clinical.index]
-                    df_clinical_cov.append(df_clinical[df_covar_clinical[self.args.covar_name] == label_covar])
+                    df_covar_clinical = self.df_covariates.loc[df_clinical.index]
+                    dfs_clinical.append(df_clinical[df_covar_clinical[self.args.covar_name] == label_covar])
 
         else:  # No covariates, so df list of controls is [df_cn] and [df_clinical]
             dfs_cn = [df_cn]
@@ -701,7 +702,7 @@ class Interface:
         # otherwise code get super messy if we have to keep checking for clinical everytime. So we put it in a independent loop.
 
         # Apply to clinical data if clinical data provided
-        dict_predicted_ages = {}
+        dict_clinical_ages = {}
         if self.flags["clinical"]:
             # Iterate over the covariate categories.
             for df_clinical, label_covar in zip(dfs_clinical, labels_covar):
@@ -748,12 +749,15 @@ class Interface:
                 for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
                     if i == 0:
                         df_ages = df_system
+                    # Otherwise, concatenate the dataframe.
                     else:
                         df_ages = pd.concat([df_ages, df_system], axis=1)
-                if label_covar == labels_covar[0]:
-                    df_ages_all = df_ages
-                else:
-                    df_ages_all = pd.concat([df_ages_all, df_ages])
+            
+            # After concatenating the systems along the columns, concatenate the covariates along the rows.
+            if label_covar == labels_covar[0]:
+                df_ages_all = df_ages
+            else:
+                df_ages_all = pd.concat([df_ages_all, df_ages])
 
         # If no systems and no covariate only 1 df
         if self.flags["clinical"]:
@@ -778,14 +782,17 @@ class Interface:
                 # Iterate over covariates and concatenate along rows
                 for label_covar, dict_of_systems in dict_clinical_ages.items():
                     for i, (system_name, df_system) in enumerate(dict_of_systems.items()):
+                        # If it is the first iteration, initialize the dataframe.
                         if i == 0:
                             df_clinical_ages = df_system
+                        # Otherwise, concatenate the dataframe.
                         else:
                             df_clinical_ages = pd.concat([df_clinical_ages, df_system], axis=1)
-                    if label_covar == labels_covar[0]:
-                        df_clinical_ages_all = df_clinical_ages
-                    else:
-                        df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_clinical_ages])
+                # After concatenating the systems along the columns, concatenate the covariates along the rows.
+                if label_covar == labels_covar[0]:
+                    df_clinical_ages_all = df_clinical_ages
+                else:
+                    df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_clinical_ages])
 
         # Now concatenate df_ages_all and df_clinical_ages_all along the rows.
         if self.flags["clinical"]:
@@ -819,13 +826,8 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "factors"])
 
-<<<<<<< HEAD
         # Check wether to split by clinical groups
-        if self.flags["clinical"]:
-=======
         if self.flags["clinical"] and not self.flags["systems"]:
-            # Extract groups from clinical data
->>>>>>> 8a36b2a ([ENH] Implemented systems functionality in run_clinical and run_lifestyle)
             groups = self.df_clinical.columns.to_list()
             dfs_ages, dfs_factors = [], []
             for g in groups:
@@ -924,20 +926,17 @@ class Interface:
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
         # Classify between groups
-<<<<<<< HEAD
-        self.set_classifier()
-        self.classify(df_group1, df_group2, groups)
-=======
         if self.flags["systems"]:
             systems_list = list(self.dict_systems.keys())
             for system in systems_list:
+                self.set_classifier()
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 df_group1_system = df_group1[cols]
                 df_group2_system = df_group2[cols]
                 self.classify(df_group1_system, df_group2_system, groups, system=system)
         else:
+            self.set_classifier()
             self.classify(df_group1, df_group2, groups)
->>>>>>> 8f9e4d4 ([ENH] Adjusted ui & visualizer to fully support systems in all pipelines)
 
 
 class CLI(Interface):
@@ -1076,29 +1075,6 @@ class CLI(Interface):
             # Check error and if not make updates
             if error is not None:
                 print(error)
-<<<<<<< HEAD
-=======
-            elif command == "r":
-                # Capture any error raised and print
-                try:
-                    self.run_wrapper(self.run)
-                except Exception as e:
-                    print(e)
-                    print("Error running modelling.")
-            elif command == "o":
-                try:
-                    self.setup()
-                    self.set_visualizer()
-                except Exception as e:
-                    print(e)
-                    print("Error setting up output directory.")
-            elif command in ["cv", "m", "s"]:
-                try:
-                    self.model = self.generate_model()
-                except Exception as e:
-                    print(e)
-                    print("Error setting up model.")
->>>>>>> 425190c ([FIX] Fixed flow problems in run_age. set_model is now generate_model)
 
             # Get next command
             self.get_line()  # get the user entry

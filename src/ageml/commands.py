@@ -132,7 +132,7 @@ class ModelAge(Interface):
         return args
 
 
-class FactorAnalsyis(Interface):
+class FactorAnalysis(Interface):
     """Run factor analysis with required parameters."""
 
     def __init__(self):
@@ -256,7 +256,7 @@ def model_age():
 def factor_analysis():
     """Run FactorAnalysis class."""
 
-    FactorAnalsyis()
+    FactorAnalysis()
 
 
 def clinical_groups():

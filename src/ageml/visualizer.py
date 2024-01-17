@@ -133,7 +133,7 @@ class Visualizer:
                 title += "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
             ax.set_title(title)
             ax.legend(labels)
-            plt.suptitle(f"Features vs. Age\n", y=1.00)
+            plt.suptitle(f"Features vs. Age\n{name}", y=0.99)
         plt.tight_layout()
 
         if name == "":
