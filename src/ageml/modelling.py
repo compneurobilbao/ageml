@@ -10,10 +10,12 @@ Classifier - classifier of class labels based on deltas.
 
 import numpy as np
 import scipy.stats as st
+from xgboost import XGBRegressor
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
 from scipy import stats
 from sklearn import linear_model
+from sklearn import svm
 from sklearn import metrics
 from sklearn import model_selection
 from sklearn import pipeline
@@ -80,10 +82,14 @@ class AgeML:
             "robust": RobustScaler,
             "standard": StandardScaler,
         }
+        
         # Model dictionary
         self.model_dict = {
             "linear_reg": linear_model.LinearRegression,
-            
+            "ridge": linear_model.Ridge,
+            "lasso": linear_model.Lasso,
+            "linear_svr": svm.SVR,
+            "xgboost": XGBRegressor,  # XGBoost
         }
         
         # Set required modelling parts
