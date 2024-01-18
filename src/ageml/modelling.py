@@ -18,7 +18,15 @@ from sklearn import metrics
 from sklearn import model_selection
 from sklearn import pipeline
 from sklearn import preprocessing
-
+from sklearn.preprocessing import (
+    MaxAbsScaler,
+    MinMaxScaler,
+    Normalizer,
+    PowerTransformer,
+    QuantileTransformer,
+    RobustScaler,
+    StandardScaler,
+)
 
 class AgeML:
 
@@ -62,6 +70,22 @@ class AgeML:
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
         """Initialise variables."""
 
+        # Scaler dictionary
+        self.scaler_dict = {
+            "maxabs": MaxAbsScaler,
+            "minmax": MinMaxScaler,
+            "normalizer": Normalizer,
+            "power": PowerTransformer,
+            "quantile": QuantileTransformer,
+            "robust": RobustScaler,
+            "standard": StandardScaler,
+        }
+        # Model dictionary
+        self.model_dict = {
+            "linear_reg": linear_model.LinearRegression,
+            
+        }
+        
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)
         self.set_model(model_type, **model_params)
@@ -72,6 +96,7 @@ class AgeML:
         self.pipelineFit = False
         self.age_biasFit = False
 
+
     def set_scaler(self, norm, **kwargs):
         """Sets the scaler to use in the pipeline.
 
@@ -81,10 +106,12 @@ class AgeML:
         **kwargs: to input to sklearn scaler object"""
 
         # Mean centered and unit variance
-        if norm == "standard":
-            self.scaler = preprocessing.StandardScaler(**kwargs)
+        if norm in ["no", "None"]:
+            self.scaler = None
+        elif norm not in self.scaler_dict.keys():
+            raise ValueError(f"Must select an available scaler type. Available: {list(self.scaler_dict.keys())}")
         else:
-            raise ValueError("Must select an available scaler type.")
+            self.scaler = self.scaler_dict[norm](**kwargs)
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -104,10 +131,11 @@ class AgeML:
         """Sets the model to use in the pipeline."""
 
         pipe = []
-        if self.scaler is None or self.model is None:
-            raise ValueError("Must set a valid model or scaler before setting pipeline.")
+        if self.model is None:
+            raise ValueError("Must set a valid model before setting pipeline.")
         
-        pipe.append(("scaler", self.scaler))
+        if self.scaler is not None:
+            pipe.append(("scaler", self.scaler))
         pipe.append(("model", self.model))
         self.pipeline = pipeline.Pipeline(pipe)
 
