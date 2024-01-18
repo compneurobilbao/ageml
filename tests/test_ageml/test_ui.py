@@ -23,6 +23,8 @@ class ExampleArguments(object):
         self.output = test_path
         self.features = None
         self.covariates = None
+        self.covar_name = None
+        self.systems = None
         self.factors = None
         self.clinical = None
         self.ages = None
@@ -65,6 +67,25 @@ def factors():
 
 
 @pytest.fixture
+def covariates():
+    df = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "gender": ['f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f',
+                       'f', 'f', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f'],
+        }
+    )
+    df.set_index("id", inplace=True)
+    return df
+
+
+@pytest.fixture
+def systems():
+    return 'pottongosystem:feature1\nmondongsystem:feature2'
+
+
+@pytest.fixture
 def clinical():
     df = pd.DataFrame(
         {
@@ -100,12 +121,51 @@ def ages():
     return df
 
 
+@pytest.fixture
+def ages_multisystem():
+    df = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "age_pottongosystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                                   53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "predicted age_pottongosystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                             58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected age_pottongosystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                             87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_pottongosystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                                     2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            
+            "age_mondongsystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                                  53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "predicted age_mondongsystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                            58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected age_mondongsystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                            87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_mondongsystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                                    2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+        }
+    )
+    df.set_index("id", inplace=True)
+    return df
+
+
 def create_csv(df, path):
     # Generate random name for the csv file
     letters = string.ascii_lowercase
     csv_name = "".join(random.choice(letters) for i in range(20)) + ".csv"
     file_path = os.path.join(path, csv_name)
     df.to_csv(path_or_buf=file_path, index=True)
+    return file_path
+
+
+def create_txt(txt, path):
+    # Generate random name for the txt file
+    letters = string.ascii_lowercase
+    txt_name = "".join(random.choice(letters) for i in range(20)) + ".txt"
+    file_path = os.path.join(path, txt_name)
+    with open(file_path, 'w') as f:
+        f.write(txt)
     return file_path
 
 
@@ -343,7 +403,284 @@ def test_run_age(dummy_interface, features):
     assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
 
 
-# TODO: def test_run_age_with_covars(dummy_interface, ages, features, covariates):
+def test_run_age_clinical(dummy_interface, features, clinical):
+    # Run the modelling pipeline
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Clinical
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_age()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    figs = [
+        "age_bias_correction_all_all",
+        "age_distribution_controls",
+        "features_vs_age_controls",
+        "chronological_vs_pred_age_all_all",
+    ]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+    # Check for the existence of the output CSV
+    csv_path = os.path.join(dummy_interface.dir_path, "predicted_age.csv")
+    assert os.path.exists(csv_path)
+
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
+
+
+def test_run_age_cov(dummy_interface, features, covariates):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Covariates
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+    # Covariate name
+    dummy_interface.args.covar_name = "gender"
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for output figs
+    figs = [f"age_bias_correction_{dummy_interface.args.covar_name}_f",
+            f"age_bias_correction_{dummy_interface.args.covar_name}_m",
+            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
+            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
+            f"age_distribution_controls_{dummy_interface.args.covar_name}",
+            f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check for the existence of the output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+    assert os.path.exists(csv_path)
+
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (features.shape[0], 4)  # always 4 columns in this case
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
+
+
+def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Covariates
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+    # Covariate name
+    dummy_interface.args.covar_name = "gender"
+    # Clinical file
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for output figs
+    figs = [f"age_bias_correction_{dummy_interface.args.covar_name}_f",
+            f"age_bias_correction_{dummy_interface.args.covar_name}_m",
+            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
+            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
+            f"age_distribution_controls_{dummy_interface.args.covar_name}",
+            f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check for the existence of the output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+    assert os.path.exists(csv_path)
+
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (clinical.shape[0], 4)
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
+
+
+def test_run_age_systems(dummy_interface, systems, features):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Systems
+    systems_path = create_txt(systems, dummy_interface.dir_path)
+    dummy_interface.args.systems = systems_path
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+    
+    # Systems names
+    system_names = list(dummy_interface.dict_systems.keys())
+    figs = ["age_distribution_controls"]
+    for system_name in system_names:
+        figs.append(f"age_bias_correction_all_all_{system_name}")
+        figs.append(f"chronological_vs_pred_age_all_all_{system_name}")
+        figs.append(f"features_vs_age_controls_system_{system_name}")
+    # Check existance of figures
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check existence of output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            "predicted_age_multisystem.csv")
+    assert os.path.exists(csv_path)
+    
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (features.shape[0], 4 * len(system_names))
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all(any(word in s for s in df.columns) for word in ["age", "predicted age", "corrected age", "delta"])
+
+
+def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Systems
+    systems_path = create_txt(systems, dummy_interface.dir_path)
+    dummy_interface.args.systems = systems_path
+    # Clinical
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+    
+    # Systems names
+    system_names = list(dummy_interface.dict_systems.keys())
+    figs = ["age_distribution_controls"]
+    for system_name in system_names:
+        figs.append(f"age_bias_correction_all_all_{system_name}")
+        figs.append(f"chronological_vs_pred_age_all_all_{system_name}")
+        figs.append(f"features_vs_age_controls_system_{system_name}")
+    # Check existance of figures
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check existence of output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            "predicted_age_multisystem.csv")
+    assert os.path.exists(csv_path)
+    
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (clinical.shape[0], 4 * len(system_names))
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all(any(word in s for s in df.columns) for word in ["age", "predicted age", "corrected age", "delta"])
+
+
+def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Covariates
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+    # Covariate name
+    dummy_interface.args.covar_name = "gender"
+    # Systems
+    systems_path = create_txt(systems, dummy_interface.dir_path)
+    dummy_interface.args.systems = systems_path
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+    
+    # Systems names
+    system_names = list(dummy_interface.dict_systems.keys())
+    figs = ["age_distribution_controls_gender"]
+    for system_name in system_names:
+        figs.append(f"age_bias_correction_{dummy_interface.args.covar_name}_f_{system_name}")
+        figs.append(f"age_bias_correction_{dummy_interface.args.covar_name}_m_{system_name}")
+        figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f_{system_name}")
+        figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m_{system_name}")
+        figs.append(f"features_vs_age_controls_{dummy_interface.args.covar_name}_system_{system_name}")
+    # Check existance of figures
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check existence of output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+    assert os.path.exists(csv_path)
+    
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (features.shape[0], 4 * len(system_names))
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all(any(word in s for s in df.columns) for word in ["age", "predicted age", "corrected age", "delta"])
+
+
+def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, covariates, clinical):
+    # Features
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    # Covariates
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+    # Covariate name
+    dummy_interface.args.covar_name = "gender"
+    # Systems
+    systems_path = create_txt(systems, dummy_interface.dir_path)
+    dummy_interface.args.systems = systems_path
+    # Clinical
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+    # Run the modelling pipeline
+    dummy_interface.run_age()
+    
+    # Check for output dir
+    assert os.path.exists(dummy_interface.dir_path)
+    
+    # Systems names
+    system_names = list(dummy_interface.dict_systems.keys())
+    figs = ["age_distribution_controls_gender"]
+    for system_name in system_names:
+        figs.append(f"age_bias_correction_{dummy_interface.args.covar_name}_f_{system_name}")
+        figs.append(f"age_bias_correction_{dummy_interface.args.covar_name}_m_{system_name}")
+        figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f_{system_name}")
+        figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m_{system_name}")
+        figs.append(f"features_vs_age_controls_{dummy_interface.args.covar_name}_system_{system_name}")
+    # Check existance of figures
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+    
+    # Check existence of output CSV
+    csv_path = os.path.join(dummy_interface.dir_path,
+                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+    assert os.path.exists(csv_path)
+    
+    # Check dimension of df_ages
+    assert dummy_interface.df_ages.shape == (clinical.shape[0], 4 * len(system_names))
+    # Check that the output CSV has the right columns
+    df = pd.read_csv(csv_path, header=0, index_col=0)
+    assert all(any(word in s for s in df.columns) for word in ["age", "predicted age", "corrected age", "delta"])
+
+
 def test_run_factor_analysis(dummy_interface, ages, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -357,6 +694,32 @@ def test_run_factor_analysis(dummy_interface, ages, factors):
 
     # Check for the existence of the output figures
     figs = ["factors_vs_deltas"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+
+def test_run_factor_analysis_systems(dummy_interface, ages_multisystem, factors):
+    # Run the lifestyle pipeline
+    ages_path = create_csv(ages_multisystem, dummy_interface.dir_path)
+    factors_path = create_csv(factors, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.factors = factors_path
+    dummy_interface.run_factor_analysis()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+    figs = []
+    for system in system_names:
+        figs.append(f"factors_vs_deltas_system_{system}")
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
     ]
@@ -390,6 +753,32 @@ def test_run_clinical(dummy_interface, ages, clinical):
     assert os.path.exists(log_path)
 
 
+def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
+    # Run the clinical pipeline
+    ages_path = create_csv(ages_multisystem, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_clinical()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+    figs = ["age_distribution_clinical_groups"]
+    for system in system_names:
+        figs.append(f"clinical_groups_box_plot_{system}")
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+
 def test_run_classification(dummy_interface, ages, clinical):
     # Run the classification pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -405,6 +794,34 @@ def test_run_classification(dummy_interface, ages, clinical):
 
     # Check for the existence of the output figures
     figs = ["roc_curve_cn_vs_group1"]
+    svg_paths = [
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+    ]
+    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+    # Check for the existence of the log
+    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    assert os.path.exists(log_path)
+
+
+def test_run_classification_systems(dummy_interface, ages_multisystem, clinical):
+    # Run the classification pipeline
+    ages_path = create_csv(ages_multisystem, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.group1 = 'cn'
+    dummy_interface.args.group2 = 'group1'
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.run_classification()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output figures
+    system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+    figs = []
+    for system in system_names:
+        figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
     ]

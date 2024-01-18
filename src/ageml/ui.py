@@ -205,6 +205,8 @@ class Interface:
         if self.df_covariates is not None and hasattr(self.args, "covar_name"):
             if self.args.covar_name is not None:
                 self.flags['covariates'] = True
+            else:
+                raise ValueError("If covariates file is provided, you must also provide the covariate name.")
 
         # Load factors
         self.df_factors = self.load_csv('factors')
@@ -827,7 +829,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
+            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Check whether to split by clinical groups
         if self.flags["clinical"] and not self.flags["systems"]:
@@ -841,7 +843,7 @@ class Interface:
 
         elif not self.flags["clinical"] and self.flags["systems"]:
             for system in systems_list:
-                cols = [col for col in systems_list if system in self.df_ages.columns.to_list()]
+                cols = [col for col in self.df_ages.columns.to_list() if col.split("_")[-1] == system]
                 dfs_ages = [self.df_ages[cols]]
                 dfs_factors = [self.df_factors]
                 groups = ["all"]
@@ -886,7 +888,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
+            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # If systems file provided, iterate over systems.
         if self.flags["systems"]:
@@ -934,7 +936,7 @@ class Interface:
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
             # Make systems list
-            systems_list = list({col.split("system_")[-1] for col in self.df_ages.columns if "system" in col})
+            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Classify between groups
         if self.flags["systems"]:
