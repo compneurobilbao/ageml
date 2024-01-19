@@ -82,6 +82,7 @@ class Visualizer:
             plt.legend(labels)
         plt.xlabel("Age (years)")
         plt.ylabel("Count")
+        plt.title("Age distribution")
         plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
         plt.close()
 
@@ -111,8 +112,8 @@ class Visualizer:
         # Color array for each covariate
         color_list = [len * [color_set[i]] for i, len in enumerate(covar_lens)]
 
-        if labels is None:
-            labels = ['population']
+        if labels == ["all"]:
+            labels = ["population"]
 
         # Show results
         nplots = len(feature_names)
@@ -123,7 +124,7 @@ class Visualizer:
             ax = plt.gca()  # Get current axis
             for i in range(len(color_set)):
                 ax.scatter(Y[i][:], X[i][:, o],
-                           s=15, c=color_list[i], label=labels[i])
+                           s=15, c=color_list[i], label=labels[i], alpha=1 / len(labels))
             # Set axis labels, title, and legend
             ax.set_ylabel(insert_newlines(feature_names[o], 4))
             ax.set_xlabel("age (years)")
@@ -132,6 +133,7 @@ class Visualizer:
                 title += "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
             ax.set_title(title)
             ax.legend(labels)
+            plt.suptitle(f"Features vs. Age\n{name}", y=0.99)
         plt.tight_layout()
 
         if name == "":
@@ -155,7 +157,7 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.title(f"Chronological vs Predicted Age {name}")
+        plt.title(f"Chronological vs Predicted Age \n{name}")
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
         if name == "":
@@ -172,7 +174,8 @@ class Visualizer:
         ----------
         y_true: 1D-Array with true age; shape=n
         y_pred: 1D-Array with predicted age before age bias correction; shape=n.
-        y_corrected: 1D-Array with predicted age after age bias correction; shape=n"""
+        y_corrected: 1D-Array with predicted age after age bias correction; shape=n
+        name: name of the figure"""
 
         # Find min and max age range to fit in graph
         age_range = np.arange(
@@ -186,7 +189,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_pred)
-        plt.title(f"Before age-bias correction {name}")
+        plt.title("Before age-bias correction")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
 
@@ -196,7 +199,7 @@ class Visualizer:
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
         plt.plot(age_range, LR_age_bias.predict(age_range.reshape(-1, 1)), color="r")
         plt.scatter(y_true, y_corrected)
-        plt.title(f"After age-bias correction {name}")
+        plt.title("After age-bias correction")
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
         plt.tight_layout()
@@ -204,10 +207,11 @@ class Visualizer:
             filename = "age_bias_correction.svg"
         else:
             filename = f"age_bias_correction_{name}.svg"
+            plt.suptitle(f"{name}\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def factors_vs_deltas(self, corrs, groups, labels, markers):
+    def factors_vs_deltas(self, corrs, groups, labels, markers, system: str = None):
         """Plot bar graph for correlation between factors and deltas.
         
         Parameters
@@ -250,11 +254,18 @@ class Visualizer:
 
         # Save figure
         fig.set_size_inches(10, 5 * len(corrs))
+        if system is not None:
+            fig.suptitle(f"Correlation of factors with age deltas. System: {system}", y=0.99)
+            filename = f"factors_vs_deltas_system_{system}.svg"
+        else:
+            fig.suptitle("Correlation of factors with age deltas.", y=0.99)
+            filename = "factors_vs_deltas.svg"
+
         plt.tight_layout()
-        plt.savefig(os.path.join(self.path_for_fig, "factors_vs_deltas.svg"))
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def deltas_by_groups(self, deltas, labels):
+    def deltas_by_groups(self, deltas, labels, system: str = None):
         """Plot box plot for deltas in each group.
 
         Parameters
@@ -277,16 +288,24 @@ class Visualizer:
             plt.scatter(x, vals, color=self.cmap(clevel))
         plt.xlabel("Gruop")
         plt.ylabel("Delta")
-        plt.savefig(os.path.join(self.path_for_fig, "clinical_groups_box_plot.svg"))
+        if system is None:
+            filename = "clinical_groups_box_plot.svg"
+            plt.suptitle("Age Delta by clinical group.")
+        else:
+            filename = f"clinical_groups_box_plot_{system}.svg"
+            plt.suptitle(f"Age Delta by clinical group. System: {system}", y=0.99)
+
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def classification_auc(self, y, y_pred, groups):
+    def classification_auc(self, y, y_pred, groups, system: str = None):
         """Plot ROC curve.
 
         Parameters
         ----------
         y: 1D-Array with true labels; shape=n
-        y_pred: 1D-Array with predicted labels; shape=n"""
+        y_pred: 1D-Array with predicted labels; shape=n
+        system: system name"""
 
         # Compute ROC curve and AUC
         fpr, tpr, _ = roc_curve(y, y_pred)
@@ -299,5 +318,10 @@ class Visualizer:
         plt.ylabel('True Positive Rate')
         plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
         plt.legend(loc="lower right")
-        plt.savefig(os.path.join(self.path_for_fig, "roc_curve_%s_vs_%s.svg" % (groups[0], groups[1])))
+        if system is not None:
+            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}_{system}.svg"
+            plt.suptitle(f"System: {system}")
+        else:
+            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}.svg"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()

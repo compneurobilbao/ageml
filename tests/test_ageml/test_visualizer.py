@@ -61,7 +61,8 @@ def test_features_vs_age(dummy_viz, np_test_data):
     reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
     reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
     significant = significant_markers(reject_bon, reject_fdr)
-    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"])
+    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"],
+                              labels=["all"])
     
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.svg")
@@ -144,3 +145,9 @@ def test_classification_auc(dummy_viz):
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
+
+
+# TODO: Test run_age with: (cov, systems), (cov), (systems), (minimum), same with clinical
+# TODO: Test run_factors -> With and without systems
+# TODO: Test run_clinical -> With and without systems
+# TODO: Test run_classification -> With and without systems
