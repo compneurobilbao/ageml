@@ -59,7 +59,7 @@ class ModelAge(Interface):
                                  help=messages.features_long_description)
         
         # Parameter arguments with defaults
-        self.parser.add_argument("-m", "--model", nargs="*", default=["linear"],
+        self.parser.add_argument("-m", "--model", nargs="*", default=["linear_reg"],
                                  help=messages.model_long_description)
         self.parser.add_argument("-s", "--scaler", nargs="*", default=["standard"],
                                  help=messages.scaler_long_description)

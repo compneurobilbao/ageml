@@ -16,6 +16,7 @@ from xgboost import XGBRegressor
 from scipy import stats
 from sklearn import linear_model
 from sklearn import svm
+from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 from sklearn import model_selection
 from sklearn import pipeline
@@ -29,6 +30,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
+
 
 class AgeML:
 
@@ -90,6 +92,7 @@ class AgeML:
             "lasso": linear_model.Lasso,
             "linear_svr": svm.SVR,
             "xgboost": XGBRegressor,  # XGBoost
+            "rf": RandomForestRegressor,
         }
         
         # Set required modelling parts
@@ -101,7 +104,6 @@ class AgeML:
         # Initialise flags
         self.pipelineFit = False
         self.age_biasFit = False
-
 
     def set_scaler(self, norm, **kwargs):
         """Sets the scaler to use in the pipeline.
@@ -125,13 +127,13 @@ class AgeML:
         Parameters
         ----------
         model_type: type of model to use
-        **kwargs: to input to sklearn modle object"""
+        **kwargs: to input to sklearn model object"""
 
         # Linear Regression
-        if model_type == "linear":
-            self.model = linear_model.LinearRegression(**kwargs)
+        if model_type not in self.model_dict.keys():
+            raise ValueError(f"Must select an available model type. Available: {list(self.model_dict.keys())}")
         else:
-            raise ValueError("Must select an available model type.")
+            self.model = self.model_dict[model_type](**kwargs)
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""

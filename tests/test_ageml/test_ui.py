@@ -15,7 +15,7 @@ class ExampleArguments(object):
     def __init__(self):
         self.scaler_type = "standard"
         self.scaler_params = {"with_mean": True}
-        self.model_type = "linear"
+        self.model_type = "linear_reg"
         self.model_params = {"fit_intercept": True}
         self.cv_split = 2
         self.seed = 0
@@ -907,7 +907,7 @@ def test_force_command_CLI(dummy_cli, monkeypatch):
     assert dummy_cli.line == ["--systems", "None"]
 
     # Test when correct input is error returned is None
-    monkeypatch.setattr("builtins.input", lambda _: "linear")
+    monkeypatch.setattr("builtins.input", lambda _: "linear_reg")
     error = dummy_cli.force_command(dummy_cli.model_command, required=True)
     assert error is None
 
@@ -1171,7 +1171,7 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     assert captured[-1] == 'Finished running age modelling.'
 
     # Test command with invalid input like incorrect model parameters
-    responses = ["model_age", features_path, "", "", "", "", "", "linear fitIntercept=True", "", "q"]
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1191,35 +1191,35 @@ def test_model_command_CLI(dummy_cli):
     dummy_cli.line = "None"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {}
 
     # Test passing invalid model type
     dummy_cli.line = "quadratic"
     error = dummy_cli.model_command()
-    assert error == "Choose a valid model type: {}".format(["linear"])
+    assert error == "Choose a valid model type: {}".format(["linear_reg", "ridge", "lasso", "xgboost", "linear_svr", "rf"])
 
     # Test empty model params if none given
-    dummy_cli.line = "linear"
+    dummy_cli.line = "linear_reg"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {}
 
     # Test passing invalid model params
     message = "Model parameters must be in the format param1=value1 param2=value2 ..."
-    dummy_cli.line = "linear intercept"
+    dummy_cli.line = "linear_reg intercept"
     error = dummy_cli.model_command()
     assert error == message
-    dummy_cli.line = "linear intercept==1"
+    dummy_cli.line = "linear_reg intercept==1"
     error = dummy_cli.model_command()
     assert error == message
 
     # Test passing correct model params
-    dummy_cli.line = "linear fit_intercept=True"
+    dummy_cli.line = "linear_reg fit_intercept=True"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {"fit_intercept": True}
 
 

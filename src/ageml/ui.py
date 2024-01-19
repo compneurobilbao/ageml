@@ -1327,8 +1327,8 @@ class CLI(Interface):
         print("Example: standard with_mean=True with_std=False")
         self.force_command(self.scaler_command)
         print("Model type and parameters (Default:linear)")
-        print("Available: linear (from sklearn)")
-        print("Example: linear fit_intercept=True positive=False")
+        print("Available: linear_reg, rf, linear_svr, lasso, ridge (from sklearn), xgboost")
+        print("Example: linear_reg fit_intercept=True positive=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
         self.force_command(self.cv_command)
@@ -1348,7 +1348,7 @@ class CLI(Interface):
 
         # Split into items and remove  command
         self.line = self.line.split()
-        valid_types = ["linear"]
+        valid_types = ["linear_reg", "ridge", "lasso", "xgboost", "linear_svr", "rf"]
         error = None
 
         # Check that at least one argument input
@@ -1360,7 +1360,7 @@ class CLI(Interface):
 
         # Set model type or default
         if model_type == "None":
-            self.args.model_type = "linear"
+            self.args.model_type = "linear_reg"
         else:
             if model_type not in valid_types:
                 error = "Choose a valid model type: {}".format(valid_types)

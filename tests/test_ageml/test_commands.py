@@ -105,7 +105,7 @@ def test_model_age(temp_dir, features):
     sys.argv = ["",
                 "-o", temp_dir.name,
                 "-f", features_data_path,
-                "-m", "linear", "fit_intercept=True",
+                "-m", "linear_reg", "fit_intercept=True",
                 "-s", "standard",
                 "--cv", "5", "0"]
     

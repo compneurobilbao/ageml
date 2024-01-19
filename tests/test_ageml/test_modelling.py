@@ -11,7 +11,7 @@ class AgeMLTest(modelling.AgeML):
         self,
         scaler="standard",
         scaler_params={"with_mean": True},
-        model="linear",
+        model="linear_reg",
         model_params={"fit_intercept": True},
         CV_split=5,
         seed=42,
@@ -40,9 +40,9 @@ def dummy_classifier():
 def test_set_unavailable_scaler():
     with pytest.raises(ValueError) as exc_info:
         age_ml_dummy = AgeMLTest(scaler="Mondong")
-        del age_ml_dummy  # To avoid linting error regarding unused variable
+        del age_ml_dummy  # Avoid linting error regarding unused variable
     assert exc_info.type == ValueError
-    assert str(exc_info.value) == "Must select an available scaler type."
+    assert str(exc_info.value) == f"Must select an available scaler type. Available: {list(AgeMLTest().scaler_dict.keys())}"
 
 
 def test_set_unavailable_model():
@@ -50,7 +50,7 @@ def test_set_unavailable_model():
         age_ml_dummy = AgeMLTest(model="Mondong")
         del age_ml_dummy  # To avoid linting error regarding unused variable
     assert exc_info.type == ValueError
-    assert str(exc_info.value) == "Must select an available model type."
+    assert str(exc_info.value) == f"Must select an available model type. Available: {list(AgeMLTest().model_dict.keys())}"
 
 
 def test_set_pipeline_none_model():
@@ -64,20 +64,17 @@ def test_set_pipeline_none_model():
     with pytest.raises(ValueError) as exc_info:
         age_ml_dummy.set_pipeline()
     assert exc_info.type == ValueError
-    error_message = "Must set a valid model or scaler before setting pipeline."
+    error_message = "Must set a valid model before setting pipeline."
     assert str(exc_info.value) == error_message
 
     # Restore for the next case
-    age_ml_dummy.set_model("linear")
+    age_ml_dummy.set_model("linear_reg")
 
     # Set None scaler in an unauthorized manner (direct modification)
     age_ml_dummy.scaler = None
-    # Set the pipeline to trigger the Value Error again
-    with pytest.raises(ValueError) as exc_info:
-        age_ml_dummy.set_pipeline()
-    assert exc_info.type == ValueError
-    error_message = "Must set a valid model or scaler before setting pipeline."
-    assert str(exc_info.value) == error_message
+    age_ml_dummy.set_pipeline()
+    # Check that the pipeline only has one step now
+    assert len(age_ml_dummy.pipeline.steps) == 1
 
 
 # TODO: test: metrics, summary_metrics, fit_age_bias, predict_age_bias, fit_age, predict_age
