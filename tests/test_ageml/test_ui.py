@@ -17,8 +17,12 @@ class ExampleArguments(object):
         self.scaler_params = {"with_mean": True}
         self.model_type = "linear"
         self.model_params = {"fit_intercept": True}
-        self.cv_split = 2
-        self.seed = 0
+        self.model_cv_split = 2
+        self.model_seed = 0
+        self.classifier_cv_split = 2
+        self.classifier_seed = 0
+        self.classifier_thr = 0.5
+        self.classifier_ci = 0.95
         test_path = os.path.dirname(__file__)
         self.output = test_path
         self.features = None
@@ -215,8 +219,8 @@ def test_interface_setup(dummy_interface):
     assert dummy_interface.args.scaler_params == expected_args.scaler_params
     assert dummy_interface.args.model_type == expected_args.model_type
     assert dummy_interface.args.model_params == expected_args.model_params
-    assert dummy_interface.args.cv_split == expected_args.cv_split
-    assert dummy_interface.args.seed == expected_args.seed
+    assert dummy_interface.args.model_cv_split == expected_args.model_cv_split
+    assert dummy_interface.args.model_seed == expected_args.model_seed
     assert dummy_interface.args.output == expected_args.output
 
 
@@ -365,8 +369,8 @@ def test_age_distribution_warning(dummy_interface):
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.age_distribution([df1, df2], labels=["dist1", "dist2"])
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = "Age distributions %s and %s are not similar." % ("dist1", "dist2")
-    assert warn_record.list[0].message.args[0] == expected
+    expected = "Age distributions %s and %s are not similar" % ("dist1", "dist2")
+    assert warn_record.list[0].message.args[0].startswith(expected)
 
 
 def test_run_age(dummy_interface, features):
@@ -930,6 +934,39 @@ def test_command_interface_CLI(dummy_cli, monkeypatch, capsys):
     assert captured[-1] == "Enter 'h' for help."
 
 
+def test_classifier_command_CLI(dummy_cli):
+    """Test dummy CLI classifier command"""
+
+    # Test no input
+    dummy_cli.line = ""
+    error = dummy_cli.classifier_command()
+    assert error == "Must provide two arguments or None."
+
+    # Test default
+    dummy_cli.line = "None"
+    error = dummy_cli.classifier_command()
+    assert error is None
+    assert dummy_cli.args.classifier_thr == 0.5
+    assert dummy_cli.args.classifier_ci == 0.95
+
+    # Test error float
+    dummy_cli.line = "mondongo"
+    error = dummy_cli.classifier_command()
+    assert error == "Parameters must be floats."
+
+    # Test passing two arguments
+    dummy_cli.line = "0.1 0.1"
+    error = dummy_cli.classifier_command()
+    assert error is None
+    assert dummy_cli.args.classifier_thr == 0.1
+    assert dummy_cli.args.classifier_ci == 0.1
+
+    # Test passing too many arguments
+    dummy_cli.line = "0.1 0.1 0.1"
+    error = dummy_cli.classifier_command()
+    assert error == "Too many values to unpack."
+
+
 def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
     """Test dummy CLI classification command"""
 
@@ -943,14 +980,14 @@ def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, caps
     clinical_path = create_csv(clinical, tempDir.name)
 
     # Test command
-    responses = ["classification", ages_path, clinical_path, "cn group1", "q"]
+    responses = ["classification", ages_path, clinical_path, "cn group1", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished classification.'
 
     # Test command with invalid input like incorrect groups
-    responses = ["classification", ages_path, clinical_path, "cn group2", "q"]
+    responses = ["classification", ages_path, clinical_path, "cn group2", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1009,39 +1046,44 @@ def test_cv_command_CLI(dummy_cli):
     # Test no input
     dummy_cli.line = ""
     error = dummy_cli.cv_command()
-    assert error == "Must provide at least one argument or None."
+    assert error == "Must provide at least one argument."
 
     # Test default values
-    dummy_cli.line = "None"
+    dummy_cli.line = "model None"
     error = dummy_cli.cv_command()
     assert error is None
-    assert dummy_cli.args.cv_split == 5
-    assert dummy_cli.args.seed == 0
+    assert dummy_cli.args.model_cv_split == 5
+    assert dummy_cli.args.model_seed == 0
+
+    # Test non existent flag
+    dummy_cli.line = "mondongo"
+    error = dummy_cli.cv_command()
+    assert error == "Must provide either model or classifier flag."
 
     # Test non-integer values
-    dummy_cli.line = "2.5"
+    dummy_cli.line = "model 2.5"
     error = dummy_cli.cv_command()
     assert error == "CV parameters must be integers"
-    dummy_cli.line = "2 3.5"
+    dummy_cli.line = "model 2 3.5"
     error = dummy_cli.cv_command()
     assert error == "CV parameters must be integers"
 
     # Test passing too many arguments
-    dummy_cli.line = "1 2 3"
+    dummy_cli.line = "model 1 2 3"
     error = dummy_cli.cv_command()
     assert error == "Too many values to unpack."
 
     # Test correct parsing
-    dummy_cli.line = "1"
+    dummy_cli.line = "model 1"
     error = dummy_cli.cv_command()
     assert error is None
-    assert dummy_cli.args.cv_split == 1
-    assert dummy_cli.args.seed == 0
-    dummy_cli.line = "1 2"
+    assert dummy_cli.args.model_cv_split == 1
+    assert dummy_cli.args.model_seed == 0
+    dummy_cli.line = "model 1 2"
     error = dummy_cli.cv_command()
     assert error is None
-    assert dummy_cli.args.cv_split == 1
-    assert dummy_cli.args.seed == 2
+    assert dummy_cli.args.model_cv_split == 1
+    assert dummy_cli.args.model_seed == 2
 
 
 def test_factor_analysis_command_CLI(dummy_cli, ages, factors, monkeypatch, capsys):

@@ -135,15 +135,21 @@ class Interface:
             self.args.scaler_params,
             self.args.model_type,
             self.args.model_params,
-            self.args.cv_split,
-            self.args.seed,
+            self.args.model_cv_split,
+            self.args.model_seed,
         )
         return model
 
-    def set_classifier(self):
+    def generate_classifier(self):
         """Set classifier with parameters."""
 
-        self.classifier = Classifier()
+        classifier = Classifier(
+            self.args.classifier_cv_split,
+            self.args.classifier_seed,
+            self.args.classifier_thr,
+            self.args.classifier_ci)
+        
+        return classifier
 
     def check_file(self, file):
         """Check that file exists."""
@@ -201,12 +207,15 @@ class Interface:
 
         # Load covariates
         self.df_covariates = self.load_csv('covariates')
+        
         # Check that covar name is given
-        if self.df_covariates is not None and hasattr(self.args, "covar_name"):
-            if self.args.covar_name is not None:
-                self.flags['covariates'] = True
-            else:
-                raise ValueError("If covariates file is provided, you must also provide the covariate name.")
+        if self.df_covariates is not None and hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
+            # Force covar_name to be lower case
+            self.args.covar_name = self.args.covar_name.lower()
+            # Check that covariate column exists
+            if self.args.covar_name not in self.df_covariates.columns:
+                raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
+            self.flags['covariates'] = True
 
         # Load factors
         self.df_factors = self.load_csv('factors')
@@ -295,6 +304,7 @@ class Interface:
         self.subjects_missing_data = []
         for label, df in zip(labels, dfs):
             if df is not None:
+                print("Number of subjects in dataframe %s: %d" % (label, df.shape[0]))
                 missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
                 self.subjects_missing_data = (
                     self.subjects_missing_data + missing_subjects
@@ -323,9 +333,14 @@ class Interface:
 
         # Remove subjects with missing values
         self.subjects_missing_data = set(self.subjects_missing_data)
+        flag_subjects = True
         for df in dfs:
             if df is not None:
                 df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
+                # Print only once number of final subjects
+                if flag_subjects:
+                    print("Number of subjects without any missing data: %d" % len(df))
+                    flag_subjects = False
 
     def age_distribution(self, dfs: list, labels=None, name=""):
         """Use visualizer to show age distribution.
@@ -350,18 +365,18 @@ class Interface:
             print("Age range: [%d,%d]" % (np.min(ages), np.max(ages)))
             list_ages.append(ages)
 
-        # Check that distributions of ages are similar
-        print("Checking that age distributions are similar...")
-        for i in range(len(list_ages)):
-            for j in range(i + 1, len(list_ages)):
-                _, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
-                if p_val < 0.05:
-                    warn_message = "Age distributions %s and %s are not similar." % (
-                        labels[i],
-                        labels[j],
-                    )
-                    print(warn_message)
-                    warnings.warn(warn_message, category=UserWarning)
+        # Check that distributions of ages are similar if more than one
+        if len(list_ages) > 1:
+            print("Checking that age distributions are similar using T-test: T-stat (p_value)")
+            print("If p_value > 0.05 distributions are considered simiilar and not displayed...")
+            for i in range(len(list_ages)):
+                for j in range(i + 1, len(list_ages)):
+                    t_stat, p_val = stats.ttest_ind(list_ages[i], list_ages[j])
+                    if p_val < 0.05:
+                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (
+                            labels[i], labels[j], t_stat, p_val)
+                        print(warn_message)
+                        warnings.warn(warn_message, category=UserWarning)
 
         # Use visualiser
         self.visualizer.age_distribution(list_ages, labels, name)
@@ -377,7 +392,7 @@ class Interface:
 
         # Select data to visualize
         print("-----------------------------------")
-        print("Features by correlation with Age")
+        print("Features by correlation with Age of Controls")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
         if not isinstance(dfs, list):
             raise TypeError("Input to 'Interface.features_vs_age' must be a list of dataframes.")
@@ -427,7 +442,7 @@ class Interface:
         # Show training pipeline
         print("-----------------------------------")
         if name == "":
-            print("Training Age Model")
+            print("Training Age Model for all controls")
         else:
             print("Training Model for covariate %s" % name)
         print(model.pipeline)
@@ -518,7 +533,8 @@ class Interface:
         # Use visualizer to show bar graph
         self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants, system)
 
-    def deltas_by_group(self, df, labels, system: str = None):
+
+    def deltas_by_group(self, df, labels, system: str = None, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
         
         Parameters
@@ -543,19 +559,29 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
-        print("*: p-value < 0.01, **: p-value < 0.001")
+        print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
+
+        # Calculate p-values
+        p_vals_matrix = np.zeros((len(deltas), len(deltas)))
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
+                p_vals_matrix[i, j] = p_val
+        
+        # Reject null hypothesis of no correlation
+        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
+        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='fdr_bh')
+        reject_bon = reject_bon.reshape((len(deltas), len(deltas)))
+        reject_fdr = reject_fdr.reshape((len(deltas), len(deltas)))
+
+        # Print results
+        for i in range(len(deltas)):
+            significant = significant_markers(reject_bon[i], reject_fdr[i])
+            for j in range(i + 1, len(deltas)):
                 pval_message = "p-value between %s and %s: %.2g" % (
-                    labels[i],
-                    labels[j],
-                    p_val,
-                )
-                if p_val < 0.001:
-                    pval_message = "*" + pval_message
-                elif p_val < 0.01:
-                    pval_message = "**" + pval_message
+                    labels[i], labels[j], p_vals_matrix[i, j])
+                if significant[j] != "":
+                    pval_message = significant[j] + " " + pval_message
                 print(pval_message)
 
         # Use visualizer
@@ -583,6 +609,9 @@ class Interface:
         # Create X and y for classification
         X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
         y = np.concatenate((np.zeros(deltas1.shape), np.ones(deltas2.shape)))
+
+        # Generate classifier
+        self.classifier = self.generate_classifier()
 
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
@@ -612,6 +641,8 @@ class Interface:
 
         # Select controls
         if self.flags["clinical"]:
+            print('Controls found in clinical file, selecting controls from clinical file.')
+            print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
             df_cn = self.df_features.loc[self.df_features.index.isin(self.cn_subjects)]
             df_clinical = self.df_features.loc[~self.df_features.index.isin(self.cn_subjects)]
         else:
@@ -619,10 +650,6 @@ class Interface:
             df_clinical = None
 
         if self.flags["covariates"] and self.args.covar_name is not None:
-            # Check that covariate column exists
-            if self.args.covar_name not in self.df_covariates.columns:
-                raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-
             # Create dataframe list of controls by covariate
             labels_covar = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
             df_covar_cn = self.df_covariates.loc[df_cn.index]
@@ -939,15 +966,14 @@ class Interface:
             systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Classify between groups
+
         if self.flags["systems"]:
             for system in systems_list:
-                self.set_classifier()
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 df_group1_system = df_group1[cols]
                 df_group2_system = df_group2[cols]
                 self.classify(df_group1_system, df_group2_system, groups, system=system)
         else:
-            self.set_classifier()
             self.classify(df_group1, df_group2, groups)
 
 
@@ -1092,6 +1118,43 @@ class CLI(Interface):
             self.get_line()  # get the user entry
             command = self.line.split()[0]  # read the first item
 
+    def classifier_command(self):
+        """Set classifier parameters."""
+
+        # Split into items
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) == 0:
+            error = "Must provide two arguments or None."
+            return error
+        
+        # Set defaults
+        if len(self.line) == 1 and self.line[0] == 'None':
+            self.args.classifier_thr = 0.5
+            self.args.classifier_ci = 0.95
+            return error
+        
+        # Check wether items are floats
+        for item in self.line:
+            try:
+                float(item)
+            except ValueError:
+                error = "Parameters must be floats."
+                return error
+            
+        # Set parameters
+        if len(self.line) == 2:
+            self.args.classifier_thr = float(self.line[0])
+            self.args.classifier_ci = float(self.line[1])
+        elif len(self.line) > 2:
+            error = "Too many values to unpack."
+        elif len(self.line) == 1:
+            error = "Must provide two arguments or None."
+        
+        return error
+            
     def classification_command(self):
         """Run classification."""
 
@@ -1106,6 +1169,12 @@ class CLI(Interface):
         # Ask for groups
         print("Input groups (Required):")
         self.force_command(self.group_command, required=True)
+
+        # Ask for CV parameters adn classifier parameters
+        print("CV parameters (Default: nº splits=5 and seed=0):")
+        self.force_command(self.cv_command, 'classifier')
+        print("Classifier parameters (Default: thr=0.5 and ci=0.95):")
+        self.force_command(self.classifier_command)
 
         # Run classification capture any error raised and print
         try:
@@ -1141,7 +1210,7 @@ class CLI(Interface):
     def covar_command(self):
         """Load covariate group."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1161,33 +1230,43 @@ class CLI(Interface):
     def cv_command(self):
         """Load CV parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
         # Check that at least one argument input
         if len(self.line) == 0:
-            error = "Must provide at least one argument or None."
+            error = "Must provide at least one argument."
             return error
 
+        # Check that first argument is model or classifier
+        if self.line[0] not in ['model', 'classifier']:
+            error = "Must provide either model or classifier flag."
+            return error
+        elif self.line[0] == 'model':
+            arg_type = 'model'
+        elif self.line[0] == 'classifier':
+            arg_type = 'classifier'
+
         # Set default values
-        if self.line[0] == "None":
-            self.args.cv_split = 5
-            self.args.seed = 0
+        if len(self.line) == 2 and self.line[1] == 'None':
+            setattr(self.args, arg_type + '_cv_split', 5)
+            setattr(self.args, arg_type + '_seed', 0)
             return error
 
         # Check wether items are integers
-        for item in self.line:
+        for item in self.line[1:]:
             if not item.isdigit():
                 error = "CV parameters must be integers"
                 return error
 
         # Set CV parameters
-        if len(self.line) == 1:
-            self.args.cv_split = int(self.line[0])
-            self.args.seed = 0
-        elif len(self.line) == 2:
-            self.args.cv_split, self.args.seed = int(self.line[0]), int(self.line[1])
+        if len(self.line) == 2:
+            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
+            setattr(self.args, arg_type + '_seed', 0)
+        elif len(self.line) == 3:
+            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
+            setattr(self.args, arg_type + '_seed', int(self.line[2]))
         else:
             error = "Too many values to unpack."
 
@@ -1221,7 +1300,7 @@ class CLI(Interface):
     def group_command(self):
         """Load groups."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1249,7 +1328,7 @@ class CLI(Interface):
     def load_command(self):
         """Load file paths."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1331,7 +1410,7 @@ class CLI(Interface):
         print("Example: linear fit_intercept=True positive=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
-        self.force_command(self.cv_command)
+        self.force_command(self.cv_command, 'model')
 
         # Run modelling capture any error raised and print
         try:
@@ -1346,7 +1425,7 @@ class CLI(Interface):
     def model_command(self):
         """Load model parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         valid_types = ["linear"]
         error = None
@@ -1387,7 +1466,7 @@ class CLI(Interface):
     def output_command(self):
         """Load output directory."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
 
@@ -1410,7 +1489,7 @@ class CLI(Interface):
     def scaler_command(self):
         """Load scaler parameters."""
 
-        # Split into items and remove  command
+        # Split into items
         self.line = self.line.split()
         error = None
         valid_types = ["standard"]
