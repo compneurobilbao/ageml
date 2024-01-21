@@ -64,7 +64,7 @@ class Interface:
 
     model_age(self, df, model): Use AgeML to fit age model with data.
 
-    predict_age(self, df, model): Use AgeML to predict age with data.
+    predict_age(self, df, model, model_name): Use AgeML to predict age with data.
 
     factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
@@ -427,9 +427,9 @@ class Interface:
         # Show training pipeline
         print("-----------------------------------")
         if name == "":
-            print("Training Age Model")
+            print(f"Training Age Model ({self.args.model_type})")
         else:
-            print("Training Model for covariate %s" % name)
+            print(f"Training Model ({self.args.model_type}): {name}")
         print(model.pipeline)
 
         # Select data to model
@@ -450,12 +450,12 @@ class Interface:
 
         return model, df_ages
 
-    def predict_age(self, df, model):
+    def predict_age(self, df, model, model_name: str = None):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
         print("-----------------------------------")
-        print("Predicting with Age Model")
+        print(f"Predicting with Age Model ({self.args.model_type}): {model_name}")
         print(model.pipeline)
 
         # Select data to model
@@ -713,7 +713,7 @@ class Interface:
                         model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
                         # Make predictions and store them.
                         dict_clinical_ages[label_covar][system_name] = self.predict_age(df_clinical[system_features + ['age']],
-                                                                                        self.models[model_name])
+                                                                                        self.models[model_name], model_name=model_name)
                         # Rename all columns in ages dataframe to include the system name.
                         dict_clinical_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
 
@@ -721,7 +721,7 @@ class Interface:
                     # Model name has no system if no systems file is provided.
                     model_name = f"{self.args.covar_name}_{label_covar}"
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
-                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name])
+                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], model_name=model_name)
 
         # Concatenate dict_ages into a single DataFrame.
         # If no systems and no covariate only 1 df
