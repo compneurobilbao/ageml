@@ -1,4 +1,4 @@
-# AgeModelling
+# AgeML
 
 _AgeML_ is a Python package for Age Modelling with Machine Learning made easy.
 
@@ -22,6 +22,25 @@ There are 4 main CLIs:
 
 In the figure below, find a schematic of the described results:
 ![./basic_functionality_figure](./resources/figs/basic_functionality_fig.svg)
+
+## How to install
+
+_AgeML_ can easily be installed using pip
+`pip install ageml`
+
+A Docker image version will be released in the short term.
+
+## How to Contribute
+
+We welcome scientists and developers who want to standardize the procedures of age modelling, share pretrained models or whatever other kind of contribution that can help the project.
+
+The contribution guidelines can be found [here](./docs/CONTRIBUTING.md).
+
+## How to use
+
+### Interactive CLI
+
+### Compact CLI
 
 ## Motivation
 
