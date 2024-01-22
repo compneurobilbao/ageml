@@ -1321,22 +1321,29 @@ class CLI(Interface):
         print("Input systems file path (Optional):")
         self.force_command(self.load_command, "--systems")
 
-        # Ask for scaler, model and CV parameters
+        # Ask for scaler, model, CV parameters, feature extension, and hyperparameter tuning
         print("Scaler type and parameters (Default:standard)")
-        print(f"Available: {AgeML.scaler_dict.keys()}")
+        print(f"Available: {list(AgeML.scaler_dict.keys())}")
         print("Example: standard with_mean=True with_std=False")
         self.force_command(self.scaler_command)
         print("Model type and parameters (Default:linear_reg)")
-        print(f"Available: {AgeML.model_dict.keys()}")
+        print(f"Available: {list(AgeML.model_dict.keys())}")
         print("Example: linear_reg fit_intercept=True normalize=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
+        print("Example: 10 0")
         self.force_command(self.cv_command)
+        print("Polynomial feature extension degree. Leave blank if not desired (Default: 0, max. 3)")
+        print("Example: 3")
+        self.force_command(self.feature_extension_command)
+        print("Hyperparameter tuning. Number of points in grid search: (Default: 0)")
+        print("Example: 100")
+        self.force_command(self.hyperparameter_grid_command)
 
         # Run modelling capture any error raised and print
         try:
             self.run_wrapper(self.run_age)
-            print('Finished running age modelling.')
+            print("Finished running age modelling.")
         except Exception as e:
             print(e)
             error = "Error running age modelling."
@@ -1458,4 +1465,56 @@ class CLI(Interface):
             error = f"Scaler parameters are not valid for {self.args.scaler_type} scaler. Check them in the sklearn documentation."
             return error
 
+        return error
+
+    def feature_extension_command(self):
+        """Load feature extension."""
+
+        # Split into items and remove  command
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) > 1:
+            error = "Must provide only one integer, or none."
+            return error
+
+        # Set default values
+        if self.line[0] == "None":
+            self.args.polynomial_features_degree = 0
+            return error
+        
+        # Check whether items are integers
+        if not self.line[0].isdigit():
+            error = "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+            return error
+
+        # Set CV parameters
+        self.args.polynomial_features_degree = self.line[0]
+        return error
+
+    def hyperparameter_grid_command(self):
+        """Load hyperparameter search grid."""
+
+        # Split into items and remove command
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) > 1:
+            error = "Must provide only one integer, or none."
+            return error
+
+        # Set default values
+        if self.line[0] == "None":
+            self.args.hyperparameter_grid_points = 0
+            return error
+        
+        # Check whether items are integers
+        if not self.line[0].isdigit():
+            error = "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+            return error
+
+        # Set CV parameters
+        self.args.hyperparameter_grid_points = self.line[0]
         return error

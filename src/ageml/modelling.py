@@ -81,7 +81,15 @@ class AgeML:
         "robust": RobustScaler,
         "standard": StandardScaler,
     }
-    # TODO: Scaler hyperparams
+    scaler_hyperparameters = {'maxabs': {},
+                              'minmax': {},
+                              'normalizer': {},
+                              'power': {'method': ['yeo-johnson', 'box-cox']},
+                              'quantile': {'n_quantiles': [10, 1000],
+                                           'output_distribution': ['normal', 'uniform']},
+                              'robust': {},
+                              'standard': {}}
+    
     # Model dictionary
     model_dict = {
         "linear_reg": linear_model.LinearRegression,
@@ -91,15 +99,32 @@ class AgeML:
         "xgboost": XGBRegressor,  # XGBoost
         "rf": RandomForestRegressor,
     }
-    # TODO: Model hyperparams
-    model_hyperparameters = {}
+    model_hyperparameters = {'ridge': {'alpha': [0, 10]},
+                             'lasso': {'alpha': [0, 10]},
+                             'linear_svr': {'C': [0, 10],
+                                            'epsilon': [0, 3]},
+                             'xgboost': {'max_depth': [0, 10],
+                                         'min_child_weight': [0, 1],
+                                         'subsample': [0, 100],
+                                         'colsample_bytree': [0, 100],
+                                         'eta': [0, 0.1],
+                                         'gamma': [0, 10],
+                                         'lambda': [0, 10],
+                                         'alpha': [0, 10]},
+                             'rf': {'n_estimators': [1, 2000],
+                                    'max_depth': [1, 100],
+                                    'min_samples_split': [1, 10],
+                                    'min_samples_leaf': [1, 10],
+                                    'max_features': [1, 10], }}
 
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
         """Initialise variables."""
 
         # Scaler dictionary
+        self.scaler_type = scaler_type
         self.scaler_dict = AgeML.scaler_dict
         # Model dictionary
+        self.model_type = model_type
         self.model_dict = AgeML.model_dict
         
         # Set required modelling parts
@@ -149,9 +174,20 @@ class AgeML:
         if self.model is None:
             raise ValueError("Must set a valid model before setting pipeline.")
         
+        # Scaler and whether it has to be optimized
         if self.scaler is not None:
             pipe.append(("scaler", self.scaler))
+            if self.optimize_hyperparams is True:
+                # Get the hyperparameters dict of the scaler
+                scaler_param_space = AgeML.scaler_hyperparameters[self.scaler_type]
+                pipe.append(("scaler_hyperparam_opt", scaler_param_space))
         pipe.append(("model", self.model))
+        
+        # Model and whether it has to be optimized
+        if self.optimize_hyperparams is True:
+            # Get the hyperparameters dict of the model
+            model_param_space = AgeML.model_hyperparameters[self.model_type]
+            pipe.append(("model_hyperparam_opt", model_param_space))
         self.pipeline = pipeline.Pipeline(pipe)
 
     def set_CV_params(self, CV_split, seed=None):
@@ -279,7 +315,8 @@ class AgeML:
         # Print comparison with mean age as only predictor to have a reference of a dummy regressor
         dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
         dummy_mae = np.mean(np.abs(y - np.mean(y)))
-        print("When using mean of ages as predictor for each subject:\nMAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse))
+        print("When using mean of ages as predictor for each subject (dummy regressor):\n"
+              "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse))
         print("Age range: %.2f" % (np.max(y) - np.min(y)))
 
         # Final model trained on all data

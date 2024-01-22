@@ -65,6 +65,10 @@ class ModelAge(Interface):
                                  help=messages.scaler_long_description)
         self.parser.add_argument("--cv", nargs="+", type=int, default=[5, 0],
                                  help=messages.cv_long_description)
+        self.parser.add_argument("-pft", "--polynomial_features_degree", nargs=1, default=0,
+                                 help=messages.poly_feature_extension_description)
+        self.parser.add_argument("-hgs", "--hyperparam_grid_points", nargs=1, default=0,
+                                 help=messages.hyperparameter_grid_description)
         
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE",
@@ -129,6 +133,20 @@ class ModelAge(Interface):
         else:
             args.model_params = {}
 
+        # Set hyperparameter grid search value
+        if len(args.hyperparameter_grid_points) > 1 or not args.hyperparameter_grid_points.isdigit():
+            raise ValueError(
+                "Hyperparameter grid points must be a non negative integer."
+            )
+        else:
+            args.hyperparameter_grid_points = convert(args.hyperparameter_grid_points)
+        # Set polynomial feature extension value
+        if len(args.polynomial_features_degree) > 1 or not args.polynomial_features_degree.isdigit():
+            raise ValueError(
+                "Polynomial feature extension degree must be a non negative integer."
+            )
+        else:
+            args.polynomial_features_degree = convert(args.polynomial_features_degree)
         return args
 
 

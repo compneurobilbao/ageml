@@ -46,7 +46,8 @@ covar_long_description = (
 )
 
 covar_name_long_description = (
-    "Name of the column (covariate) in the CSV file containing covariates, to make different models for each category of the covariate. \n"
+    "Name of the column (covariate) in the CSV file containing covariates, to make different\n"
+    "models for each category of the covariate. \n"
     "The name must be written exactly as it is in the CSV file. \n"
     "If no covariate name is given, no covariate separation will be done."
 )
@@ -84,6 +85,16 @@ groups_long_description = (
     "Two groups are required. (e.g. --groups cn ad)"
 )
 
+poly_feature_extension_description = (
+    "Degree of the polynomial to use in Polynomial Feature Extension (from sklearn)\n"
+    "An integer is required. (e.g.   -pft 2    /   --polynomial_features_degree 1)"
+)
+
+hyperparameter_grid_description = (
+    "Number of points for which the hyperparameter optimization Grid Search will train\n"
+    "a model. The parameter ranges are predefined. An integer is required.\n"
+    "(e.g.   -hgs 100   /   --hyperparameter_grid_points 100)"
+)
 # UI information
 
 emblem = """
