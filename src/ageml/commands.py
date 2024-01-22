@@ -204,6 +204,10 @@ class ClinicalGroups(Interface):
                                  help=messages.ages_long_description)
         self.parser.add_argument("--clinical", metavar="FILE", required=True,
                                  help=messages.clinical_long_description)
+                            
+        # Optional arguments
+        self.parser.add_argument("--covariates", metavar="FILE",
+                                 help=messages.covar_long_description)
 
 
 class ClinicalClassification(Interface):
@@ -251,6 +255,10 @@ class ClinicalClassification(Interface):
                                  help=messages.thr_long_description)
         self.parser.add_argument("--ci", nargs=1, type=float, default=[0.95],
                                  help=messages.ci_long_description)
+        
+        # Optional arguments
+        self.parser.add_argument("--covariates", metavar="FILE",
+                                 help=messages.covar_long_description)
         
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.

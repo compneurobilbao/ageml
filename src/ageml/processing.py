@@ -22,3 +22,27 @@ def find_correlations(X, Y):
         corr_coefs, p_values = zip(*corrs)
         order = [o for o in np.argsort(np.abs(corr_coefs))[::-1] if corr_coefs[o] is not np.nan]
         return corr_coefs, order, p_values
+
+
+def covariate_correction(X, Z, beta=None):
+    """Correct for covariates Z in X using linear OLS.
+
+    Parameters
+    ----------
+    X: 2D-Array with features; shape=(n,m)
+    Z: 2D-Array with covariates; shape=(n,k)
+
+    Returns
+    -------
+    X_residual: 2D-Array with corrected features; shape=(n,m)
+    beta: 2D-Array with coefficients; shape=(m,k)
+    """
+
+    # Estimate coefficients
+    if beta is None:
+        beta = np.linalg.inv(Z.T @ Z) @ Z.T @ X
+
+    # Subtract the effect of Z from X
+    X_residual = X - Z @ beta
+
+    return X_residual, beta

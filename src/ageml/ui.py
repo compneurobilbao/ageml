@@ -25,7 +25,7 @@ import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log
 from ageml.modelling import AgeML, Classifier
-from ageml.processing import find_correlations
+from ageml.processing import find_correlations, covariate_correction
 
 
 class Interface:
@@ -120,7 +120,7 @@ class Interface:
     def set_flags(self):
         """Set flags."""
 
-        self.flags = {"clinical": False, "covariates": False, "systems": False}
+        self.flags = {"clinical": False, "covariates": False, "covarname": False, "systems": False}
 
     def set_visualizer(self):
         """Set visualizer with output directory."""
@@ -207,7 +207,11 @@ class Interface:
 
         # Load covariates
         self.df_covariates = self.load_csv('covariates')
-        
+        if self.df_covariates is not None:
+            self.flags['covariates'] = True
+        elif "covariates" in required:
+            raise ValueError("Covariates file must be provided.")
+
         # Check that covar name is given
         if self.df_covariates is not None and hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
             # Force covar_name to be lower case
@@ -215,7 +219,7 @@ class Interface:
             # Check that covariate column exists
             if self.args.covar_name not in self.df_covariates.columns:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-            self.flags['covariates'] = True
+            self.flags['covarname'] = True
 
         # Load factors
         self.df_factors = self.load_csv('factors')
@@ -263,7 +267,7 @@ class Interface:
             else:
                 self.flags['clinical'] = True
                 self.cn_subjects = self.df_clinical[self.df_clinical["cn"]].index
-        elif "clinical" in required or not hasattr(self.args, "clinical"):
+        elif "clinical" in required:
             raise ValueError("Clinical file must be provided.")
 
         # Load AGES file
@@ -409,6 +413,10 @@ class Interface:
         for df, label in zip(dfs, labels):
             # Extract features
             X, y, feature_names = feature_extractor(df)
+            # Covariate correction
+            if self.flags["covariates"] and not self.flags['covarname']:
+                print("Covariate effects will be subtracted from features.")
+                X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(X, y)
             # Reject null hypothesis of no correlation
@@ -417,8 +425,9 @@ class Interface:
             significant = significant_markers(reject_bon, reject_fdr)
             # Print results
             for idx, order_element in enumerate(order):
-                print("%d.%s %s %s: %.2f" % (idx + 1, label, significant[order_element],
-                                             feature_names[order_element], corr[order_element]))
+                print("%d.%s %s %s: %.2f (%.2g)" % (idx + 1, label, significant[order_element],
+                                                    feature_names[order_element], corr[order_element],
+                                                    p_values[order_element]))
             # Append all the values
             X_list.append(X)
             y_list.append(y)
@@ -450,6 +459,13 @@ class Interface:
         # Select data to model
         X, y, _ = feature_extractor(df)
 
+        # Covariate correction
+        if self.flags["covariates"] and not self.flags['covarname']:
+            print("Covariate effects will be subtracted from features.")
+            X, beta = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
+        else:
+            beta = None
+
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
         self.visualizer.true_vs_pred_age(y, y_pred, name)
@@ -463,9 +479,9 @@ class Interface:
         cols = ["age", "predicted age", "corrected age", "delta"]
         df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
-        return model, df_ages
+        return model, df_ages, beta
 
-    def predict_age(self, df, model):
+    def predict_age(self, df, model, beta: np.ndarray = None):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
@@ -475,6 +491,11 @@ class Interface:
 
         # Select data to model
         X, y, _ = feature_extractor(df)
+
+        # Covariate correction
+        if self.flags["covariates"] and not self.flags['covarname']:
+            print("Covariate effects will be subtracted from features.")
+            X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy(), beta)
 
         # Predict age
         y_pred, y_corrected = model.predict_age(X, y)
@@ -508,6 +529,19 @@ class Interface:
 
         # Iterate over groups
         corrs, significants = [], []
+
+        # Calculate covariate corrections
+        if self.flags["covariates"]:
+            print("Covariate effects will be subtracted from factors.")
+            if self.flags["clinical"]:
+                cn_pos = [i for i, label in enumerate(groups) if "cn" in label.lower()][0]
+                factors_cn = dfs_factors[cn_pos].to_numpy()
+                covars_cn = self.df_covariates.loc[dfs_factors[cn_pos].index].to_numpy()
+            else:
+                factors_cn = dfs_factors[0].to_numpy()
+                covars_cn = self.df_covariates.loc[dfs_factors[0].index].to_numpy()
+            _, beta = covariate_correction(factors_cn, covars_cn)
+
         for group, df_ages, df_factors in zip(groups, dfs_ages, dfs_factors):
             print(group)
 
@@ -515,6 +549,11 @@ class Interface:
             delta_col = [col for col in df_ages.columns if "delta" in col][0]
             deltas = df_ages[delta_col].to_numpy()
             factors = df_factors.to_numpy()
+
+            # Apply covariate correction
+            if self.flags["covariates"]:
+                covars = self.df_covariates.loc[df_ages.index].to_numpy()
+                factors, _ = covariate_correction(factors, covars, beta)
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
@@ -528,11 +567,10 @@ class Interface:
 
             # Print results
             for i, o in enumerate(order):
-                print("%d. %s %s: %.2f" % (i + 1, significant[o], factor_names[o], corr[o]))
+                print("%d. %s %s: %.2f (%.2g)" % (i + 1, significant[o], factor_names[o], corr[o], p_values[o]))
 
         # Use visualizer to show bar graph
         self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants, system)
-
 
     def deltas_by_group(self, df, labels, system: str = None, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
@@ -547,11 +585,29 @@ class Interface:
         print("-----------------------------------")
         print("Delta distribution by group")
 
+        # Check wether covariates will be corrected
+        if self.flags["covariates"]:
+            print("Covariate effects will be subtracted from deltas.")
+
+            # Find position of controls
+            pos_controls = [i for i, label in enumerate(labels) if "cn" in label.lower()][0]
+            df_cn = df[pos_controls]
+
+            # Calculate covariate correction coefficients
+            _, beta = covariate_correction(df_cn['delta'], self.df_covariates.loc[df_cn.index].to_numpy())
+
         # Obtain deltas means and stds
         deltas = []
-        for i, df_group in enumerate(df):
-            delta_col = [col for col in df_group.columns if "delta" in col][0]
-            deltas.append(df_group[delta_col].to_numpy())
+        for df_group in df:
+            vals = df_group['delta'].to_numpy()
+            if self.flags["covariates"]:
+                covariates = self.df_covariates.loc[df_group.index].to_numpy()
+                vals_corr, _ = covariate_correction(vals, covariates, beta)
+                deltas.append(vals_corr)
+            else:
+                deltas.append(vals)
+
+        for i in range(len(deltas)):
             print(labels[i])
             print("Mean delta: %.2f" % np.mean(deltas[i]))
             print("Std delta: %.2f" % np.std(deltas[i]))
@@ -587,7 +643,7 @@ class Interface:
         # Use visualizer
         self.visualizer.deltas_by_groups(deltas, labels, system)
 
-    def classify(self, df1, df2, groups, system: str = None):
+    def classify(self, df1, df2, groups, system: str = None, beta: np.ndarray = None):
         """Classify two groups based on deltas.
 
         Parameters
@@ -595,7 +651,8 @@ class Interface:
         df1: dataframe with delta information; shape=(n,m)
         df2: dataframe with delta information; shape=(n,m)
         groups: list of labels for each dataframe; shape=(2,)
-        system: name of the system from which the variables come from"""
+        system: name of the system from which the variables come from
+        beta: coefficients for covariate correction"""
 
         # Classification
         print("-----------------------------------")
@@ -612,6 +669,11 @@ class Interface:
 
         # Generate classifier
         self.classifier = self.generate_classifier()
+
+        # Apply covariate correction
+        if self.flags["covariates"]:
+            Z = np.concatenate((self.df_covariates.loc[df1.index].to_numpy(), self.df_covariates.loc[df2.index].to_numpy()))
+            X, _ = covariate_correction(X, Z, beta)
 
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
@@ -649,7 +711,7 @@ class Interface:
             df_cn = self.df_features
             df_clinical = None
 
-        if self.flags["covariates"] and self.args.covar_name is not None:
+        if self.flags["covarname"] and self.args.covar_name is not None:
             # Create dataframe list of controls by covariate
             labels_covar = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
             df_covar_cn = self.df_covariates.loc[df_cn.index]
@@ -671,7 +733,7 @@ class Interface:
             self.args.covar_name = "all"
 
         # Relationship between features and age
-        if self.flags["covariates"]:
+        if self.flags["covarname"]:
             initial_plots_names = f"controls_{self.args.covar_name}"
         else:
             initial_plots_names = "controls"
@@ -705,6 +767,7 @@ class Interface:
         # Model age
         # Dict ages is a dictionary of dictionaries. First index is covariate category. Second index is system.
         dict_ages = {}
+        betas = {}
         # When no covariates, label_covar is "all".
         # Otherwise, it is covariate name and we iterate over its values.
         for label_covar, df_cn in zip(labels_covar, dfs_cn):
@@ -716,8 +779,10 @@ class Interface:
                     model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
                     # Fit the model.
                     ageml_model = self.generate_model()
-                    self.models[model_name], dict_ages[label_covar][system_name] = self.model_age(df_cn[system_features + ['age']],
-                                                                                                  ageml_model, model_name)
+                    model, ages, beta = self.model_age(df_cn[system_features + ['age']], ageml_model, model_name)
+                    self.models[model_name] = model
+                    dict_ages[label_covar][system_name] = ages
+                    betas[label_covar][system_name] = beta
                     # Rename all columns in ages dataframe including system name.
                     dict_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
             else:
@@ -725,7 +790,10 @@ class Interface:
                 model_name = f"{self.args.covar_name}_{label_covar}"
                 # If no systems file is provided, fit a model for each covariate category. Fit model.
                 ageml_model = self.generate_model()
-                self.models[model_name], dict_ages[label_covar] = self.model_age(df_cn, ageml_model, model_name)
+                model, ages, beta = self.model_age(df_cn, ageml_model, model_name)
+                self.models[model_name] = model
+                dict_ages[label_covar] = ages
+                betas[label_covar] = beta
 
         # Apply to clinical data if clinical data provided
         dict_clinical_ages = {}
@@ -740,7 +808,8 @@ class Interface:
                         model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
                         # Make predictions and store them.
                         dict_clinical_ages[label_covar][system_name] = self.predict_age(df_clinical[system_features + ['age']],
-                                                                                        self.models[model_name])
+                                                                                        self.models[model_name],
+                                                                                        betas[label_covar][system_name])
                         # Rename all columns in ages dataframe to include the system name.
                         dict_clinical_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
 
@@ -748,28 +817,28 @@ class Interface:
                     # Model name has no system if no systems file is provided.
                     model_name = f"{self.args.covar_name}_{label_covar}"
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
-                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name])
+                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], betas[label_covar])
 
         # Concatenate dict_ages into a single DataFrame.
         # If no systems and no covariate only 1 df
-        if not self.flags["systems"] and not self.flags["covariates"]:
+        if not self.flags["systems"] and not self.flags["covarname"]:
             df_ages_all = dict_ages["all"]
         # If no systems but yes covariates, iterate over covariates and concatenate
-        elif not self.flags["systems"] and self.flags["covariates"]:
+        elif not self.flags["systems"] and self.flags["covarname"]:
             for label_covar in labels_covar:
                 if label_covar == labels_covar[0]:
                     df_ages_all = dict_ages[label_covar]
                 else:
                     df_ages_all = pd.concat([df_ages_all, dict_ages[label_covar]])
         # If yes systems and no covariates, iterate over systems and concatenate
-        elif self.flags["systems"] and not self.flags["covariates"]:
+        elif self.flags["systems"] and not self.flags["covarname"]:
             for i, (_, df_system) in enumerate(dict_ages["all"].items()):
                 if i == 0:
                     df_ages_all = df_system
                 else:
                     df_ages_all = pd.concat([df_ages_all, df_system], axis=1)
         # If yes systems and yes covariates, iterate over covariates and systems
-        elif self.flags["systems"] and self.flags["covariates"]:
+        elif self.flags["systems"] and self.flags["covarname"]:
             # Iterate over covariates and concatenate along rows
             for label_covar, dict_of_systems in dict_ages.items():
                 for i, (_, df_system) in enumerate(dict_of_systems.items()):
@@ -787,24 +856,24 @@ class Interface:
 
         # If no systems and no covariate only 1 df
         if self.flags["clinical"]:
-            if not self.flags["systems"] and not self.flags["covariates"]:
+            if not self.flags["systems"] and not self.flags["covarname"]:
                 df_clinical_ages_all = dict_clinical_ages["all"]
             # If no systems but yes covariates, iterate over covariates and concatenate
-            elif not self.flags["systems"] and self.flags["covariates"]:
+            elif not self.flags["systems"] and self.flags["covarname"]:
                 for label_covar in labels_covar:
                     if label_covar == labels_covar[0]:
                         df_clinical_ages_all = dict_clinical_ages[label_covar]
                     else:
                         df_clinical_ages_all = pd.concat([df_clinical_ages_all, dict_clinical_ages[label_covar]])
             # If yes systems and no covariates, iterate over systems and concatenate
-            elif self.flags["systems"] and not self.flags["covariates"]:
+            elif self.flags["systems"] and not self.flags["covarname"]:
                 for i, (_, df_system) in enumerate(dict_clinical_ages["all"].items()):
                     if i == 0:
                         df_clinical_ages_all = df_system
                     else:
                         df_clinical_ages_all = pd.concat([df_clinical_ages_all, df_system], axis=1)
             # If yes systems and yes covariates, iterate over covariates and systems
-            elif self.flags["systems"] and self.flags["covariates"]:
+            elif self.flags["systems"] and self.flags["covarname"]:
                 # Iterate over covariates and concatenate along rows
                 for label_covar, dict_of_systems in dict_clinical_ages.items():
                     for i, (_, df_system) in enumerate(dict_of_systems.items()):
@@ -826,19 +895,13 @@ class Interface:
         else:
             self.df_ages = df_ages_all
 
-        # Save dataframe. Give it a proper name depending on the existence of covariates and systems.
-        if self.flags["covariates"] and self.flags["systems"]:
-            filename = f"predicted_age_{self.args.covar_name}_multisystem.csv"
-        
-        elif self.flags["covariates"] and not self.flags["systems"]:
-            filename = f"predicted_age_{self.args.covar_name}.csv"
-        
-        elif not self.flags["covariates"] and self.flags["systems"]:
-            filename = "predicted_age_multisystem.csv"
-        
-        else:
-            filename = "predicted_age.csv"
-
+        # Save dataframe to csv
+        filename = "predicted_age"
+        if self.flags["covarname"]:
+            filename = filename + f"_{self.args.covar_name}"
+        if self.flags["systems"]:
+            filename = filename + "_multisystem"
+        filename = filename + ".csv"
         self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def run_factor_analysis(self):
@@ -959,6 +1022,9 @@ class Interface:
         df_group1 = self.df_ages.loc[self.df_clinical[groups[0]]]
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
 
+        if self.flags["covariates"]:
+            df_cn = self.df_ages.loc[self.df_clinical["cn"]]
+
         # Check if systems are provided in the ages file
         if any(["system" in col for col in self.df_ages.columns]):
             self.flags["systems"] = True
@@ -966,15 +1032,29 @@ class Interface:
             systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
 
         # Classify between groups
-
         if self.flags["systems"]:
             for system in systems_list:
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 df_group1_system = df_group1[cols]
                 df_group2_system = df_group2[cols]
-                self.classify(df_group1_system, df_group2_system, groups, system=system)
+                if self.flags['covariates']:
+                    print("Covariate effects will be subtracted from deltas.")
+                    df_cn_system = df_cn[cols]
+                    deltas = df_cn_system['delta'].to_numpy()
+                    covars = self.df_covariates.loc[df_cn_system.index].to_numpy()
+                    _, beta = covariate_correction(deltas, covars)
+                else:
+                    beta = None
+                self.classify(df_group1_system, df_group2_system, groups, system=system, beta=beta)
         else:
-            self.classify(df_group1, df_group2, groups)
+            if self.flags['covariates']:
+                print("Covariate effects will be subtracted from deltas.")
+                deltas = df_cn['delta'].to_numpy()
+                covars = self.df_covariates.loc[df_cn.index].to_numpy()
+                _, beta = covariate_correction(deltas, covars)
+            else:
+                beta = None
+            self.classify(df_group1, df_group2, groups, beta=beta)
 
 
 class CLI(Interface):
