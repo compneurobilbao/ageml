@@ -1171,12 +1171,12 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     assert captured[-1] == 'Finished running age modelling.'
 
     # Test command with invalid input like incorrect model parameters # TODO: How to trigger "Error running age modelling"?
-    # responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "q"]
-    # monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
-    # dummy_cli.command_interface()
-    # captured = capsys.readouterr().out.split("\n")[:-1]
-    # print(captured)
-    # assert captured[-1] == "Error running age modelling."
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    print(captured)
+    assert 'Model parameters are not valid for linear_reg model. Check them in the sklearn documentation.' in captured
 
 
 def test_model_command_CLI(dummy_cli):

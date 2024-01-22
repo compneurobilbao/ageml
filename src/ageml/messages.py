@@ -1,3 +1,5 @@
+from ageml.modelling import AgeML
+
 """Messages for the AgeML package."""
 
 # Help command messeages
@@ -19,16 +21,16 @@ features_long_description = (
 
 model_long_description = (
     "Model type and model parameters to use. First argument is the type and the following \n"
-    "arguments are input as keyword arguments into the model. They must be seperated by an =.\n"
-    "Example: -m linear_reg fit_intercept=False\n"
-    "Available Types: linear_reg (Default: linear_reg, ridge, lasso, linear_svr, xgboost, rf)"
+    "arguments are input as keyword arguments into the model. They must be seperated by an '='.\n"
+    "Example: -m linear_reg fit_intercept=False normalize=True\n"
+    f"Available Types: linear_reg (Default: {list(AgeML.model_dict.keys())})"
 )
 
 scaler_long_description = (
     "Scaler type and scaler parameters to use. First argument is the type and the following \n"
     "arguments are input as keyword arguments into scaler. They must be seperated by an =.\n"
     "Example: -m standard\n"
-    "Available Types: standard (Default: standard, minmax, maxabs, robust, quantile, normalizer, power)"
+    f"Available Types: standard (Default: {list(AgeML.scaler_dict.keys())})"
 )
 
 cv_long_description = (

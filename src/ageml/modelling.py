@@ -71,6 +71,7 @@ class AgeML:
     predict_age(self, X): Predict age with fitted model.
     """
     
+    # Scaler dictionary
     scaler_dict = {
         "maxabs": MaxAbsScaler,
         "minmax": MinMaxScaler,
@@ -80,6 +81,7 @@ class AgeML:
         "robust": RobustScaler,
         "standard": StandardScaler,
     }
+    # TODO: Scaler hyperparams
     # Model dictionary
     model_dict = {
         "linear_reg": linear_model.LinearRegression,
@@ -89,6 +91,8 @@ class AgeML:
         "xgboost": XGBRegressor,  # XGBoost
         "rf": RandomForestRegressor,
     }
+    # TODO: Model hyperparams
+    model_hyperparameters = {}
 
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
         """Initialise variables."""
@@ -272,6 +276,11 @@ class AgeML:
         print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
         summary_test = self.summary_metrics(metrics_test)
         print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
+        # Print comparison with mean age as only predictor to have a reference of a dummy regressor
+        dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
+        dummy_mae = np.mean(np.abs(y - np.mean(y)))
+        print("When using mean of ages as predictor for each subject:\nMAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse))
+        print("Age range: %.2f" % (np.max(y) - np.min(y)))
 
         # Final model trained on all data
         self.pipeline.fit(X, y)
