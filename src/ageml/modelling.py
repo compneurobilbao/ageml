@@ -70,30 +70,33 @@ class AgeML:
 
     predict_age(self, X): Predict age with fitted model.
     """
+    
+    scaler_dict = {
+        "maxabs": MaxAbsScaler,
+        "minmax": MinMaxScaler,
+        "normalizer": Normalizer,
+        "power": PowerTransformer,
+        "quantile": QuantileTransformer,
+        "robust": RobustScaler,
+        "standard": StandardScaler,
+    }
+    # Model dictionary
+    model_dict = {
+        "linear_reg": linear_model.LinearRegression,
+        "ridge": linear_model.Ridge,
+        "lasso": linear_model.Lasso,
+        "linear_svr": svm.SVR,
+        "xgboost": XGBRegressor,  # XGBoost
+        "rf": RandomForestRegressor,
+    }
 
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
         """Initialise variables."""
 
         # Scaler dictionary
-        self.scaler_dict = {
-            "maxabs": MaxAbsScaler,
-            "minmax": MinMaxScaler,
-            "normalizer": Normalizer,
-            "power": PowerTransformer,
-            "quantile": QuantileTransformer,
-            "robust": RobustScaler,
-            "standard": StandardScaler,
-        }
-        
+        self.scaler_dict = AgeML.scaler_dict
         # Model dictionary
-        self.model_dict = {
-            "linear_reg": linear_model.LinearRegression,
-            "ridge": linear_model.Ridge,
-            "lasso": linear_model.Lasso,
-            "linear_svr": svm.SVR,
-            "xgboost": XGBRegressor,  # XGBoost
-            "rf": RandomForestRegressor,
-        }
+        self.model_dict = AgeML.model_dict
         
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)

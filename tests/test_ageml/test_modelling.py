@@ -80,8 +80,8 @@ def test_set_pipeline_none_model():
 # TODO: test: metrics, summary_metrics, fit_age_bias, predict_age_bias, fit_age, predict_age
 # TODO: check all errors raised
 
-def test_fit_age():
-    pass
+# def test_fit_age():
+#     pass
 
 
 def test_classifier_fit_age(dummy_classifier):

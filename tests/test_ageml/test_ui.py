@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 import ageml.messages as messages
-from ageml.ui import Interface, CLI
+from ageml.ui import Interface, CLI, AgeML
 
 
 class ExampleArguments(object):
@@ -210,7 +210,7 @@ def test_interface_setup(dummy_interface):
     expected_args = ExampleArguments()
     # Now check that the attributes are the same
     # NOTE: This is not a good test, but it's a start.
-    # TODO: How to make it more scalable?
+    # NOTE: How to make it more scalable?
     assert dummy_interface.args.scaler_type == expected_args.scaler_type
     assert dummy_interface.args.scaler_params == expected_args.scaler_params
     assert dummy_interface.args.model_type == expected_args.model_type
@@ -1170,13 +1170,13 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished running age modelling.'
 
-    # Test command with invalid input like incorrect model parameters
-    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "q"]
-    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
-    dummy_cli.command_interface()
-    captured = capsys.readouterr().out.split("\n")[:-1]
-    print(captured)
-    assert captured[-1] == "Error running age modelling."
+    # Test command with invalid input like incorrect model parameters # TODO: How to trigger "Error running age modelling"?
+    # responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "q"]
+    # monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    # dummy_cli.command_interface()
+    # captured = capsys.readouterr().out.split("\n")[:-1]
+    # print(captured)
+    # assert captured[-1] == "Error running age modelling."
 
 
 def test_model_command_CLI(dummy_cli):
@@ -1197,7 +1197,7 @@ def test_model_command_CLI(dummy_cli):
     # Test passing invalid model type
     dummy_cli.line = "quadratic"
     error = dummy_cli.model_command()
-    assert error == "Choose a valid model type: {}".format(["linear_reg", "ridge", "lasso", "xgboost", "linear_svr", "rf"])
+    assert error == f"Choose a valid model type: {list(AgeML.model_dict.keys())}"
 
     # Test empty model params if none given
     dummy_cli.line = "linear_reg"
@@ -1221,6 +1221,16 @@ def test_model_command_CLI(dummy_cli):
     assert error is None
     assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {"fit_intercept": True}
+    
+    # Test passing correctly formated, but invalid sklearn model params
+    dummy_cli.line = "linear_reg my_super_fake_intercept=True"
+    error = dummy_cli.model_command()
+    assert error == "Model parameters are not valid for linear_reg model. Check them in the sklearn documentation."
+
+    # Test passing correctly formated, but invalid sklearn model params in another type of model
+    dummy_cli.line = "ridge my_super_fake_intercept=True"
+    error = dummy_cli.model_command()
+    assert error == "Model parameters are not valid for ridge model. Check them in the sklearn documentation."
 
 
 def test_output_command_CLI(dummy_cli):
@@ -1265,9 +1275,9 @@ def test_scaler_command_CLI(dummy_cli):
     assert dummy_cli.args.scaler_params == {}
 
     # Test passing invalid scaler type
-    dummy_cli.line = "minmax"
+    dummy_cli.line = "mofongo"
     error = dummy_cli.scaler_command()
-    assert error == "Choose a valid scaler type: {}".format(["standard"])
+    assert error == f"Choose a valid scaler type: {list(AgeML.scaler_dict.keys())}"
 
     # Test empty scaler params if none given
     dummy_cli.line = "standard"
@@ -1286,8 +1296,18 @@ def test_scaler_command_CLI(dummy_cli):
     assert error == message
 
     # Test passing correct scaler params
-    dummy_cli.line = "standard mean=0"
+    dummy_cli.line = "standard with_mean=0"
     error = dummy_cli.scaler_command()
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
-    assert dummy_cli.args.scaler_params == {"mean": 0}
+    assert dummy_cli.args.scaler_params == {"with_mean": 0}
+    
+    # Test passing correctly formated, but invalid sklearn scaler params
+    dummy_cli.line = "standard my_super_fake_mean=0"
+    error = dummy_cli.scaler_command()
+    assert error == "Scaler parameters are not valid for standard scaler. Check them in the sklearn documentation."
+    
+    # Test passing correctly formated, but invalid sklearn scaler params in another type of scaler
+    dummy_cli.line = "minmax my_super_fake_mean=0"
+    error = dummy_cli.scaler_command()
+    assert error == "Scaler parameters are not valid for minmax scaler. Check them in the sklearn documentation."

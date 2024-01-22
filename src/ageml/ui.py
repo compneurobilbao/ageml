@@ -48,7 +48,7 @@ class Interface:
 
     set_visualizer(self): Set visualizer with output directory.
 
-    set_model(self): Set model with parameters.
+    generate_model(self): Set model with parameters.
 
     set_classifier(self): Set classifier with parameters.
 
@@ -1314,7 +1314,7 @@ class CLI(Interface):
         self.force_command(self.load_command, "--features", required=True)
         print("Input covariates file path (Optional):")
         self.force_command(self.load_command, "--covariates")
-        print("Input covariate type to train seperate models (Optional):")
+        print("Input covariate type to train separate models (Optional):")
         self.force_command(self.covar_command)
         print("Input clinical file path (Optional):")
         self.force_command(self.load_command, "--clinical")
@@ -1323,12 +1323,12 @@ class CLI(Interface):
 
         # Ask for scaler, model and CV parameters
         print("Scaler type and parameters (Default:standard)")
-        print("Available: standard (from sklearn)")
+        print(f"Available: {AgeML.scaler_dict.keys()}")
         print("Example: standard with_mean=True with_std=False")
         self.force_command(self.scaler_command)
-        print("Model type and parameters (Default:linear)")
-        print("Available: linear_reg, rf, linear_svr, lasso, ridge (from sklearn), xgboost")
-        print("Example: linear_reg fit_intercept=True positive=False")
+        print("Model type and parameters (Default:linear_reg)")
+        print(f"Available: {AgeML.model_dict.keys()}")
+        print("Example: linear_reg fit_intercept=True normalize=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
         self.force_command(self.cv_command)
@@ -1348,7 +1348,7 @@ class CLI(Interface):
 
         # Split into items and remove  command
         self.line = self.line.split()
-        valid_types = ["linear_reg", "ridge", "lasso", "xgboost", "linear_svr", "rf"]
+        valid_types = list(AgeML.model_dict.keys())
         error = None
 
         # Check that at least one argument input
@@ -1363,7 +1363,7 @@ class CLI(Interface):
             self.args.model_type = "linear_reg"
         else:
             if model_type not in valid_types:
-                error = "Choose a valid model type: {}".format(valid_types)
+                error = f"Choose a valid model type: {valid_types}"
             else:
                 self.args.model_type = model_type
 
@@ -1381,6 +1381,12 @@ class CLI(Interface):
             self.args.model_params = model_params
         else:
             self.args.model_params = {}
+
+        # Try to set an instance of the specified scaler with the provided arguments
+        try:
+            AgeML.model_dict[self.args.model_type](**self.args.model_params)
+        except TypeError:  # Raised when invalid parameters are given to sklearn
+            error = f"Model parameters are not valid for {self.args.model_type} model. Check them in the sklearn documentation."
 
         return error
 
@@ -1413,7 +1419,7 @@ class CLI(Interface):
         # Split into items and remove  command
         self.line = self.line.split()
         error = None
-        valid_types = ["standard"]
+        valid_types = list(AgeML.scaler_dict.keys())
 
         # Check that at least one argument input
         if len(self.line) == 0:
@@ -1427,7 +1433,7 @@ class CLI(Interface):
             self.args.scaler_type = "standard"
         else:
             if scaler_type not in valid_types:
-                error = "Choose a valid scaler type: {}".format(valid_types)
+                error = f"Choose a valid scaler type: {valid_types}"
             else:
                 self.args.scaler_type = scaler_type
 
@@ -1444,5 +1450,12 @@ class CLI(Interface):
             self.args.scaler_params = scaler_params
         else:
             self.args.scaler_params = {}
+
+        # Try to set an instance of the specified scaler with the provided arguments
+        try:
+            AgeML.scaler_dict[self.args.scaler_type](**self.args.scaler_params)
+        except TypeError:
+            error = f"Scaler parameters are not valid for {self.args.scaler_type} scaler. Check them in the sklearn documentation."
+            return error
 
         return error
