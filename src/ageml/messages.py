@@ -15,6 +15,8 @@ features_long_description = (
     "In the file the first column should be the ID, the second column should be the AGE, \n"
     "and the following columns the features. The first row should be the header for \n"
     "column names."
+    "\nMore info on the file format in:\n"
+    "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#features-file"
 )
 
 model_long_description = (
@@ -41,6 +43,8 @@ covar_long_description = (
     "Path to input CSV file containing covariates. \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
     "covariates. The first row should be the header for column names."
+    "\nMore info on the file format in:\n"
+    "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#covariates-file"
 )
 
 covar_name_long_description = (
@@ -53,6 +57,8 @@ factors_long_description = (
     "Path to input CSV file containing factors. \n"
     "In the file the first column should be the ID, the followins columns should be the \n"
     "factors. The first row should be the header for column names."
+    "\nMore info on the file format in:\n"
+    "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#factors-file"
 )
 
 clinical_long_description = (
@@ -60,6 +66,8 @@ clinical_long_description = (
     "In the file, the first column should be the ID, the second column should be whether the \n"
     "subject is a CONTROL, and the following columns are binary variables for different \n"
     "conditions. The first row should be the header for column names."
+    "\nMore info on the file format in:\n"
+    "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#clinical-file"
 )
 
 systems_long_description = (
@@ -68,6 +76,8 @@ systems_long_description = (
     "where the first words in the line is the system name followed by a colon and then the \n"
     "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
     "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)"
+    "\nMore info on the file format in:\n"
+    "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#systems-file"
 )
 
 ages_long_description = (
@@ -87,7 +97,11 @@ thr_long_description = (
     "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"
 )
 
-ci_long_description = ("""Confidence interval for classification metrics. Default: 0.95 \n""")
+ci_long_description = ("Confidence interval for classification metrics. Default: 0.95 \n")
+
+read_the_documentation_message = ("\nFor more information, refer to the documentation in the ageml repository:\n"
+                                  "https://github.com/compneurobilbao/ageml/tree/main/docs\n"
+                                  )
 
 # UI information
 

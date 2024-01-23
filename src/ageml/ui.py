@@ -533,7 +533,6 @@ class Interface:
         # Use visualizer to show bar graph
         self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants, system)
 
-
     def deltas_by_group(self, df, labels, system: str = None, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
         
@@ -1324,6 +1323,7 @@ class CLI(Interface):
         print(messages.factor_analysis_command_message)
         print(messages.model_age_command_message)
         print(messages.quit_command_message)
+        print(messages.read_the_documentation_message)
 
     def load_command(self):
         """Load file paths."""
