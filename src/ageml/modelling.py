@@ -101,40 +101,60 @@ class AgeML:
         "rf": RandomForestRegressor,
     }
     model_hyperparameter_ranges = {'ridge': {'alpha': [-3, 3]},
+                                   
                                    'lasso': {'alpha': [-3, 3]},
+                                   
                                    'linear_svr': {'C': [-3, 3],
                                                   'epsilon': [-3, 3]},
-                                   'xgboost': {'max_depth': [-3, 3],
-                                               'min_child_weight': [-3, 3],
-                                               'subsample': [-3, 3],
-                                               'colsample_bytree': [-3, 3],
-                                               'eta': [-3, 3],
+                                   
+                                   'xgboost': {'eta': [-3, 3],
                                                'gamma': [-3, 3],
+                                               'max_depth': [0, 100],
+                                               'min_child_weight': [0, 100],
+                                               'max_delta_step': [0, 100],
+                                               'subsample': [-3, 3],
+                                               'colsample_bytree': [0.001, 1],
+                                               'colsample_bylevel': [0.001, 1],
+                                               'colsample_bynode': [0.001, 1],
                                                'lambda': [-3, 3],
                                                'alpha': [-3, 3]},
-                                   'rf': {'n_estimators': [-3, 3],
-                                          'max_depth': [-3, 3],
-                                          'min_samples_split': [-3, 3],
-                                          'min_samples_leaf': [-3, 3],
-                                          'max_features': [-3, 3], }}
+                                   
+                                   'rf': {'n_estimators': [1, 100],
+                                          'max_depth': [1, 100],
+                                          'min_samples_split': [1, 100],
+                                          'min_samples_leaf': [1, 100],
+                                          'max_features': [1, 100],
+                                          'min_impurity_decrease': [0, 1],
+                                          'max_leaf_nodes': [1, 100],
+                                          'min_weight_fraction_leaf': [-3, 3], }}
 
     model_hyperparameter_types = {'ridge': {'alpha': 'log'},
+                                  
                                   'lasso': {'alpha': 'log'},
+                                  
                                   'linear_svr': {'C': 'log',
                                                  'epsilon': 'log'},
-                                  'xgboost': {'max_depth': 'int',
+                                  
+                                  'xgboost': {'eta': 'float',
+                                              'gamma': 'float',
+                                              'max_depth': 'int',
                                               'min_child_weight': 'int',
+                                              'max_delta_step': 'int',
                                               'subsample': 'float',
                                               'colsample_bytree': 'float',
-                                              'eta': 'float',
-                                              'gamma': 'float',
-                                              'lambda': 'float',
-                                              'alpha': 'float'},
+                                              'colsample_bylevel': 'float',
+                                              'colsample_bynode': 'float',
+                                              'colsample_bytree': 'float',
+                                              'lambda': 'log',
+                                              'alpha': 'log'},
+                                  
                                   'rf': {'n_estimators': 'int',
                                          'max_depth': 'int',
                                          'min_samples_split': 'int',
                                          'min_samples_leaf': 'int',
-                                         'max_features': 'int'}}
+                                         'max_features': 'int',
+                                         'min_impurity_decrease': 'log',
+                                         'max_leaf_nodes': 'int'}}
 
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed,
                  hyperparameter_tuning: int = 0, feature_extension: int = 0):
@@ -182,7 +202,7 @@ class AgeML:
                     param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0], bounds[1],
                                                                       int(self.hyperparameter_tuning))).astype(int)
                 elif hyperparam_types[hyperparam_name] == 'float':
-                    param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0], bounds[1],
+                    param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0], bounds[1],
                                                                           int(self.hyperparameter_tuning))
         else:
             print("No hyperparameter grid was built for the selected model. No hyperparameters available.")
