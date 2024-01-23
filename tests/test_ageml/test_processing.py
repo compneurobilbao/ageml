@@ -26,3 +26,31 @@ def test_find_correlations_nans(X, Y, exception_msg):
         processing.find_correlations(X, Y)
         assert exc_info.type == ValueError
     assert str(exc_info.value) == exception_msg
+
+
+def test_covariate_correction():
+
+    # Variables for testing
+    X = np.array([[2, 4, -6], [4, 8, -12], [6, 12, -18]])
+    Z = np.array([1, 2, 3]).reshape(-1, 1)
+
+    # Check ValueError raies with NaNs
+    with pytest.raises(ValueError) as exc_info:
+        processing.covariate_correction(X, np.array([1, 2, np.nan]).reshape(-1, 1))
+        assert exc_info.type == ValueError
+    with pytest.raises(ValueError) as exc_info:
+        processing.covariate_correction(np.array([2.0, np.nan]), Z)
+        assert exc_info.type == ValueError
+    with pytest.raises(ValueError) as exc_info:
+        processing.covariate_correction(X, Z, beta=np.array([2.0, np.nan]).reshape(-1, 1))
+        assert exc_info.type == ValueError
+
+    # Check ValueError raises with incompatible shapes
+    with pytest.raises(ValueError) as exc_info:
+        processing.covariate_correction(X, np.array([1, 2]))
+        assert exc_info.type == ValueError
+
+    # Test a very simple correlation
+    _, beta = processing.covariate_correction(X, Z)
+    beta_expected = np.array([2.0, 4.0, -6.0])
+    assert np.allclose(beta, beta_expected)

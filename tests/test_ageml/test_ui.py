@@ -980,14 +980,14 @@ def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, caps
     clinical_path = create_csv(clinical, tempDir.name)
 
     # Test command
-    responses = ["classification", ages_path, clinical_path, "cn group1", "", "", "q"]
+    responses = ["classification", ages_path, clinical_path, "cn group1", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished classification.'
 
     # Test command with invalid input like incorrect groups
-    responses = ["classification", ages_path, clinical_path, "cn group2", "", "", "q"]
+    responses = ["classification", ages_path, clinical_path, "cn group2", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1008,14 +1008,14 @@ def test_clinical_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
     clinical_path = create_csv(clinical, tempDir.name)
 
     # Test command
-    responses = ["clinical", ages_path, clinical_path, "q"]
+    responses = ["clinical", ages_path, clinical_path, "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished clinical analysis.'
 
     # Test command with invalid input like incorrect file
-    responses = ["clinical", ages_path, ages_path, "q"]
+    responses = ["clinical", ages_path, ages_path, "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
