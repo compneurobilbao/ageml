@@ -140,7 +140,7 @@ class ModelAge(Interface):
             )
         else:
             args.hyperparameter_tuning = args.hyperparameter_tuning[0]
-            args.hyperparameter_tuning = convert(args.hyperparameter_tuning)
+            args.hyperparameter_tuning = int(convert(args.hyperparameter_tuning))
         # Set polynomial feature extension value
         if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
             raise ValueError(
@@ -148,7 +148,7 @@ class ModelAge(Interface):
             )
         else:
             args.feature_extension = args.feature_extension[0]
-            args.feature_extension = convert(args.feature_extension)
+            args.feature_extension = int(convert(args.feature_extension))
         return args
 
 

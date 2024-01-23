@@ -31,6 +31,7 @@ class ExampleArguments(object):
         self.group1 = None
         self.group2 = None
         self.hyperparameter_tuning = 0
+        self.feature_extension = 0
 
 
 @pytest.fixture
@@ -1177,7 +1178,16 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
-    assert 'Model parameters are not valid for linear_reg model. Check them in the sklearn documentation.' in captured
+    assert "Model parameters are not valid for linear_reg model. Check them in the sklearn documentation." in captured
+    
+    # Test command with hyperparameter optimization and feature_extension
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_svr", "", "2", "3", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    assert any(["feature_extension" in i for i in captured])
+    assert "Running Hyperparameter optimization..." in captured
+    assert any(["Hyperoptimization best parameters" in i for i in captured])
 
 
 def test_model_command_CLI(dummy_cli):
@@ -1312,3 +1322,54 @@ def test_scaler_command_CLI(dummy_cli):
     dummy_cli.line = "minmax my_super_fake_mean=0"
     error = dummy_cli.scaler_command()
     assert error == "Scaler parameters are not valid for minmax scaler. Check them in the sklearn documentation."
+
+
+def test_hyperparameter_tuning_CLI(dummy_cli):
+    dummy_cli.args.model_type = "linear_svr"
+    dummy_cli.args.model_params = {"C": 1, "epsilon": 0.1}
+    
+    # Test no hyperparameters
+    dummy_cli.line = ""
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error is None
+    assert dummy_cli.args.hyperparameter_tuning == 0
+    
+    # Test passing too many arguments
+    dummy_cli.line = "1 2 3"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "Must provide only one integer, or none."
+    
+    # Test passing non integer arguments
+    dummy_cli.line = "1.5"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+    dummy_cli.line = "mondong"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+
+
+def test_feature_extension_CLI(dummy_cli):
+    # Test no feature extension
+    dummy_cli.line = ""
+    error = dummy_cli.feature_extension_command()
+    assert error is None
+    assert dummy_cli.args.feature_extension == 0
+    
+    # Test passing too many arguments
+    dummy_cli.line = "1 2 3"
+    error = dummy_cli.feature_extension_command()
+    assert error == "Must provide only one integer, or none."
+    
+    # Test passing non integer arguments
+    dummy_cli.line = "1.5"
+    error = dummy_cli.feature_extension_command()
+    assert error == "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+    dummy_cli.line = "mondong"
+    error = dummy_cli.feature_extension_command()
+    assert error == "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+    
+    # Test with a correct argument
+    dummy_cli.line = "2"
+    error = dummy_cli.feature_extension_command()
+    assert error is None
+    assert dummy_cli.args.feature_extension == 2

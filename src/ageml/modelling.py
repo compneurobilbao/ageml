@@ -134,56 +134,56 @@ class AgeML:
                                          'max_depth': 'int',
                                          'min_samples_split': 'int',
                                          'min_samples_leaf': 'int',
-                                         'max_features': 'float'}}
+                                         'max_features': 'int'}}
 
     def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed,
-                 hyperparameter_tuning: int = 0):
+                 hyperparameter_tuning: int = 0, feature_extension: int = 0):
         """Initialise variables."""
 
         # Scaler dictionary
         self.scaler_type = scaler_type
         self.scaler_dict = AgeML.scaler_dict
+        
         # Model dictionary
         self.model_type = model_type
         self.model_dict = AgeML.model_dict
+        # Hyperparameters and feature extension
+        self.hyperparameter_tuning = hyperparameter_tuning
+        self.feature_extension = feature_extension
         
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)
         self.set_model(model_type, **model_params)
         self.set_pipeline()
         self.set_CV_params(CV_split, seed)
-        self.set_hyperparameter_grid(model_type, hyperparameter_tuning)
+        self.set_hyperparameter_grid()
 
         # Initialise flags
         self.pipelineFit = False
         self.age_biasFit = False
 
-    def set_hyperparameter_grid(self, model_type: str, hyperparameter_points: int) -> dict:
+    def set_hyperparameter_grid(self):
         """Builds the hyperparameter grid of the selected model upon AgeML object initialization
-
-        Args:
-            model_type (str): type of model, specified in the keys of AgeML.model_dict
-            hyperparameter_points (int): number of lin/log space points in the hyperparameter range to explore
 
         Returns:
             dict: dictionary with the hyperparameter grid
         """
         param_grid = {}
-        if model_type in AgeML.model_dict.keys() and hyperparameter_points > 0:
-            hyperparam_ranges = AgeML.model_hyperparameter_ranges[model_type]
-            hyperparam_types = AgeML.model_hyperparameter_types[model_type]
+        if self.model_type in AgeML.model_dict.keys() and self.hyperparameter_tuning > 0:
+            hyperparam_ranges = AgeML.model_hyperparameter_ranges[self.model_type]
+            hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
             # Initialize output grid
             for hyperparam_name in list(hyperparam_types.keys()):
                 bounds = hyperparam_ranges[hyperparam_name]
                 if hyperparam_types[hyperparam_name] == 'log':
                     param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0], bounds[1],
-                                                                          int(hyperparameter_points))
+                                                                          int(self.hyperparameter_tuning))
                 elif hyperparam_types[hyperparam_name] == 'int':
-                    param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0], bounds[1],
-                                                                          int(hyperparameter_points))
+                    param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0], bounds[1],
+                                                                      int(self.hyperparameter_tuning))).astype(int)
                 elif hyperparam_types[hyperparam_name] == 'float':
                     param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0], bounds[1],
-                                                                          float(hyperparameter_points))
+                                                                          int(self.hyperparameter_tuning))
         else:
             print("No hyperparameter grid was built for the selected model. No hyperparameters available.")
         self.hyperparameter_grid = param_grid
@@ -228,7 +228,10 @@ class AgeML:
         # Scaler and whether it has to be optimized
         if self.scaler is not None:
             pipe.append(("scaler", self.scaler))
-
+        # Feature extension
+        if self.feature_extension != 0:
+            pipe.append(("feature_extension", preprocessing.PolynomialFeatures(degree=self.feature_extension)))
+        # Model
         pipe.append(("model", self.model))
         self.pipeline = pipeline.Pipeline(pipe)
 

@@ -138,6 +138,7 @@ class Interface:
             self.args.cv_split,
             self.args.seed,
             self.args.hyperparameter_tuning,
+            self.args.feature_extension
         )
         return model
 
@@ -1488,7 +1489,7 @@ class CLI(Interface):
             return error
 
         # Set default values
-        if self.line[0] == "None":
+        if len(self.line) == 0 or self.line[0] == "None":
             self.args.feature_extension = 0
             return error
         
@@ -1514,7 +1515,7 @@ class CLI(Interface):
             return error
 
         # Set default values
-        if self.line[0] == "None":
+        if len(self.line) == 0 or self.line[0] == "None":
             self.args.hyperparameter_tuning = 0
             return error
         
