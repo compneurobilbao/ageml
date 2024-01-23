@@ -87,13 +87,13 @@ groups_long_description = (
 
 poly_feature_extension_description = (
     "Degree of the polynomial to use in Polynomial Feature Extension (from sklearn)\n"
-    "An integer is required. (e.g.   -pft 2    /   --polynomial_features_degree 1)"
+    "An integer is required. (e.g.   -fext 2    /   --feature_extension 1)"
 )
 
 hyperparameter_grid_description = (
     "Number of points for which the hyperparameter optimization Grid Search will train\n"
     "a model. The parameter ranges are predefined. An integer is required.\n"
-    "(e.g.   -hgs 100   /   --hyperparameter_grid_points 100)"
+    "(e.g.   -ht 100   /   --hyperparameter_tuning 100)"
 )
 # UI information
 

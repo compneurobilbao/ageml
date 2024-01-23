@@ -137,6 +137,7 @@ class Interface:
             self.args.model_params,
             self.args.cv_split,
             self.args.seed,
+            self.args.hyperparameter_tuning,
         )
         return model
 
@@ -429,7 +430,7 @@ class Interface:
         if name == "":
             print(f"Training Age Model ({self.args.model_type})")
         else:
-            print(f"Training Model ({self.args.model_type}): {name}")
+            print(f"Training Age Model ({self.args.model_type}): {name}")
         print(model.pipeline)
 
         # Select data to model
@@ -449,6 +450,13 @@ class Interface:
         df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
         return model, df_ages
+
+    def _build_parameter_grid(self, param_template: dict) -> dict:
+        param_grid = {}
+        for param, bounds in param_template.items():
+            param_grid[f"model__{param}"] = np.linspace(bounds[0], bounds[1],
+                                                        int(self.args.hyperparameter_tuning))
+        return param_grid
 
     def predict_age(self, df, model, model_name: str = None):
         """Use AgeML to predict age with data."""
@@ -1481,7 +1489,7 @@ class CLI(Interface):
 
         # Set default values
         if self.line[0] == "None":
-            self.args.polynomial_features_degree = 0
+            self.args.feature_extension = 0
             return error
         
         # Check whether items are integers
@@ -1490,7 +1498,7 @@ class CLI(Interface):
             return error
 
         # Set CV parameters
-        self.args.polynomial_features_degree = self.line[0]
+        self.args.feature_extension = int(self.line[0])
         return error
 
     def hyperparameter_grid_command(self):
@@ -1507,7 +1515,7 @@ class CLI(Interface):
 
         # Set default values
         if self.line[0] == "None":
-            self.args.hyperparameter_grid_points = 0
+            self.args.hyperparameter_tuning = 0
             return error
         
         # Check whether items are integers
@@ -1516,5 +1524,5 @@ class CLI(Interface):
             return error
 
         # Set CV parameters
-        self.args.hyperparameter_grid_points = self.line[0]
+        self.args.hyperparameter_tuning = int(self.line[0])
         return error

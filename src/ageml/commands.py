@@ -65,9 +65,9 @@ class ModelAge(Interface):
                                  help=messages.scaler_long_description)
         self.parser.add_argument("--cv", nargs="+", type=int, default=[5, 0],
                                  help=messages.cv_long_description)
-        self.parser.add_argument("-pft", "--polynomial_features_degree", nargs=1, default=0,
+        self.parser.add_argument("-fext", "--feature_extension", nargs=1, default=['0'],
                                  help=messages.poly_feature_extension_description)
-        self.parser.add_argument("-hgs", "--hyperparam_grid_points", nargs=1, default=0,
+        self.parser.add_argument("-ht", "--hyperparameter_tuning", nargs=1, default=['0'],
                                  help=messages.hyperparameter_grid_description)
         
         # Optional arguments
@@ -134,19 +134,21 @@ class ModelAge(Interface):
             args.model_params = {}
 
         # Set hyperparameter grid search value
-        if len(args.hyperparameter_grid_points) > 1 or not args.hyperparameter_grid_points.isdigit():
+        if len(args.hyperparameter_tuning) > 1 or not args.hyperparameter_tuning[0].isdigit():
             raise ValueError(
                 "Hyperparameter grid points must be a non negative integer."
             )
         else:
-            args.hyperparameter_grid_points = convert(args.hyperparameter_grid_points)
+            args.hyperparameter_tuning = args.hyperparameter_tuning[0]
+            args.hyperparameter_tuning = convert(args.hyperparameter_tuning)
         # Set polynomial feature extension value
-        if len(args.polynomial_features_degree) > 1 or not args.polynomial_features_degree.isdigit():
+        if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
             raise ValueError(
                 "Polynomial feature extension degree must be a non negative integer."
             )
         else:
-            args.polynomial_features_degree = convert(args.polynomial_features_degree)
+            args.feature_extension = args.feature_extension[0]
+            args.feature_extension = convert(args.feature_extension)
         return args
 
 

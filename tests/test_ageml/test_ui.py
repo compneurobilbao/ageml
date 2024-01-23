@@ -30,6 +30,7 @@ class ExampleArguments(object):
         self.ages = None
         self.group1 = None
         self.group2 = None
+        self.hyperparameter_tuning = 0
 
 
 @pytest.fixture
@@ -1164,14 +1165,14 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     features_path = create_csv(features, tempDir.name)
 
     # Test command
-    responses = ["model_age", features_path, "", "", "", "", "", "", "", "q"]
+    responses = ["model_age", features_path, "", "", "", "", "", "", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished running age modelling.'
 
-    # Test command with invalid input like incorrect model parameters # TODO: How to trigger "Error running age modelling"?
-    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "", "q"]
+    # Test command with invalid input like incorrect model parameters
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
