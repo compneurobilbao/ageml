@@ -2,6 +2,8 @@
 
 This document contains the characteristics of the input file types that are supported by the _ageml_ pipelines (`model_age, factor_analysis, clinical_groups, clinical_classify`).
 
+__IMPORTANT__: Not following these specifications may lead to errors and unexpected behavior, so please, make sure your input files comply with them.
+
 ## Features File
 
 Specified with the `--features` flag. Contains the age and the features of the subjects.
