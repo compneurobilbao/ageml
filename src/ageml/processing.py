@@ -38,6 +38,18 @@ def covariate_correction(X, Z, beta=None):
     beta: 2D-Array with coefficients; shape=(m,k)
     """
 
+    # Check NaN values
+    if any(np.isnan(X.flatten())):
+        raise ValueError("NaN entrie(s) found in Y.")
+    elif any(np.isnan(Z.flatten())):
+        raise ValueError("NaN entrie(s) found in X.")
+    elif beta is not None and any(np.isnan(beta.flatten())):
+        raise ValueError("NaN entrie(s) found in Z.")
+    
+    # Check shapes
+    if X.shape[0] != Z.shape[0]:
+        raise ValueError("X and Z must have the same number of rows.")
+
     # Estimate coefficients
     if beta is None:
         beta = np.linalg.inv(Z.T @ Z) @ Z.T @ X

@@ -599,7 +599,8 @@ class Interface:
         # Obtain deltas means and stds
         deltas = []
         for df_group in df:
-            vals = df_group['delta'].to_numpy()
+            delta_col = [col for col in df_group.columns if "delta" in col][0]
+            vals = df_group[delta_col].to_numpy()
             if self.flags["covariates"]:
                 covariates = self.df_covariates.loc[df_group.index].to_numpy()
                 vals_corr, _ = covariate_correction(vals, covariates, beta)
@@ -774,6 +775,7 @@ class Interface:
             # If systems file provided, iterate over systems.
             if self.flags["systems"]:
                 dict_ages[label_covar] = {}
+                betas[label_covar] = {}
                 for system_name, system_features in self.dict_systems.items():
                     # If covariates and systems provided, model name has covariate name and system name.
                     model_name = f"{self.args.covar_name}_{label_covar}_{system_name}"
@@ -1250,6 +1252,10 @@ class CLI(Interface):
         print("Input groups (Required):")
         self.force_command(self.group_command, required=True)
 
+        # Ask for optional
+        print("Input covariates file path (Optional):")
+        self.force_command(self.load_command, "--covariates")
+
         # Ask for CV parameters adn classifier parameters
         print("CV parameters (Default: nº splits=5 and seed=0):")
         self.force_command(self.cv_command, 'classifier')
@@ -1276,6 +1282,10 @@ class CLI(Interface):
         self.force_command(self.load_command, "--ages", required=True)
         print("Input clinical file path (Required):")
         self.force_command(self.load_command, "--clinical", required=True)
+
+        # Ask for optional
+        print("Input covariates file path (Optional):")
+        self.force_command(self.load_command, "--covariates")
 
         # Run clinical analysis capture any error raised and print
         try:
