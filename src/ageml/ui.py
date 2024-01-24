@@ -484,7 +484,6 @@ class Interface:
 
         return model, df_ages, beta
 
-
     def predict_age(self, df, model, beta: np.ndarray = None, model_name: str = None):
         """Use AgeML to predict age with data."""
 
@@ -815,7 +814,8 @@ class Interface:
                         # Make predictions and store them.
                         dict_clinical_ages[label_covar][system_name] = self.predict_age(df_clinical[system_features + ['age']],
                                                                                         self.models[model_name],
-                                                                                        betas[label_covar][system_name], model_name=model_name)
+                                                                                        betas[label_covar][system_name],
+                                                                                        model_name=model_name)
                         # Rename all columns in ages dataframe to include the system name.
                         dict_clinical_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
 
@@ -823,7 +823,8 @@ class Interface:
                     # Model name has no system if no systems file is provided.
                     model_name = f"{self.args.covar_name}_{label_covar}"
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
-                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], betas[label_covar], model_name=model_name)
+                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], betas[label_covar],
+                                                                       model_name=model_name)
 
         # Concatenate dict_ages into a single DataFrame.
         # If no systems and no covariate only 1 df
