@@ -436,25 +436,40 @@ class Classifier:
     This class allows the differentiation of two groups based
     on differences in their deltas based on a logistic regresor.
 
+    Parameters
+    -----------
+    CV_split: integer number of CV splits
+    seed: integer seed for randomization
+    thr: threshold value
+    ci_val: confidence interval value
+
     Public methods:
     ---------------
     set_model(self): Sets the model to use in the pipeline.
 
+    set_CV_params(self, CV_split, seed): Set the parameters of the Cross Validation scheme.
+
+    set_threshold(self, thr): Set the threshold for classification.
+
+    set_ci(self, ci_val): Set the confidence interval for classification.
+
     fit_model(self, X, y): Fit the model.
+
+    predict(self, X): Predict class labels with fitted model.
     """
 
-    def __init__(self):
+    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95):
         """Initialise variables."""
 
         # Set required modelling parts
         self.set_model()
 
-        # Set default parameters
-        # TODO: let user choose this
-        self.CV_split = 5
-        self.seed = 0
-        self.thr = 0.5
-        self.ci_val = 0.95
+        # Set CV parameters
+        self.set_CV_params(CV_split=CV_split, seed=seed)
+
+        # Set threshold and confidence interval
+        self.set_threshold(thr)
+        self.set_ci(ci_val)
 
         # Initialise flags
         self.modelFit = False
@@ -464,6 +479,35 @@ class Classifier:
 
         self.model = linear_model.LogisticRegression()
     
+    def set_CV_params(self, CV_split, seed=None):
+        """Set the parameters of the Cross Validation Scheme.
+
+        Parameters
+        ----------
+        CV_split: number of splits in CV scheme
+        seed: seed to set random state."""
+
+        self.CV_split = CV_split
+        self.seed = seed
+    
+    def set_threshold(self, thr):
+        """Set the threshold for classification.
+
+        Parameters
+        ----------
+        thr: threshold value"""
+
+        self.thr = thr
+
+    def set_ci(self, ci_val):
+        """Set the confidence interval for classification.
+
+        Parameters
+        ----------
+        ci_val: confidence interval value"""
+
+        self.ci_val = ci_val
+
     def fit_model(self, X, y):
         """Fit the model.
 
@@ -508,7 +552,7 @@ class Classifier:
         ci_spes = st.t.interval(alpha=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
 
         # Print results
-        print('Summary metrics over all CV splits (95% CI)')
+        print('Summary metrics over all CV splits (%s CI)' % (self.ci_val))
         print('AUC: %.3f [%.3f-%.3f]' % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
         print('Accuracy: %.3f [%.3f-%.3f]' % (np.mean(accs), ci_accs[0], ci_accs[1]))
         print('Sensitivity: %.3f [%.3f-%.3f]' % (np.mean(sens), ci_sens[0], ci_sens[1]))

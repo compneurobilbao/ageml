@@ -275,11 +275,18 @@ class Visualizer:
 
         # Plot boxplots
         plt.figure(figsize=(10, 5))
-        num_groups = len(labels)
-        boxes = plt.boxplot(deltas, labels=labels, patch_artist=True)
-        for i, box in enumerate(boxes["boxes"]):
-            box.set_facecolor(self.cmap(i / num_groups))
-        plt.xlabel("Group")
+        ngroups = len(labels)
+        clevels = np.linspace(0, 1, ngroups)
+        boxes = plt.boxplot(deltas, labels=labels, patch_artist=True, showfliers=False)
+        # Plot patches
+        for box, clevel in zip(boxes["boxes"], clevels):
+            box.set_facecolor(self.cmap(clevel))
+            box.set_alpha(0.5)
+        # Plot scatter
+        for i, (vals, clevel) in enumerate(zip(deltas, clevels)):
+            x = np.random.normal(i + 1, 0.04, size=len(vals))
+            plt.scatter(x, vals, color=self.cmap(clevel))
+        plt.xlabel("Gruop")
         plt.ylabel("Delta")
         if system is None:
             filename = "clinical_groups_box_plot.svg"
