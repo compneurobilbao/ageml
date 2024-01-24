@@ -1,6 +1,6 @@
-# AgeML
+# `ageml`
 
-_AgeML_ is a Python package for Age Modelling with Machine Learning made easy.
+`ageml` is a Python package for Age Modelling with Machine Learning made easy.
 
 [![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/records/10255550)
 [![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
@@ -8,11 +8,11 @@ _AgeML_ is a Python package for Age Modelling with Machine Learning made easy.
 
 ## Background
 
-Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics. With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age. It has been shown in __CITATIONS__ that the mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
+Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics. With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age. It has been shown in [CITATIONS](.) that the mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
 
 ## Description
 
-AgeML allows age modelling with a set of simple-to-use CLIs that produce comprehensive figures of the modelling steps and detailed logs for exploring the effectiveness of the trained models.
+`ageml` allows age modelling with a set of simple-to-use CLIs that produce comprehensive figures of the modelling steps and detailed logs for exploring the effectiveness of the trained models.
 There are 4 main CLIs:
 
 - __model_age__: It takes a features file (in CSV format) from a set of subjects, which includes their chronological age, and it trains a model for predicting it. Categorical Covariates can be included to train models per category, using a CSV file. Systems, feature groups that correspond to a congruent physiological system (cardiac, muskuloskeletal, gastric, etc.) can also be included to train models per system using a simple .txt file. A CSV file is returned with the predicted ages, and the corresponding _age delta_. Also, a simple correlation analysis is performed to check how the input features correlate with the chronological age. The age distribution of the cohort is plotted too.
@@ -64,7 +64,7 @@ BrainAge models (Franke et al. 2010, Neuroimage) have had success in exploring t
 
 However, there is no standard for age modelling. There have been works attempting to describe proper procedures, especially for age-bias correction (de Lange and Cole 2020, Neuroimage: Clinical). In this work we developed an Open-Source software that allows anyone to do age modelling following well-established and tested methodologies for any type of clinical data. Age modelling with machine learning made easy.
 
-The objective of AgeML is to standardise procedures, lower the barrier to entry into age modelling and ensure reproducibility. The project is Open-Source to create a welcoming environment and a community to work together to improve and validate existing methodologies. We are actively seeking new developers who want to contribute to growing and expanding the package.
+The objective of `ageml` is to standardise procedures, lower the barrier to entry into age modelling and ensure reproducibility. The project is Open-Source to create a welcoming environment and a community to work together to improve and validate existing methodologies. We are actively seeking new developers who want to contribute to growing and expanding the package.
 
 References:
 
