@@ -20,27 +20,43 @@ There are 4 main CLIs:
 - __clinical_groups__: To see how the _age delta_ changes across clinical groups, a boxplot is created. The age distribution across the groups is also plotted.
 - __clinical_classify__: Using the features file and the ages file (with the _age delta_) classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
 
-In the figure below, find a schematic of the described results:
-![./basic_functionality_figure](./resources/figs/basic_functionality_fig.svg)
+In the figure below, find a schematic of the described pipelines, along with their outputs:
+![./pipelines_figure](./resources/figs/pipelines_only.svg)
+![./pipelines_outputs](./resources/figs/pipeline_outputs.svg)
 
-## How to install
+## How to install `ageml`
 
-_AgeML_ can easily be installed using pip
+#### Using `pip` (recommended)
+
+From your terminal, for basic installation, run:
 `pip install ageml`
+
+#### Cloning from Github
+
+Note that `ageml` is under active development, but still not continuously deployed, so the latest version might not be available in PyPI. If you want to use the latest version, you can clone the repository and install it locally. From your terminal, run:
+`git clone https://github.com/compneurobilbao/ageml.git`
+Then `cd` into the `ageml` folder, and install with pip:
+`pip install .`
 
 A Docker image version will be released in the short term.
 
-## How to Contribute
+#### Developer installation
+
+The developer installation is described in the [contribution guidelines](./docs/CONTRIBUTING.md).
+
+## How to cite
+
+If you use `ageml` in your work, please cite the all-time [Zenodo DOI](https://doi.org/10.5281/zenodo.10255549) 10.5281/zenodo.10255549
+
+## How to Contribute to the project
 
 We welcome scientists and developers who want to standardize the procedures of age modelling, share pretrained models or whatever other kind of contribution that can help the project.
 
 The contribution guidelines can be found [here](./docs/CONTRIBUTING.md).
 
-## How to use
+## How to use `ageml`
 
-### Interactive CLI
-
-### Compact CLI
+A comprehensive, step by step tutorial of the tool can be found [here](./docs/TUTORIAL.md).
 
 ## Motivation
 

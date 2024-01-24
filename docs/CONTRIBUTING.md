@@ -3,7 +3,7 @@
 ---
 This guide shows the guidelines to contribute to this project.
 
-//TODO: Explain which is our commit, merge, push, etc. philosophy (Good-to-knows)
+<!-- TODO: Explain which is our commit, merge, push, etc. philosophy (Good-to-knows) -->
 
 ## Project Structure
 
@@ -55,25 +55,46 @@ ageml
 ├── poetry.lock                     # Dependency for building the system
 ├── noxfile.py                      # Defines the linting, coverage, pytest sessions
 ├── setup.cfg                       # Defines the linting rules
+├── LICENSE                         # Apache 2.0 License file
+├── NOTICE                          # Notice file required by the Apache 2.0 License
 └── .gitignore                      # Files/directories that should not be tracked
 ```
 
-## Prepare and set up the package
+## Developer Setup
+
+### 1. Prepare and set up the package
 
 Poetry is our environment manager and build system. To install the required packages for creating the environment with poetry.
 
-__NOTE__: If you are using Mac OS, make sure you are installing pip correctly, either by installing python3 via homebrew, or other tested methods.
-`pip install poetry nox nox-poetry`
+__Note__: If you are using Mac OS, make sure you are installing `pip` correctly, either by installing python3 via homebrew, or other tested methods.
+
+```bash
+pip install poetry nox nox-poetry
+```
 
 If you want the virtual environment of the project to be located in the project root, run this line (make sure you have poetry installed running `poetry --version`):
-`poetry config virtualenvs.in-project true`
 
-Poetry will provide to install in the virtual environment (in developer mode) when running_ `poetry install`.
-A _pyproject.toml_ file is provided for creating the environment using poetry.
+```bash
+poetry config virtualenvs.in-project true
+```
+
+### 2. Clone the git repository
+
+Run in your terminal:
+
+```bash
+git clone https://github.com/compneurobilbao/ageml.git && cd ageml
+```
+
+Once inside the cloned folder (where the _pyproject.toml_ file is located), Poetry will install in the virtual environment (in developer mode) when running:
+
+```bash
+poetry install
+```
 
 Refer to the [poetry documentation](https://python-poetry.org/docs/) for more information.
 
-### Activate the environment
+### 3. Activate the environment
 
 At this point, a virtual environment should have been created automatically with all the required dependencies.
 If this is something that could be launched somehow, activate the poetry shell:
@@ -90,8 +111,8 @@ Or you can also run:
 
 ### Running the tests
 
-Before pushing anything with significant changes in code/functionality, tests should be (ideally) run locally.
-With the environment activated, run:
+Before pushing anything with significant changes in code/functionality, tests should be (ideally) run locally. This can be done using pre-commit hooks, or manually.
+To run the tests manually, first activate the environment, and then run:
 
 ```(bash)
 nox -s test
@@ -111,7 +132,7 @@ nox -s coverage
 
 ### Commits
 
-We try to follow the [**seven rules of a great Git commit message**](https://cbea.ms/git-commit/).
+We try to follow the [__seven rules of a great Git commit message__](https://cbea.ms/git-commit/).
 
 We like using the following standard prefixes for commit messages. Rigidness is not of our liking, so as long as the commit message is informative about its changes, you are good to go.
 
