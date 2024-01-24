@@ -48,7 +48,7 @@ class Interface:
 
     set_visualizer(self): Set visualizer with output directory.
 
-    set_model(self): Set model with parameters.
+    generate_model(self): Set model with parameters.
 
     set_classifier(self): Set classifier with parameters.
 
@@ -64,7 +64,7 @@ class Interface:
 
     model_age(self, df, model): Use AgeML to fit age model with data.
 
-    predict_age(self, df, model): Use AgeML to predict age with data.
+    predict_age(self, df, model, model_name): Use AgeML to predict age with data.
 
     factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
@@ -137,6 +137,8 @@ class Interface:
             self.args.model_params,
             self.args.model_cv_split,
             self.args.model_seed,
+            self.args.hyperparameter_tuning,
+            self.args.feature_extension
         )
         return model
 
@@ -451,9 +453,10 @@ class Interface:
         # Show training pipeline
         print("-----------------------------------")
         if name == "":
-            print("Training Age Model for all controls")
+            print(f"Training Age Model for all controls ({self.args.model_type})")
+
         else:
-            print("Training Model for covariate %s" % name)
+            print(f"Training Age Model ({self.args.model_type}): {name}")
         print(model.pipeline)
 
         # Select data to model
@@ -481,12 +484,12 @@ class Interface:
 
         return model, df_ages, beta
 
-    def predict_age(self, df, model, beta: np.ndarray = None):
+    def predict_age(self, df, model, beta: np.ndarray = None, model_name: str = None):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
         print("-----------------------------------")
-        print("Predicting with Age Model")
+        print(f"Predicting with Age Model ({self.args.model_type}): {model_name}")
         print(model.pipeline)
 
         # Select data to model
@@ -811,7 +814,8 @@ class Interface:
                         # Make predictions and store them.
                         dict_clinical_ages[label_covar][system_name] = self.predict_age(df_clinical[system_features + ['age']],
                                                                                         self.models[model_name],
-                                                                                        betas[label_covar][system_name])
+                                                                                        betas[label_covar][system_name],
+                                                                                        model_name=model_name)
                         # Rename all columns in ages dataframe to include the system name.
                         dict_clinical_ages[label_covar][system_name].rename(columns=lambda x: f"{x}_system_{system_name}", inplace=True)
 
@@ -819,7 +823,8 @@ class Interface:
                     # Model name has no system if no systems file is provided.
                     model_name = f"{self.args.covar_name}_{label_covar}"
                     # If no systems file is provided, fit a model for each covariate category. Make predictions and store them.
-                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], betas[label_covar])
+                    dict_clinical_ages[label_covar] = self.predict_age(df_clinical, self.models[model_name], betas[label_covar],
+                                                                       model_name=model_name)
 
         # Concatenate dict_ages into a single DataFrame.
         # If no systems and no covariate only 1 df
@@ -1483,29 +1488,36 @@ class CLI(Interface):
         self.force_command(self.load_command, "--features", required=True)
         print("Input covariates file path (Optional):")
         self.force_command(self.load_command, "--covariates")
-        print("Input covariate type to train seperate models (Optional):")
+        print("Input covariate type to train separate models (Optional):")
         self.force_command(self.covar_command)
         print("Input clinical file path (Optional):")
         self.force_command(self.load_command, "--clinical")
         print("Input systems file path (Optional):")
         self.force_command(self.load_command, "--systems")
 
-        # Ask for scaler, model and CV parameters
+        # Ask for scaler, model, CV parameters, feature extension, and hyperparameter tuning
         print("Scaler type and parameters (Default:standard)")
-        print("Available: standard (from sklearn)")
+        print(f"Available: {list(AgeML.scaler_dict.keys())}")
         print("Example: standard with_mean=True with_std=False")
         self.force_command(self.scaler_command)
-        print("Model type and parameters (Default:linear)")
-        print("Available: linear (from sklearn)")
-        print("Example: linear fit_intercept=True positive=False")
+        print("Model type and parameters (Default:linear_reg)")
+        print(f"Available: {list(AgeML.model_dict.keys())}")
+        print("Example: linear_reg fit_intercept=True normalize=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
+        print("Example: 10 0")
         self.force_command(self.cv_command, 'model')
+        print("Polynomial feature extension degree. Leave blank if not desired (Default: 0, max. 3)")
+        print("Example: 3")
+        self.force_command(self.feature_extension_command)
+        print("Hyperparameter tuning. Number of points in grid search: (Default: 0)")
+        print("Example: 100")
+        self.force_command(self.hyperparameter_grid_command)
 
         # Run modelling capture any error raised and print
         try:
             self.run_wrapper(self.run_age)
-            print('Finished running age modelling.')
+            print("Finished running age modelling.")
         except Exception as e:
             print(e)
             error = "Error running age modelling."
@@ -1517,7 +1529,7 @@ class CLI(Interface):
 
         # Split into items
         self.line = self.line.split()
-        valid_types = ["linear"]
+        valid_types = list(AgeML.model_dict.keys())
         error = None
 
         # Check that at least one argument input
@@ -1529,10 +1541,10 @@ class CLI(Interface):
 
         # Set model type or default
         if model_type == "None":
-            self.args.model_type = "linear"
+            self.args.model_type = "linear_reg"
         else:
             if model_type not in valid_types:
-                error = "Choose a valid model type: {}".format(valid_types)
+                error = f"Choose a valid model type: {valid_types}"
             else:
                 self.args.model_type = model_type
 
@@ -1550,6 +1562,12 @@ class CLI(Interface):
             self.args.model_params = model_params
         else:
             self.args.model_params = {}
+
+        # Try to set an instance of the specified scaler with the provided arguments
+        try:
+            AgeML.model_dict[self.args.model_type](**self.args.model_params)
+        except TypeError:  # Raised when invalid parameters are given to sklearn
+            error = f"Model parameters are not valid for {self.args.model_type} model. Check them in the sklearn documentation."
 
         return error
 
@@ -1582,7 +1600,7 @@ class CLI(Interface):
         # Split into items
         self.line = self.line.split()
         error = None
-        valid_types = ["standard"]
+        valid_types = list(AgeML.scaler_dict.keys())
 
         # Check that at least one argument input
         if len(self.line) == 0:
@@ -1596,7 +1614,7 @@ class CLI(Interface):
             self.args.scaler_type = "standard"
         else:
             if scaler_type not in valid_types:
-                error = "Choose a valid scaler type: {}".format(valid_types)
+                error = f"Choose a valid scaler type: {valid_types}"
             else:
                 self.args.scaler_type = scaler_type
 
@@ -1614,4 +1632,63 @@ class CLI(Interface):
         else:
             self.args.scaler_params = {}
 
+        # Try to set an instance of the specified scaler with the provided arguments
+        try:
+            AgeML.scaler_dict[self.args.scaler_type](**self.args.scaler_params)
+        except TypeError:
+            error = f"Scaler parameters are not valid for {self.args.scaler_type} scaler. Check them in the sklearn documentation."
+            return error
+
+        return error
+
+    def feature_extension_command(self):
+        """Load feature extension."""
+
+        # Split into items and remove  command
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) > 1:
+            error = "Must provide only one integer, or none."
+            return error
+
+        # Set default values
+        if len(self.line) == 0 or self.line[0] == "None":
+            self.args.feature_extension = 0
+            return error
+        
+        # Check whether items are integers
+        if not self.line[0].isdigit():
+            error = "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+            return error
+
+        # Set CV parameters
+        self.args.feature_extension = int(self.line[0])
+        return error
+
+    def hyperparameter_grid_command(self):
+        """Load hyperparameter search grid."""
+
+        # Split into items and remove command
+        self.line = self.line.split()
+        error = None
+
+        # Check that at least one argument input
+        if len(self.line) > 1:
+            error = "Must provide only one integer, or none."
+            return error
+
+        # Set default values
+        if len(self.line) == 0 or self.line[0] == "None":
+            self.args.hyperparameter_tuning = 0
+            return error
+        
+        # Check whether items are integers
+        if not self.line[0].isdigit():
+            error = "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+            return error
+
+        # Set CV parameters
+        self.args.hyperparameter_tuning = int(self.line[0])
         return error

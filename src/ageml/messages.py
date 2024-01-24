@@ -1,3 +1,5 @@
+from ageml.modelling import AgeML
+
 """Messages for the AgeML package."""
 
 # Help command messeages
@@ -19,16 +21,16 @@ features_long_description = (
 
 model_long_description = (
     "Model type and model parameters to use. First argument is the type and the following \n"
-    "arguments are input as keyword arguments into the model. They must be seperated by an =.\n"
-    "Example: -m linear fit_intercept=False\n"
-    "Available Types: linear (Default: linear)"
+    "arguments are input as keyword arguments into the model. They must be seperated by an '='.\n"
+    "Example: -m linear_reg fit_intercept=False normalize=True\n"
+    f"Available Types: {list(AgeML.model_dict.keys())} (Default: linear_reg)"
 )
 
 scaler_long_description = (
     "Scaler type and scaler parameters to use. First argument is the type and the following \n"
     "arguments are input as keyword arguments into scaler. They must be seperated by an =.\n"
     "Example: -m standard\n"
-    "Available Types: standard (Default: standard)"
+    f"Available Types:{list(AgeML.scaler_dict.keys())} (Default: standard)"
 )
 
 cv_long_description = (
@@ -44,7 +46,8 @@ covar_long_description = (
 )
 
 covar_name_long_description = (
-    "Name of the column (covariate) in the CSV file containing covariates, to make different models for each category of the covariate. \n"
+    "Name of the column (covariate) in the CSV file containing covariates, to make different\n"
+    "models for each category of the covariate. \n"
     "The name must be written exactly as it is in the CSV file. \n"
     "If no covariate name is given, no covariate separation will be done."
 )
@@ -80,6 +83,18 @@ ages_long_description = (
 groups_long_description = (
     "Clinical groups to do classification. \n"
     "Two groups are required. (e.g. --groups cn ad)"
+)
+
+
+poly_feature_extension_description = (
+    "Degree of the polynomial to use in Polynomial Feature Extension (from sklearn)\n"
+    "An integer is required. (e.g.   -fext 2    /   --feature_extension 1)"
+)
+
+hyperparameter_grid_description = (
+    "Number of points for which the hyperparameter optimization Grid Search will train\n"
+    "a model. The parameter ranges are predefined. An integer is required.\n"
+    "(e.g.   -ht 100   /   --hyperparameter_tuning 100)"
 )
 
 thr_long_description = (

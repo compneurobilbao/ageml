@@ -10,14 +10,26 @@ Classifier - classifier of class labels based on deltas.
 
 import numpy as np
 import scipy.stats as st
+from xgboost import XGBRegressor
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
 from scipy import stats
 from sklearn import linear_model
+from sklearn import svm
+from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 from sklearn import model_selection
 from sklearn import pipeline
 from sklearn import preprocessing
+from sklearn.preprocessing import (
+    MaxAbsScaler,
+    MinMaxScaler,
+    Normalizer,
+    PowerTransformer,
+    QuantileTransformer,
+    RobustScaler,
+    StandardScaler,
+)
 
 
 class AgeML:
@@ -35,6 +47,7 @@ class AgeML:
     model_params: dictionary to pass as **kwargs to model
     CV_split: integer number of CV splits
     seed: integer seed for randomization
+    optimize_hyperparams (Bool): perform hyperparameter optimization
 
     Public methods:
     ---------------
@@ -58,19 +71,142 @@ class AgeML:
 
     predict_age(self, X): Predict age with fitted model.
     """
+    
+    # Scaler dictionary
+    scaler_dict = {
+        "maxabs": MaxAbsScaler,
+        "minmax": MinMaxScaler,
+        "normalizer": Normalizer,
+        "power": PowerTransformer,
+        "quantile": QuantileTransformer,
+        "robust": RobustScaler,
+        "standard": StandardScaler,
+    }
+    scaler_hyperparameters = {'maxabs': {},
+                              'minmax': {},
+                              'normalizer': {},
+                              'power': {'method': ['yeo-johnson', 'box-cox']},
+                              'quantile': {'n_quantiles': [10, 1000],
+                                           'output_distribution': ['normal', 'uniform']},
+                              'robust': {},
+                              'standard': {}}
+    
+    # Model dictionary
+    model_dict = {
+        "linear_reg": linear_model.LinearRegression,
+        "ridge": linear_model.Ridge,
+        "lasso": linear_model.Lasso,
+        "linear_svr": svm.SVR,
+        "xgboost": XGBRegressor,  # XGBoost
+        "rf": RandomForestRegressor,
+    }
+    model_hyperparameter_ranges = {'ridge': {'alpha': [-3, 3]},
+                                   
+                                   'lasso': {'alpha': [-3, 3]},
+                                   
+                                   'linear_svr': {'C': [-3, 3],
+                                                  'epsilon': [-3, 3]},
+                                   
+                                   'xgboost': {'eta': [-3, 3],
+                                               'gamma': [-3, 3],
+                                               'max_depth': [0, 100],
+                                               'min_child_weight': [0, 100],
+                                               'max_delta_step': [0, 100],
+                                               'subsample': [-3, 3],
+                                               'colsample_bytree': [0.001, 1],
+                                               'colsample_bylevel': [0.001, 1],
+                                               'colsample_bynode': [0.001, 1],
+                                               'lambda': [-3, 3],
+                                               'alpha': [-3, 3]},
+                                   
+                                   'rf': {'n_estimators': [1, 100],
+                                          'max_depth': [1, 100],
+                                          'min_samples_split': [1, 100],
+                                          'min_samples_leaf': [1, 100],
+                                          'max_features': [1, 100],
+                                          'min_impurity_decrease': [0, 1],
+                                          'max_leaf_nodes': [1, 100],
+                                          'min_weight_fraction_leaf': [-3, 3], }}
 
-    def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed):
+    model_hyperparameter_types = {'ridge': {'alpha': 'log'},
+                                  
+                                  'lasso': {'alpha': 'log'},
+                                  
+                                  'linear_svr': {'C': 'log',
+                                                 'epsilon': 'log'},
+                                  
+                                  'xgboost': {'eta': 'float',
+                                              'gamma': 'float',
+                                              'max_depth': 'int',
+                                              'min_child_weight': 'int',
+                                              'max_delta_step': 'int',
+                                              'subsample': 'float',
+                                              'colsample_bytree': 'float',
+                                              'colsample_bylevel': 'float',
+                                              'colsample_bynode': 'float',
+                                              'colsample_bytree': 'float',
+                                              'lambda': 'log',
+                                              'alpha': 'log'},
+                                  
+                                  'rf': {'n_estimators': 'int',
+                                         'max_depth': 'int',
+                                         'min_samples_split': 'int',
+                                         'min_samples_leaf': 'int',
+                                         'max_features': 'int',
+                                         'min_impurity_decrease': 'log',
+                                         'max_leaf_nodes': 'int'}}
+
+    def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed,
+                 hyperparameter_tuning: int = 0, feature_extension: int = 0):
         """Initialise variables."""
 
+        # Scaler dictionary
+        self.scaler_type = scaler_type
+        self.scaler_dict = AgeML.scaler_dict
+        
+        # Model dictionary
+        self.model_type = model_type
+        self.model_dict = AgeML.model_dict
+        # Hyperparameters and feature extension
+        self.hyperparameter_tuning = hyperparameter_tuning
+        self.feature_extension = feature_extension
+        
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)
         self.set_model(model_type, **model_params)
         self.set_pipeline()
         self.set_CV_params(CV_split, seed)
+        self.set_hyperparameter_grid()
 
         # Initialise flags
         self.pipelineFit = False
         self.age_biasFit = False
+
+    def set_hyperparameter_grid(self):
+        """Builds the hyperparameter grid of the selected model upon AgeML object initialization
+
+        Returns:
+            dict: dictionary with the hyperparameter grid
+        """
+        param_grid = {}
+        if self.model_type in AgeML.model_dict.keys() and self.hyperparameter_tuning > 0:
+            hyperparam_ranges = AgeML.model_hyperparameter_ranges[self.model_type]
+            hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
+            # Initialize output grid
+            for hyperparam_name in list(hyperparam_types.keys()):
+                bounds = hyperparam_ranges[hyperparam_name]
+                if hyperparam_types[hyperparam_name] == 'log':
+                    param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0], bounds[1],
+                                                                          int(self.hyperparameter_tuning))
+                elif hyperparam_types[hyperparam_name] == 'int':
+                    param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0], bounds[1],
+                                                                      int(self.hyperparameter_tuning))).astype(int)
+                elif hyperparam_types[hyperparam_name] == 'float':
+                    param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0], bounds[1],
+                                                                          int(self.hyperparameter_tuning))
+        else:
+            print("No hyperparameter grid was built for the selected model. No hyperparameters available.")
+        self.hyperparameter_grid = param_grid
 
     def set_scaler(self, norm, **kwargs):
         """Sets the scaler to use in the pipeline.
@@ -81,10 +217,12 @@ class AgeML:
         **kwargs: to input to sklearn scaler object"""
 
         # Mean centered and unit variance
-        if norm == "standard":
-            self.scaler = preprocessing.StandardScaler(**kwargs)
+        if norm in ["no", "None"]:
+            self.scaler = None
+        elif norm not in self.scaler_dict.keys():
+            raise ValueError(f"Must select an available scaler type. Available: {list(self.scaler_dict.keys())}")
         else:
-            raise ValueError("Must select an available scaler type.")
+            self.scaler = self.scaler_dict[norm](**kwargs)
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -92,22 +230,28 @@ class AgeML:
         Parameters
         ----------
         model_type: type of model to use
-        **kwargs: to input to sklearn modle object"""
+        **kwargs: to input to sklearn model object"""
 
         # Linear Regression
-        if model_type == "linear":
-            self.model = linear_model.LinearRegression(**kwargs)
+        if model_type not in self.model_dict.keys():
+            raise ValueError(f"Must select an available model type. Available: {list(self.model_dict.keys())}")
         else:
-            raise ValueError("Must select an available model type.")
+            self.model = self.model_dict[model_type](**kwargs)
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
 
         pipe = []
-        if self.scaler is None or self.model is None:
-            raise ValueError("Must set a valid model or scaler before setting pipeline.")
+        if self.model is None:
+            raise ValueError("Must set a valid model before setting pipeline.")
         
-        pipe.append(("scaler", self.scaler))
+        # Scaler and whether it has to be optimized
+        if self.scaler is not None:
+            pipe.append(("scaler", self.scaler))
+        # Feature extension
+        if self.feature_extension != 0:
+            pipe.append(("feature_extension", preprocessing.PolynomialFeatures(degree=self.feature_extension)))
+        # Model
         pipe.append(("model", self.model))
         self.pipeline = pipeline.Pipeline(pipe)
 
@@ -187,7 +331,7 @@ class AgeML:
         Parameters
         ----------
         X: 2D-Array with features; shape=(n,m)
-        Y: 1D-Array with age; shape=n"""
+        y: 1D-Array with age; shape=n"""
 
         # Check that pipeline has been properly constructed
         if self.pipeline is None:
@@ -198,6 +342,16 @@ class AgeML:
         corrected_age = np.zeros(y.shape)
         metrics_train = []
         metrics_test = []
+
+        # Optimize hyperparameters if required
+        if self.hyperparameter_grid != {}:
+            print("Running Hyperparameter optimization...")
+            opt_pipeline = model_selection.GridSearchCV(self.pipeline, self.hyperparameter_grid, cv=self.CV_split,
+                                                        scoring="neg_mean_absolute_error")
+            opt_pipeline.fit(X, y)
+            print(f"Hyperoptimization best parameters: {opt_pipeline.best_params_}")
+            # Set best parameters in pipeline
+            self.pipeline.set_params(**opt_pipeline.best_params_)
 
         # Apply cross-validation
         kf = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
@@ -233,11 +387,18 @@ class AgeML:
         print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
         summary_test = self.summary_metrics(metrics_test)
         print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
+        # Print comparison with mean age as only predictor to have a reference of a dummy regressor
+        dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
+        dummy_mae = np.mean(np.abs(y - np.mean(y)))
+        print("When using mean of ages as predictor for each subject (dummy regressor):\n"
+              "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse))
+        print("Age range: %.2f" % (np.max(y) - np.min(y)))
 
-        # Final model trained on all data
+        # Fit model on all data
         self.pipeline.fit(X, y)
-        self.pipelineFit = True
         y_pred = self.pipeline.predict(X)
+        
+        self.pipelineFit = True
         self.fit_age_bias(y, y_pred)
 
         return pred_age, corrected_age

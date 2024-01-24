@@ -8,14 +8,14 @@ import pandas as pd
 import numpy as np
 
 import ageml.messages as messages
-from ageml.ui import Interface, CLI
+from ageml.ui import Interface, CLI, AgeML
 
 
 class ExampleArguments(object):
     def __init__(self):
         self.scaler_type = "standard"
         self.scaler_params = {"with_mean": True}
-        self.model_type = "linear"
+        self.model_type = "linear_reg"
         self.model_params = {"fit_intercept": True}
         self.model_cv_split = 2
         self.model_seed = 0
@@ -34,6 +34,8 @@ class ExampleArguments(object):
         self.ages = None
         self.group1 = None
         self.group2 = None
+        self.hyperparameter_tuning = 0
+        self.feature_extension = 0
 
 
 @pytest.fixture
@@ -214,7 +216,7 @@ def test_interface_setup(dummy_interface):
     expected_args = ExampleArguments()
     # Now check that the attributes are the same
     # NOTE: This is not a good test, but it's a start.
-    # TODO: How to make it more scalable?
+    # NOTE: How to make it more scalable?
     assert dummy_interface.args.scaler_type == expected_args.scaler_type
     assert dummy_interface.args.scaler_params == expected_args.scaler_params
     assert dummy_interface.args.model_type == expected_args.model_type
@@ -911,7 +913,7 @@ def test_force_command_CLI(dummy_cli, monkeypatch):
     assert dummy_cli.line == ["--systems", "None"]
 
     # Test when correct input is error returned is None
-    monkeypatch.setattr("builtins.input", lambda _: "linear")
+    monkeypatch.setattr("builtins.input", lambda _: "linear_reg")
     error = dummy_cli.force_command(dummy_cli.model_command, required=True)
     assert error is None
 
@@ -1206,19 +1208,28 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     features_path = create_csv(features, tempDir.name)
 
     # Test command
-    responses = ["model_age", features_path, "", "", "", "", "", "", "", "q"]
+    responses = ["model_age", features_path, "", "", "", "", "", "", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     assert captured[-1] == 'Finished running age modelling.'
 
     # Test command with invalid input like incorrect model parameters
-    responses = ["model_age", features_path, "", "", "", "", "", "linear fitIntercept=True", "", "q"]
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
-    assert captured[-1] == "Error running age modelling."
+    assert "Model parameters are not valid for linear_reg model. Check them in the sklearn documentation." in captured
+    
+    # Test command with hyperparameter optimization and feature_extension
+    responses = ["model_age", features_path, "", "", "", "", "", "linear_svr", "", "2", "3", "", "q"]
+    monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
+    dummy_cli.command_interface()
+    captured = capsys.readouterr().out.split("\n")[:-1]
+    assert any(["feature_extension" in i for i in captured])
+    assert "Running Hyperparameter optimization..." in captured
+    assert any(["Hyperoptimization best parameters" in i for i in captured])
 
 
 def test_model_command_CLI(dummy_cli):
@@ -1233,36 +1244,46 @@ def test_model_command_CLI(dummy_cli):
     dummy_cli.line = "None"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {}
 
     # Test passing invalid model type
     dummy_cli.line = "quadratic"
     error = dummy_cli.model_command()
-    assert error == "Choose a valid model type: {}".format(["linear"])
+    assert error == f"Choose a valid model type: {list(AgeML.model_dict.keys())}"
 
     # Test empty model params if none given
-    dummy_cli.line = "linear"
+    dummy_cli.line = "linear_reg"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {}
 
     # Test passing invalid model params
     message = "Model parameters must be in the format param1=value1 param2=value2 ..."
-    dummy_cli.line = "linear intercept"
+    dummy_cli.line = "linear_reg intercept"
     error = dummy_cli.model_command()
     assert error == message
-    dummy_cli.line = "linear intercept==1"
+    dummy_cli.line = "linear_reg intercept==1"
     error = dummy_cli.model_command()
     assert error == message
 
     # Test passing correct model params
-    dummy_cli.line = "linear fit_intercept=True"
+    dummy_cli.line = "linear_reg fit_intercept=True"
     error = dummy_cli.model_command()
     assert error is None
-    assert dummy_cli.args.model_type == "linear"
+    assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {"fit_intercept": True}
+    
+    # Test passing correctly formated, but invalid sklearn model params
+    dummy_cli.line = "linear_reg my_super_fake_intercept=True"
+    error = dummy_cli.model_command()
+    assert error == "Model parameters are not valid for linear_reg model. Check them in the sklearn documentation."
+
+    # Test passing correctly formated, but invalid sklearn model params in another type of model
+    dummy_cli.line = "ridge my_super_fake_intercept=True"
+    error = dummy_cli.model_command()
+    assert error == "Model parameters are not valid for ridge model. Check them in the sklearn documentation."
 
 
 def test_output_command_CLI(dummy_cli):
@@ -1307,9 +1328,9 @@ def test_scaler_command_CLI(dummy_cli):
     assert dummy_cli.args.scaler_params == {}
 
     # Test passing invalid scaler type
-    dummy_cli.line = "minmax"
+    dummy_cli.line = "mofongo"
     error = dummy_cli.scaler_command()
-    assert error == "Choose a valid scaler type: {}".format(["standard"])
+    assert error == f"Choose a valid scaler type: {list(AgeML.scaler_dict.keys())}"
 
     # Test empty scaler params if none given
     dummy_cli.line = "standard"
@@ -1328,8 +1349,69 @@ def test_scaler_command_CLI(dummy_cli):
     assert error == message
 
     # Test passing correct scaler params
-    dummy_cli.line = "standard mean=0"
+    dummy_cli.line = "standard with_mean=0"
     error = dummy_cli.scaler_command()
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
-    assert dummy_cli.args.scaler_params == {"mean": 0}
+    assert dummy_cli.args.scaler_params == {"with_mean": 0}
+    
+    # Test passing correctly formated, but invalid sklearn scaler params
+    dummy_cli.line = "standard my_super_fake_mean=0"
+    error = dummy_cli.scaler_command()
+    assert error == "Scaler parameters are not valid for standard scaler. Check them in the sklearn documentation."
+    
+    # Test passing correctly formated, but invalid sklearn scaler params in another type of scaler
+    dummy_cli.line = "minmax my_super_fake_mean=0"
+    error = dummy_cli.scaler_command()
+    assert error == "Scaler parameters are not valid for minmax scaler. Check them in the sklearn documentation."
+
+
+def test_hyperparameter_tuning_CLI(dummy_cli):
+    dummy_cli.args.model_type = "linear_svr"
+    dummy_cli.args.model_params = {"C": 1, "epsilon": 0.1}
+    
+    # Test no hyperparameters
+    dummy_cli.line = ""
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error is None
+    assert dummy_cli.args.hyperparameter_tuning == 0
+    
+    # Test passing too many arguments
+    dummy_cli.line = "1 2 3"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "Must provide only one integer, or none."
+    
+    # Test passing non integer arguments
+    dummy_cli.line = "1.5"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+    dummy_cli.line = "mondong"
+    error = dummy_cli.hyperparameter_grid_command()
+    assert error == "The number of points in the hyperparameter grid must be a positive, nonzero integer."
+
+
+def test_feature_extension_CLI(dummy_cli):
+    # Test no feature extension
+    dummy_cli.line = ""
+    error = dummy_cli.feature_extension_command()
+    assert error is None
+    assert dummy_cli.args.feature_extension == 0
+    
+    # Test passing too many arguments
+    dummy_cli.line = "1 2 3"
+    error = dummy_cli.feature_extension_command()
+    assert error == "Must provide only one integer, or none."
+    
+    # Test passing non integer arguments
+    dummy_cli.line = "1.5"
+    error = dummy_cli.feature_extension_command()
+    assert error == "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+    dummy_cli.line = "mondong"
+    error = dummy_cli.feature_extension_command()
+    assert error == "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
+    
+    # Test with a correct argument
+    dummy_cli.line = "2"
+    error = dummy_cli.feature_extension_command()
+    assert error is None
+    assert dummy_cli.args.feature_extension == 2
