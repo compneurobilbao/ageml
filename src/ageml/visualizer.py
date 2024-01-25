@@ -83,7 +83,7 @@ class Visualizer:
         plt.xlabel("Age (years)")
         plt.ylabel("Count")
         plt.title("Age distribution")
-        plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.svg" % name))
+        plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.png" % name))
         plt.close()
 
     def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers,
@@ -137,9 +137,9 @@ class Visualizer:
         plt.tight_layout()
 
         if name == "":
-            filename = "features_vs_age.svg"
+            filename = "features_vs_age.png"
         else:
-            filename = f"features_vs_age_{name}.svg"
+            filename = f"features_vs_age_{name}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
@@ -161,9 +161,9 @@ class Visualizer:
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
         if name == "":
-            filename = "chronological_vs_pred_age.svg"
+            filename = "chronological_vs_pred_age.png"
         else:
-            filename = f"chronological_vs_pred_age_{name}.svg"
+            filename = f"chronological_vs_pred_age_{name}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
@@ -204,9 +204,9 @@ class Visualizer:
         plt.xlabel("Chronological Age")
         plt.tight_layout()
         if name == "":
-            filename = "age_bias_correction.svg"
+            filename = "age_bias_correction.png"
         else:
-            filename = f"age_bias_correction_{name}.svg"
+            filename = f"age_bias_correction_{name}.png"
             plt.suptitle(f"{name}\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
@@ -256,10 +256,10 @@ class Visualizer:
         fig.set_size_inches(10, 5 * len(corrs))
         if system is not None:
             fig.suptitle(f"Correlation of factors with age deltas. System: {system}", y=0.99)
-            filename = f"factors_vs_deltas_system_{system}.svg"
+            filename = f"factors_vs_deltas_system_{system}.png"
         else:
             fig.suptitle("Correlation of factors with age deltas.", y=0.99)
-            filename = "factors_vs_deltas.svg"
+            filename = "factors_vs_deltas.png"
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, filename))
@@ -289,10 +289,10 @@ class Visualizer:
         plt.xlabel("Gruop")
         plt.ylabel("Delta")
         if system is None:
-            filename = "clinical_groups_box_plot.svg"
+            filename = "clinical_groups_box_plot.png"
             plt.suptitle("Age Delta by clinical group.")
         else:
-            filename = f"clinical_groups_box_plot_{system}.svg"
+            filename = f"clinical_groups_box_plot_{system}.png"
             plt.suptitle(f"Age Delta by clinical group. System: {system}", y=0.99)
 
         plt.savefig(os.path.join(self.path_for_fig, filename))
@@ -319,9 +319,9 @@ class Visualizer:
         plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
         plt.legend(loc="lower right")
         if system is not None:
-            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}_{system}.svg"
+            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}_{system}.png"
             plt.suptitle(f"System: {system}")
         else:
-            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}.svg"
+            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()

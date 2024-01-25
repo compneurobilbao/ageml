@@ -364,8 +364,7 @@ class Interface:
         for i, df in enumerate(dfs):
             if labels is not None:
                 print(labels[i])
-            age_col = [col for col in df.columns if "age" in col][0]
-            ages = df[age_col].to_numpy()
+            ages = df['age'].to_numpy()
             print("Mean age: %.2f" % np.mean(ages))
             print("Std age: %.2f" % np.std(ages))
             print("Age range: [%d,%d]" % (np.min(ages), np.max(ages)))
@@ -993,7 +992,9 @@ class Interface:
                 group_ages = []
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 for g in groups:
-                    group_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
+                    df_a = self.df_ages[cols].loc[self.df_clinical[g]]
+                    df_a['age'] = df_a['age_system_' + system]
+                    group_ages.append(df_a)
                 # Use visualizer to show box plots of deltas by group
                 self.deltas_by_group(group_ages, groups, system=system)
             # Use visualizer to show age distribution per system

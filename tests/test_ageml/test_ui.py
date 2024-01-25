@@ -133,23 +133,22 @@ def ages_multisystem():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "age_pottongosystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                                   53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age_pottongosystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                                             58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age_pottongosystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                                             87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta_pottongosystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                                     2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
-            
-            "age_mondongsystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                                  53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age_mondongsystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                                            58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age_mondongsystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                                            87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta_mondongsystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                                    2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "age_system_pottongosystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                                          53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "predicted age_system_pottongosystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                                    58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected age_system_pottongosystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                                    87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_system_pottongosystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                                            2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "age_system_mondongsystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
+                                         53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
+            "predicted age_system_mondongsystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                                   58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected age_system_mondongsystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                                   87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_system_mondongsystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                                           2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
     df.set_index("id", inplace=True)
@@ -392,7 +391,7 @@ def test_run_age(dummy_interface, features):
         "chronological_vs_pred_age_all_all",
     ]
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -429,7 +428,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
         "chronological_vs_pred_age_all_all",
     ]
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -468,7 +467,7 @@ def test_run_age_cov(dummy_interface, features, covariates):
             f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
             f"age_distribution_controls_{dummy_interface.args.covar_name}",
             f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check for the existence of the output CSV
@@ -508,7 +507,7 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
             f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
             f"age_distribution_controls_{dummy_interface.args.covar_name}",
             f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check for the existence of the output CSV
@@ -544,7 +543,7 @@ def test_run_age_systems(dummy_interface, systems, features):
         figs.append(f"chronological_vs_pred_age_all_all_{system_name}")
         figs.append(f"features_vs_age_controls_system_{system_name}")
     # Check existance of figures
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
@@ -583,7 +582,7 @@ def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
         figs.append(f"chronological_vs_pred_age_all_all_{system_name}")
         figs.append(f"features_vs_age_controls_system_{system_name}")
     # Check existance of figures
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
@@ -626,7 +625,7 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
         figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m_{system_name}")
         figs.append(f"features_vs_age_controls_{dummy_interface.args.covar_name}_system_{system_name}")
     # Check existance of figures
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
@@ -672,7 +671,7 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
         figs.append(f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m_{system_name}")
         figs.append(f"features_vs_age_controls_{dummy_interface.args.covar_name}_system_{system_name}")
     # Check existance of figures
-    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
@@ -701,7 +700,7 @@ def test_run_factor_analysis(dummy_interface, ages, factors):
     # Check for the existence of the output figures
     figs = ["factors_vs_deltas"]
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -727,7 +726,7 @@ def test_run_factor_analysis_systems(dummy_interface, ages_multisystem, factors)
     for system in system_names:
         figs.append(f"factors_vs_deltas_system_{system}")
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -750,7 +749,7 @@ def test_run_clinical(dummy_interface, ages, clinical):
     # Check for the existence of the output figures
     figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot"]
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -776,7 +775,7 @@ def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
     for system in system_names:
         figs.append(f"clinical_groups_box_plot_{system}")
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -801,7 +800,7 @@ def test_run_classification(dummy_interface, ages, clinical):
     # Check for the existence of the output figures
     figs = ["roc_curve_cn_vs_group1"]
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -829,7 +828,7 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
     for system in system_names:
         figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
     svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.svg") for fig in figs
+        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
     ]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 

@@ -47,7 +47,7 @@ def test_visualizer_age_distribution(dummy_viz, np_test_data):
     # Plot 'age' distribution (response variable, Y)
     dummy_viz.age_distribution(np_test_data[:, -1])
     # Check file existance
-    svg_path = os.path.join(dummy_viz.dir, "figures/age_distribution_.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/age_distribution_.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -65,7 +65,7 @@ def test_features_vs_age(dummy_viz, np_test_data):
                               labels=["all"])
     
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -79,7 +79,7 @@ def test_true_vs_pred_age(dummy_viz, np_test_data, dummy_ml):
     Y_pred, _ = dummy_ml.fit_age(X, Y)
     dummy_viz.true_vs_pred_age(Y, Y_pred)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/chronological_vs_pred_age.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/chronological_vs_pred_age.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -93,7 +93,7 @@ def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
     Y_pred, Y_corrected = dummy_ml.fit_age(X, Y)
     dummy_viz.age_bias_correction(Y, Y_pred, Y_corrected)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/age_bias_correction.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/age_bias_correction.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -108,7 +108,7 @@ def test_factors_vs_deltas(dummy_viz):
     # Plot
     dummy_viz.factors_vs_deltas(corrs, groups, labels, markers)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -127,7 +127,7 @@ def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     # Plot
     dummy_viz.deltas_by_groups([deltas], labels)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/clinical_groups_box_plot.svg")
+    svg_path = os.path.join(dummy_viz.dir, "figures/clinical_groups_box_plot.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -141,7 +141,7 @@ def test_classification_auc(dummy_viz):
     # Plot
     dummy_viz.classification_auc(y, y_pred, groups)
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/roc_curve_%s_vs_%s.svg" % (groups[0], groups[1]))
+    svg_path = os.path.join(dummy_viz.dir, "figures/roc_curve_%s_vs_%s.png" % (groups[0], groups[1]))
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
