@@ -540,7 +540,7 @@ class Classifier:
             acc = metrics.accuracy_score(y_test, y_pred > self.thr)
             tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
             specificity = tn / (tn + fp)
-            sensitivity = tp / (tp + fp)
+            sensitivity = tp / (tp + fn)
             accs.append(acc)
             sens.append(sensitivity)
             spes.append(specificity)
