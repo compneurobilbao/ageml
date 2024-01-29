@@ -1,4 +1,4 @@
-# `ageml`
+# ageml
 
 `ageml` is a Python package for Age Modelling with Machine Learning made easy.
 
@@ -21,8 +21,7 @@ There are 4 main CLIs:
 - __clinical_classify__: Using the features file and the ages file (with the _age delta_) classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
 
 In the figure below, find a schematic of the described pipelines, along with their outputs:
-![./pipelines_figure](./resources/figs/pipelines_only.svg)
-![./pipelines_outputs](./resources/figs/pipeline_outputs.svg)
+![./pipelines_figure](./resources/figs/pipelines.svg)
 
 ## How to install `ageml`
 
