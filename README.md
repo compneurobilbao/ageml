@@ -21,7 +21,7 @@ There are 4 main CLIs:
 - __clinical_classify__: Using the features file and the ages file (with the _age delta_) classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
 
 In the figure below, find a schematic of the described pipelines, along with their outputs:
-![./pipelines_figure](./resources/figs/pipelines.svg)
+![pipelines_figure](./resources/figs/pipelines.svg)
 
 ## How to install `ageml`
 
@@ -67,9 +67,9 @@ The objective of `ageml` is to standardise procedures, lower the barrier to entr
 
 References:
 
-- De Lange, A.-M. G., & Cole, J. H. (2020). Commentary: Correction procedures in brain-age prediction. NeuroImage: Clinical, 26, 102229. <https://doi.org/10.1016/j.nicl.2020.102229>
-- Franke, K., Ziegler, G., Klöppel, S., & Gaser, C. (2010). Estimating the age of healthy subjects from T1-weighted MRI scans using kernel methods: Exploring the influence of various parameters. NeuroImage, 50(3), 883–892. <https://doi.org/10.1016/j.neuroimage.2010.01.005>
-- Tian, Y. E., Cropley, V., Maier, A. B., Lautenschlager, N. T., Breakspear, M., & Zalesky, A. (2023). Heterogeneous aging across multiple organ systems and prediction of chronic disease and mortality. Nature Medicine, 29(5), 1221–1231. <https://doi.org/10.1038/s41591-023-02296-6>
+- De Lange, A.-M. G., & Cole, J. H. (2020). Commentary: Correction procedures in brain-age prediction. NeuroImage: Clinical, 26, 102229. [https://doi.org/10.1016/j.nicl.2020.102229](https://doi.org/10.1016/j.nicl.2020.102229)
+- Franke, K., Ziegler, G., Klöppel, S., & Gaser, C. (2010). Estimating the age of healthy subjects from T1-weighted MRI scans using kernel methods: Exploring the influence of various parameters. NeuroImage, 50(3), 883–892. [https://doi.org/10.1016/j.neuroimage.2010.01.005](https://doi.org/10.1016/j.nicl.2020.102229)
+- Tian, Y. E., Cropley, V., Maier, A. B., Lautenschlager, N. T., Breakspear, M., & Zalesky, A. (2023). Heterogeneous aging across multiple organ systems and prediction of chronic disease and mortality. Nature Medicine, 29(5), 1221–1231. [https://doi.org/10.1038/s41591-023-02296-6](https://doi.org/10.1016/j.nicl.2020.102229)
 
 ## License
 
