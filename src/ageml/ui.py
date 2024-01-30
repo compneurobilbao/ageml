@@ -659,16 +659,20 @@ class Interface:
 
         # Classification
         print("-----------------------------------")
-        print("Classification between groups %s and %s" % (groups[0], groups[1]))
+        print(f"Classification between groups {groups[0]} and {groups[1]} (system: {system})")
 
         # Select delta information
-        delta_col = [col for col in df1.columns if "delta" in col][0]
-        deltas1 = df1[delta_col].to_numpy()
-        deltas2 = df2[delta_col].to_numpy()
+        delta_cols = [col for col in df1.columns if "delta" in col]
+        deltas1 = df1[delta_cols].to_numpy()
+        deltas2 = df2[delta_cols].to_numpy()
 
         # Create X and y for classification
-        X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
-        y = np.concatenate((np.zeros(deltas1.shape), np.ones(deltas2.shape)))
+        if len(delta_cols) == 1:
+            X = np.concatenate((deltas1, deltas2)).reshape(-1, 1)
+            y = np.concatenate((np.zeros(deltas1.shape), np.ones(deltas2.shape)))
+        else:
+            X = np.concatenate((deltas1, deltas2))
+            y = np.concatenate((np.zeros(deltas1.shape[0]), np.ones(deltas2.shape[0])))
 
         # Generate classifier
         self.classifier = self.generate_classifier()
@@ -680,6 +684,10 @@ class Interface:
 
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
+        if len(delta_cols) > 1:
+            print("Logistic regressor weigths:")
+            for coef, delta in zip(self.classifier.model.coef_[0], delta_cols):
+                print(f"    {delta} = {coef:.3f}")
 
         # Visualize AUC
         self.visualizer.classification_auc(y, y_pred, groups, system)
@@ -1041,7 +1049,7 @@ class Interface:
 
         # Classify between groups
         if self.flags["systems"]:
-            for system in systems_list:
+            for system in systems_list + ["delta"]:
                 cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 df_group1_system = df_group1[cols]
                 df_group2_system = df_group2[cols]
@@ -1053,6 +1061,8 @@ class Interface:
                     _, beta = covariate_correction(deltas, covars)
                 else:
                     beta = None
+                if system == "delta":
+                    system = "all"
                 self.classify(df_group1_system, df_group2_system, groups, system=system, beta=beta)
         else:
             if self.flags['covariates']:

@@ -518,6 +518,7 @@ class Classifier:
 
         # Arrays to store  values
         accs, aucs, spes, sens = [], [], [], []
+        y = y.ravel()
         y_preds = np.empty(shape=y.shape)
     
         kf = model_selection.KFold(n_splits=self.CV_split, shuffle=True, random_state=self.seed)
@@ -540,7 +541,7 @@ class Classifier:
             acc = metrics.accuracy_score(y_test, y_pred > self.thr)
             tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
             specificity = tn / (tn + fp)
-            sensitivity = tp / (tp + fp)
+            sensitivity = tp / (tp + fn)
             accs.append(acc)
             sens.append(sensitivity)
             spes.append(specificity)
