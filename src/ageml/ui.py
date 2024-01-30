@@ -526,7 +526,7 @@ class Interface:
 
         # Select age information
         print("-----------------------------------")
-        print("Correlations between lifestyle factors by group")
+        print("Correlations between lifestyle factors by group %s" % system)
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Iterate over groups
@@ -548,8 +548,8 @@ class Interface:
             print(group)
 
             # Select data to visualize
-            delta_col = [col for col in df_ages.columns if "delta" in col][0]
-            deltas = df_ages[delta_col].to_numpy()
+            deltas_col = [col for col in df_ages.columns if "delta" in col][0]
+            deltas = df_ages[deltas_col].to_numpy()
             factors = df_factors.to_numpy()
 
             # Apply covariate correction
@@ -585,7 +585,7 @@ class Interface:
 
         # Select age information
         print("-----------------------------------")
-        print("Delta distribution by group")
+        print("Delta distribution by group %s" % system)
 
         # Check wether covariates will be corrected
         if self.flags["covariates"]:
@@ -949,13 +949,13 @@ class Interface:
         elif self.flags["clinical"] and self.flags["systems"]:
             # Extract systems from systems file
             groups = self.df_clinical.columns.to_list()
-            dfs_ages, dfs_factors = [], []
             for system in systems_list:
+                dfs_ages, dfs_factors = [], []
+                cols = [col for col in self.df_ages.columns.to_list() if system in col]
                 for g in groups:
-                    cols = [col for col in self.df_ages.columns.to_list() if system in col]
                     dfs_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
                     dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
-                # Compute correlations between factors and deltas for each system
+                # Compute correlations between factors and deltas for each system  
                 self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
                                        self.df_factors.columns.to_list(), system=system)
 
