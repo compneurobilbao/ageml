@@ -1430,6 +1430,7 @@ class CLI(Interface):
         print(messages.factor_analysis_command_message)
         print(messages.model_age_command_message)
         print(messages.quit_command_message)
+        print(messages.read_the_documentation_message)
 
     def load_command(self):
         """Load file paths."""
