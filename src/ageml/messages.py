@@ -4,7 +4,7 @@ from ageml.modelling import AgeML
 
 # Help command messeages
 model_age_command_message = "model_age           - run age prediction modelling."
-factor_analysis_command_message = "factor_analysis     - run factor analysis on age deltas."
+factor_correlation_command_message = "factor_correlation     - run factor correlation analysis on age deltas."
 clinical_command_message = "clinical            - run analysis on clinical groups based on age deltas."
 classification_command_message = "classification      - run classification based on age deltas."
 quit_command_message = "q                   - quit the program"

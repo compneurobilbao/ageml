@@ -30,10 +30,10 @@ model_age --features features.csv --ages ages.csv --systems systems.txt --covari
 
 This pipeline will produce a file named `ages.csv` in the specified output directory _<my_output_dir>_
 
-## 2- `factor_analysis`
+## 2- `factor_correlation`
 
 ```bash
-factor_analysis --factors factors.csv --ages ages.csv --clinical clinical_categories.csv --output ./<my_output_dir>
+factor_correlation --factors factors.csv --ages ages.csv --clinical clinical_categories.csv --output ./<my_output_dir>
 ```
 
 ## 3- `clinical_groups`

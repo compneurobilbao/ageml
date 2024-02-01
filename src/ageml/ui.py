@@ -76,7 +76,7 @@ class Interface:
 
     run_age(self): Run age modelling.
 
-    run_factor_analysis(self): Factor analysis between deltas and factors.
+    run_factor_correlation(self): Factor correlation analysis between deltas and factors.
 
     run_clinical(self): Analyse differences between deltas in clinical groups.
 
@@ -918,10 +918,10 @@ class Interface:
         filename = filename + ".csv"
         self.df_ages.to_csv(os.path.join(self.dir_path, filename))
 
-    def run_factor_analysis(self):
-        """Run factor analysis between deltas and factors."""
+    def run_factor_correlation(self):
+        """Run factor correlation analysis between deltas and factors."""
 
-        print("Running lifestyle factors...")
+        print("Running factors correlation analysis...")
 
         # Reset flags
         self.set_flags()
@@ -963,7 +963,7 @@ class Interface:
                 for g in groups:
                     dfs_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
                     dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
-                # Compute correlations between factors and deltas for each system  
+                # Compute correlations between factors and deltas for each system
                 self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
                                        self.df_factors.columns.to_list(), system=system)
 
@@ -1037,6 +1037,13 @@ class Interface:
         # Obtain dataframes for each clinical group
         df_group1 = self.df_ages.loc[self.df_clinical[groups[0]]]
         df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
+        # Balance the groups (subsampling)
+        # if df_group1.shape[0] < df_group2.shape[0]:
+        #     print("### Balancing groups... ###")
+        #     df_group2 = df_group2.sample(n=df_group1.shape[0], random_state=42)
+        # elif df_group1.shape[0] > df_group2.shape[0]:
+        #     print("### Balancing groups... ###")
+        #     df_group1 = df_group1.sample(n=df_group2.shape[0], random_state=42)
 
         if self.flags["covariates"]:
             df_cn = self.df_ages.loc[self.df_clinical["cn"]]
@@ -1099,7 +1106,7 @@ class CLI(Interface):
 
     cv_command(self): Loads CV parameters.
 
-    factor_analysis_command(self): Runs factor analysis.
+    factor_correlation_command(self): Runs factor correlation analysis.
 
     group_command(self): Loads groups.
 
@@ -1199,8 +1206,8 @@ class CLI(Interface):
                 error = self.classification_command()
             elif command == "clinical":
                 error = self.clinical_command()
-            elif command == "factor_analysis":
-                error = self.factor_analysis_command()
+            elif command == "factor_correlation":
+                error = self.factor_correlation_command()
             elif command == "model_age":
                 error = self.model_age_command()
             elif command == "h":
@@ -1378,8 +1385,8 @@ class CLI(Interface):
 
         return error
 
-    def factor_analysis_command(self):
-        """Run factor analysis."""
+    def factor_correlation_command(self):
+        """Run factor correlation analysis."""
 
         error = None
 
@@ -1393,13 +1400,13 @@ class CLI(Interface):
         print("Input covariates file path (Optional):")
         self.force_command(self.load_command, "--covariates")
 
-        # Run factor analysis capture any error raised and print
+        # Run factor correlation analysis capture any error raised and print
         try:
-            self.run_wrapper(self.run_factor_analysis)
-            print("Finished factor analysis.")
+            self.run_wrapper(self.run_factor_correlation)
+            print("Finished factor correlation analysis.")
         except Exception as e:
             print(e)
-            error = "Error running factor analysis."
+            error = "Error running factor correlation analysis."
         
         return error
 
@@ -1427,7 +1434,7 @@ class CLI(Interface):
         print("User commands:")
         print(messages.classification_command_message)
         print(messages.clinical_command_message)
-        print(messages.factor_analysis_command_message)
+        print(messages.factor_correlation_command_message)
         print(messages.model_age_command_message)
         print(messages.quit_command_message)
         print(messages.read_the_documentation_message)
