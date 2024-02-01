@@ -8,10 +8,11 @@
 
 ## Background
 
-Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics. With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age. It has been shown in [CITATIONS](.) that the mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
+Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics. With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age. The mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
 
 ## Description
 
+![pipelines_figure](./resources/figs/pipeline.png)
 `ageml` allows age modelling with a set of simple-to-use CLIs that produce comprehensive figures of the modelling steps and detailed logs for exploring the effectiveness of the trained models.
 There are 4 main CLIs:
 
@@ -19,9 +20,6 @@ There are 4 main CLIs:
 - __factor_correlation__: The correlation between the provided factors and the computed _age deltas_ is analyzed, including the strength and significance. If the clinical category of each subject is provided (with a CSV file), this analysis runs for every clinical category.
 - __clinical_groups__: To see how the _age delta_ changes across clinical groups, a boxplot is created. The age distribution across the groups is also plotted.
 - __clinical_classify__: Using the features file and the ages file (with the _age delta_) classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
-
-In the figure below, find a schematic of the described pipelines, along with their outputs:
-![pipelines_figure](./resources/figs/pipelines.svg)
 
 ## How to install `ageml`
 
