@@ -6,7 +6,7 @@ import string
 import sys
 import tempfile
 
-from ageml.commands import model_age, factor_analysis, clinical_groups, clinical_classify
+from ageml.commands import model_age, factor_correlation, clinical_groups, clinical_classify
 
 
 # Fake data for testing
@@ -113,8 +113,8 @@ def test_model_age(temp_dir, features):
     model_age()
 
 
-def test_factor_analysis(temp_dir, ages, factors):
-    """Test factor_analysis function."""
+def test_factor_correlation(temp_dir, ages, factors):
+    """Test factor_correlation function."""
 
     # Create features file
     age_data_path = create_csv(ages, temp_dir.name)
@@ -127,7 +127,7 @@ def test_factor_analysis(temp_dir, ages, factors):
                 "-f", factors_data_path]
     
     # Run function
-    factor_analysis()
+    factor_correlation()
 
 
 def test_clinical_groups(temp_dir, ages, clinical):

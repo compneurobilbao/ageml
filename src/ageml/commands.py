@@ -5,7 +5,7 @@ Used in the AgeML project with poetry to create command line commands.
 Public classes:
 ---------------
 ModelAge: Run age modelling with required parameters.
-FactorAnalysis: Run factor analysis with required parameters.
+FactorCorrelation: Run factor correlation analysis with required parameters.
 ClinicalGroups: Run clinical analysis with age deltas with required parameters.
 ClinicalClassification: Run classification of groups based on age deltas with required parameters.
 
@@ -13,7 +13,7 @@ ClinicalClassification: Run classification of groups based on age deltas with re
 Public functions:
 -----------------
 model_age(): Run ModelAge class.
-factor_analysis(): Run FactorAnalysis class.
+factor_correlation(): Run FactorCorrelation class.
 clinical_groups(): Run ClinicalGroups class.
 clinical_classify(): Run ClinicalClassification class.
 """
@@ -152,15 +152,15 @@ class ModelAge(Interface):
         return args
 
 
-class FactorAnalysis(Interface):
-    """Run factor analysis with required parameters."""
+class FactorCorrelation(Interface):
+    """Run factor correlation analysis with required parameters."""
 
     def __init__(self):
         """Initialise variables."""
 
         # Initialise parser
         self.parser = argparse.ArgumentParser(
-            description="Factor analysis of age deltas.",
+            description="Factor correlation analysis of age deltas.",
             formatter_class=argparse.RawTextHelpFormatter,
         )
 
@@ -171,8 +171,8 @@ class FactorAnalysis(Interface):
         # Initialise parent class
         super().__init__(args)
 
-        # Run factor analysis
-        self.run_wrapper(self.run_factor_analysis)
+        # Run factor correlation analysis
+        self.run_wrapper(self.run_factor_correlation)
 
     def configure_parser(self):
         """Configure parser with required arguments for processing."""
@@ -211,7 +211,7 @@ class ClinicalGroups(Interface):
         # Initialise parent class
         super().__init__(args)
 
-        # Run factor analysis
+        # Run clinical groups
         self.run_wrapper(self.run_clinical)
 
     def configure_parser(self):
@@ -252,7 +252,7 @@ class ClinicalClassification(Interface):
         # Initialise parent class
         super().__init__(args)
 
-        # Run factor analysis
+        # Run classification
         self.run_wrapper(self.run_classification)
 
     def configure_parser(self):
@@ -317,10 +317,10 @@ def model_age():
     ModelAge()
 
 
-def factor_analysis():
-    """Run FactorAnalysis class."""
+def factor_correlation():
+    """Run FactorCorrelation class."""
 
-    FactorAnalysis()
+    FactorCorrelation()
 
 
 def clinical_groups():

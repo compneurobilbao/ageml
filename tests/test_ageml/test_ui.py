@@ -686,13 +686,13 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted age", "corrected age", "delta"])
 
 
-def test_run_factor_analysis(dummy_interface, ages, factors):
+def test_run_factor_correlation(dummy_interface, ages, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     factors_path = create_csv(factors, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
     dummy_interface.args.factors = factors_path
-    dummy_interface.run_factor_analysis()
+    dummy_interface.run_factor_correlation()
 
     # Check for the existence of the output directory
     assert os.path.exists(dummy_interface.dir_path)
@@ -709,13 +709,13 @@ def test_run_factor_analysis(dummy_interface, ages, factors):
     assert os.path.exists(log_path)
 
 
-def test_run_factor_analysis_systems(dummy_interface, ages_multisystem, factors):
+def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, factors):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages_multisystem, dummy_interface.dir_path)
     factors_path = create_csv(factors, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
     dummy_interface.args.factors = factors_path
-    dummy_interface.run_factor_analysis()
+    dummy_interface.run_factor_correlation()
 
     # Check for the existence of the output directory
     assert os.path.exists(dummy_interface.dir_path)
@@ -1087,8 +1087,8 @@ def test_cv_command_CLI(dummy_cli):
     assert dummy_cli.args.model_seed == 2
 
 
-def test_factor_analysis_command_CLI(dummy_cli, ages, factors, monkeypatch, capsys):
-    """Test dummy CLI factor_analysis command"""
+def test_factor_correlation_command_CLI(dummy_cli, ages, factors, monkeypatch, capsys):
+    """Test dummy CLI factor_correlation command"""
 
     # Create temporary directory to store data
     tempDir = tempfile.TemporaryDirectory()
@@ -1101,20 +1101,20 @@ def test_factor_analysis_command_CLI(dummy_cli, ages, factors, monkeypatch, caps
     empty_path = create_csv(pd.DataFrame([]), tempDir.name)
 
     # Test command
-    responses = ["factor_analysis", ages_path, factors_path, "", "", "q"]
+    responses = ["factor_correlation", ages_path, factors_path, "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
-    assert captured[-1] == 'Finished factor analysis.'
+    assert captured[-1] == 'Finished factor correlation analysis.'
 
     # Test command with invalid input like incorrect file
-    responses = ["factor_analysis", ages_path, empty_path, "", "", "q"]
+    responses = ["factor_correlation", ages_path, empty_path, "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
-    assert captured[-1] == "Error running factor analysis."
+    assert captured[-1] == "Error running factor correlation analysis."
 
 
 def test_group_command_CLI(dummy_cli):
@@ -1142,7 +1142,7 @@ def test_help_command_CLI(dummy_cli, capsys):
     assert captured[0] == "User commands:"
     assert captured[1] == messages.classification_command_message
     assert captured[2] == messages.clinical_command_message
-    assert captured[3] == messages.factor_analysis_command_message
+    assert captured[3] == messages.factor_correlation_command_message
     assert captured[4] == messages.model_age_command_message
     assert captured[5] == messages.quit_command_message
 
