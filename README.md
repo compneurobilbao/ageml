@@ -16,7 +16,7 @@ Age Modelling consists of trying to predict the chronological age of an organism
 There are 4 main CLIs:
 
 - __model_age__: It takes a features file (in CSV format) from a set of subjects, which includes their chronological age, and it trains a model for predicting it. Categorical Covariates can be included to train models per category, using a CSV file. Systems, feature groups that correspond to a congruent physiological system (cardiac, muskuloskeletal, gastric, etc.) can also be included to train models per system using a simple .txt file. A CSV file is returned with the predicted ages, and the corresponding _age delta_. Also, a simple correlation analysis is performed to check how the input features correlate with the chronological age. The age distribution of the cohort is plotted too.
-- __factor_analysis__: The correlation between the provided factors and the computed _age deltas_ is analyzed, including the strength and significance. If the clinical category of each subject is provided (with a CSV file), this analysis runs for every clinical category.
+- __factor_correlation__: The correlation between the provided factors and the computed _age deltas_ is analyzed, including the strength and significance. If the clinical category of each subject is provided (with a CSV file), this analysis runs for every clinical category.
 - __clinical_groups__: To see how the _age delta_ changes across clinical groups, a boxplot is created. The age distribution across the groups is also plotted.
 - __clinical_classify__: Using the features file and the ages file (with the _age delta_) classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
 
