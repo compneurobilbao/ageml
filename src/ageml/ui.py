@@ -403,11 +403,7 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Make lists to store covariate info for each dataframe
-        X_list = []
-        y_list = []
-        corr_list = []
-        order_list = []
-        significance_list = []
+        X_list, y_list, corr_list, order_list, significance_list = [], [], [], [], []
         for label, df in features_dict.items():
             print('Covariate %s' % label)
             # Extract features
@@ -428,11 +424,7 @@ class Interface:
                                                     feature_names[order_element], corr[order_element],
                                                     p_values[order_element]))
             # Append all the values
-            X_list.append(X)
-            y_list.append(y)
-            corr_list.append(corr)
-            order_list.append(order)
-            significance_list.append(significant)
+            X_list.append(X), y_list.append(y), corr_list.append(corr), order_list.append(order), significance_list.append(significant)
 
         # Use visualizer to show results
         self.visualizer.features_vs_age(X_list, y_list, corr_list, order_list,
@@ -510,50 +502,32 @@ class Interface:
 
         return df_ages
 
-    def factors_vs_deltas(self, dfs_ages, dfs_factors, groups, factor_names, significance=0.05, system: str = None):
+    def factors_vs_deltas(self, dict_ages, df_factors,  group="", significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
         ----------
-        dfs_ages: list of dataframes with delta information; shape=(n,m)
-        dfs_factors: list of dataframes with factor information; shape=(n,m)
-        groups: list of labels for each dataframe; shape=(n,),
-        factor_names: list of factor names; shape=(m,)
-        significance: significance level for correlation
-        system: name of the system from which the variables come from"""
+        dict_ages: dictionary for each system with deltas; shape=(n,m)
+        df_factors: dataframe with factor information; shape=(n,m)
+        significance: significance level for correlation"""
 
         # Select age information
         print("-----------------------------------")
-        print("Correlations between lifestyle factors by group %s" % system)
+        print("Correlations between lifestyle factors for %s" % group)
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
-        # Iterate over groups
+        # Iterate over systems
         corrs, significants = [], []
 
-        # Calculate covariate corrections
-        if self.flags["covariates"]:
-            print("Covariate effects will be subtracted from factors.")
-            if self.flags["clinical"]:
-                cn_pos = [i for i, label in enumerate(groups) if "cn" in label.lower()][0]
-                factors_cn = dfs_factors[cn_pos].to_numpy()
-                covars_cn = self.df_covariates.loc[dfs_factors[cn_pos].index].to_numpy()
-            else:
-                factors_cn = dfs_factors[0].to_numpy()
-                covars_cn = self.df_covariates.loc[dfs_factors[0].index].to_numpy()
-            _, beta = covariate_correction(factors_cn, covars_cn)
+        # Facotr information
+        factors = df_factors.to_numpy()
+        factor_names = df_factors.columns.to_list()
 
-        for group, df_ages, df_factors in zip(groups, dfs_ages, dfs_factors):
-            print(group)
+        for system, df in dict_ages.items():
+            print(system)
 
             # Select data to visualize
-            deltas_col = [col for col in df_ages.columns if "delta" in col][0]
-            deltas = df_ages[deltas_col].to_numpy()
-            factors = df_factors.to_numpy()
-
-            # Apply covariate correction
-            if self.flags["covariates"]:
-                covars = self.df_covariates.loc[df_ages.index].to_numpy()
-                factors, _ = covariate_correction(factors, covars, beta)
+            deltas = df['delta_%s' % system].to_numpy()
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
@@ -570,9 +544,9 @@ class Interface:
                 print("%d. %s %s: %.2f (%.2g)" % (i + 1, significant[o], factor_names[o], corr[o], p_values[o]))
 
         # Use visualizer to show bar graph
-        self.visualizer.factors_vs_deltas(corrs, groups, factor_names, significants, system)
+        self.visualizer.factors_vs_deltas(corrs, list(dict_ages.keys()), factor_names, significants, group)
 
-    def deltas_by_group(self, df, labels, system: str = None, significance: float = 0.05):
+    def deltas_by_group(self, dfs, system: str = None, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
         
         Parameters
@@ -585,34 +559,15 @@ class Interface:
         print("-----------------------------------")
         print("Delta distribution by group %s" % system)
 
-        # Check wether covariates will be corrected
-        if self.flags["covariates"]:
-            print("Covariate effects will be subtracted from deltas.")
-
-            # Find position of controls
-            pos_controls = [i for i, label in enumerate(labels) if "cn" in label.lower()][0]
-            df_cn = df[pos_controls]
-
-            # Calculate covariate correction coefficients
-            _, beta = covariate_correction(df_cn['delta'], self.df_covariates.loc[df_cn.index].to_numpy())
-
         # Obtain deltas means and stds
         deltas = []
-        for df_group in df:
-            delta_col = [col for col in df_group.columns if "delta" in col][0]
-            vals = df_group[delta_col].to_numpy()
-            if self.flags["covariates"]:
-                covariates = self.df_covariates.loc[df_group.index].to_numpy()
-                vals_corr, _ = covariate_correction(vals, covariates, beta)
-                deltas.append(vals_corr)
-            else:
-                deltas.append(vals)
-
-        for i in range(len(deltas)):
-            print(labels[i])
-            print("Mean delta: %.2f" % np.mean(deltas[i]))
-            print("Std delta: %.2f" % np.std(deltas[i]))
-            print("Delta range: [%d, %d]" % (np.min(deltas[i]), np.max(deltas[i])))
+        for group, df in dfs.items():
+            vals = df["delta_%s" % system].to_numpy()
+            deltas.append(vals)
+            print(group)
+            print("Mean delta: %.2f" % np.mean(vals))
+            print("Std delta: %.2f" % np.std(vals))
+            print("Delta range: [%d, %d]" % (np.min(vals), np.max(vals)))
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
@@ -632,6 +587,7 @@ class Interface:
         reject_fdr = reject_fdr.reshape((len(deltas), len(deltas)))
 
         # Print results
+        labels = list(dfs.keys())
         for i in range(len(deltas)):
             significant = significant_markers(reject_bon[i], reject_fdr[i])
             for j in range(i + 1, len(deltas)):
@@ -716,60 +672,57 @@ class Interface:
         # Check possible flags of interest
         if self.flags['clinical']:
             subject_types = self.df_clinical.columns.to_list()
-        if self.flags['covariates'] and self.args.covar_name is not None:
+        if self.flags['covarname']:
             covars = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
             naming += f"_{self.args.covar_name}"
         if self.flags['systems']:
             systems = list(self.dict_systems.keys())
             naming += "_multisystem"
 
-        # Dictionary of dataframes
-        dict_dfs = {}
+        # Initialized dictionaries
+        dfs = {subject_type: {covar: {system: {} for system in systems} for covar in covars} for subject_type in subject_types}
+        preds = {subject_type: {covar: {system: {} for system in systems} for covar in covars} for subject_type in subject_types}
+        models = {covar: {system: {} for system in systems} for covar in covars}
+        betas = {covar: {system: {} for system in systems} for covar in covars}
 
         # Obtain dataframes for each subject type, covariate and system
         for subject_type in subject_types:
-            dict_dfs[subject_type] = {}
             # Keep only the subjects of the specified type
             df_sub = self.df_features[self.df_clinical[subject_type]]
             for covar in covars: 
-                dict_dfs[subject_type][covar] = {}
                 # Keep subjects with the specified covariate
-                if covar != 'all':
+                if self.flags['covarname']:
                     covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
                     df_cov = df_sub[df_sub.index.isin(covar_index)]
                 else:
                     df_cov = df_sub
                 for system in systems:
                     # Keep only the features of the system
-                    if system != 'all':
+                    if self.flags['systems']:
                         df_sys = df_cov[['age']+self.dict_systems[system]]
                     else:
                         df_sys = df_cov
                     # Save the dataframe
-                    dict_dfs[subject_type][covar][system] = df_sys
+                    dfs[subject_type][covar][system] = df_sys
 
 
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
-        cn_ages = {covar: dict_dfs['cn'][covar][systems[0]]['age'].to_list() for covar in covars}
+        cn_ages = {covar: dfs['cn'][covar][systems[0]]['age'].to_list() for covar in covars}
         self.age_distribution(cn_ages, name="controls"+naming)
 
         # Show features vs age for controls for each system
         for system in systems:
-            cn_features = {covar: dict_dfs['cn'][covar][system] for covar in covars}
+            cn_features = {covar: dfs['cn'][covar][system] for covar in covars}
             self.features_vs_age(cn_features, name="controls"+naming+"_"+system)
 
         # Model age for each system on controls
-        preds = {}
-        models, preds['cn'], betas  = {}, {}, {}
         for covar in covars:
-            models[covar], preds['cn'][covar], betas[covar] = {}, {}, {}
             for system in systems:
                 model_name = f"{covar}_{system}"
                 ageml_model = self.generate_model()
-                models[covar][system], df_pred, betas[covar][system] = self.model_age(dict_dfs['cn'][covar][system],
-                                                                                                         ageml_model, name=model_name)
-                if self.flags['systems']:
-                    df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                models[covar][system], df_pred, betas[covar][system] = self.model_age(dfs['cn'][covar][system],
+                                                                                      ageml_model, name=model_name)
+                df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                 preds['cn'][covar][system] = df_pred
 
         # Apply to all other subject types
@@ -777,15 +730,12 @@ class Interface:
             # Do not apply to controls
             if subject_type == 'cn':
                 continue
-            preds[subject_type] = {}
             for covar in covars:
-                preds[subject_type][covar] = {}
                 for system in systems:
                     model_name = f"{covar}_{system}"
-                    df_pred = self.predict_age(dict_dfs[subject_type][covar][system], models[covar][system],
+                    df_pred = self.predict_age(dfs[subject_type][covar][system], models[covar][system],
                                                betas[covar][system], model_name=model_name)
-                    if self.flags['systems']:
-                        df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                    df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                     preds[subject_type][covar][system] = df_pred
 
         # Concatenate predictions into a DataFrame
@@ -795,6 +745,9 @@ class Interface:
                 df_systems = pd.concat([preds[subject_type][covar][system] for system in systems], axis=1)
                 stack.append(df_systems)
         df_ages = pd.concat(stack, axis=0)
+
+        # Drop duplicates keep first (some subjects may be in more than one subejct type)
+        df_ages = df_ages[~df_ages.index.duplicated(keep='first')]
 
         # Save dataframe to csv
         filename = "predicted_age" + naming + ".csv"
@@ -808,53 +761,28 @@ class Interface:
         # Reset flags
         self.set_flags()
 
+        # Initial parameters
+        subject_types = ['cn']
+
         # Load data
         self.load_data(required=["ages", "factors"])
 
-        # Check if systems are provided in the ages file
-        if any(["system" in col for col in self.df_ages.columns]):
-            self.flags["systems"] = True
-            # Make systems list
-            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
+        # Check possible flags of interest
+        if self.flags['clinical']:
+            subject_types = self.df_clinical.columns.to_list()
 
-        # Check whether to split by clinical groups
-        if self.flags["clinical"] and not self.flags["systems"]:
-            groups = self.df_clinical.columns.to_list()
-            dfs_ages, dfs_factors = [], []
-            for g in groups:
-                dfs_ages.append(self.df_ages.loc[self.df_clinical[g]])
-                dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
-            # Compute correlations between factors and deltas for each group
-            self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
+        # Obtain systems
+        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
 
-        elif not self.flags["clinical"] and self.flags["systems"]:
-            for system in systems_list:
-                cols = [col for col in self.df_ages.columns.to_list() if col.split("_")[-1] == system]
-                dfs_ages = [self.df_ages[cols]]
-                dfs_factors = [self.df_factors]
-                groups = ["all"]
-                self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
-                                       self.df_factors.columns.to_list(), system=system)
-
-        elif self.flags["clinical"] and self.flags["systems"]:
-            # Extract systems from systems file
-            groups = self.df_clinical.columns.to_list()
-            for system in systems_list:
-                dfs_ages, dfs_factors = [], []
-                cols = [col for col in self.df_ages.columns.to_list() if system in col]
-                for g in groups:
-                    dfs_ages.append(self.df_ages[cols].loc[self.df_clinical[g]])
-                    dfs_factors.append(self.df_factors.loc[self.df_clinical[g]])
-                # Compute correlations between factors and deltas for each system
-                self.factors_vs_deltas(dfs_ages, dfs_factors, groups,
-                                       self.df_factors.columns.to_list(), system=system)
-
-        elif not self.flags["clinical"] and not self.flags["systems"]:
-            dfs_ages = [self.df_ages]
-            dfs_factors = [self.df_factors]
-            groups = ["all"]
-            # Compute correlations between factors and deltas
-            self.factors_vs_deltas(dfs_ages, dfs_factors, groups, self.df_factors.columns.to_list())
+        # For each subject type
+        for subject_type in subject_types:
+            dfs_systems = {}
+            df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
+            df_factors = self.df_factors.loc[df_sub.index]
+            for system in systems:
+                df_sys = df_sub[[col for col in df_sub.columns if system in col]]
+                dfs_systems[system] = df_sys
+            self.factors_vs_deltas(dfs_systems, df_factors, subject_type)
 
     def run_clinical(self):
         """Analyse differences between deltas in clinical groups."""
@@ -867,34 +795,19 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "clinical"])
 
-        # Obtain dataframes for each clinical group
+        # Obtain dataframes for each group
         groups = self.df_clinical.columns.to_list()
-        
-        # Check if systems are provided in the ages file
-        if any(["system" in col for col in self.df_ages.columns]):
-            self.flags["systems"] = True
-            # Make systems list
-            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
+        dfs = {g: self.df_ages.loc[self.df_clinical[g]] for g in groups}
+    
+        # Use visualizer to show age distribution per clinical group
+        ages = {g: dfs[g].iloc[:, 0].to_list() for g in groups}
+        self.age_distribution(ages, name="clinical_groups")
 
-        # If systems file provided, iterate over systems.
-        if self.flags["systems"]:
-            for system in systems_list:
-                group_ages = []
-                cols = [col for col in self.df_ages.columns.to_list() if system in col]
-                for g in groups:
-                    df_a = self.df_ages[cols].loc[self.df_clinical[g]]
-                    df_a['age'] = df_a['age_system_' + system]
-                    group_ages.append(df_a)
-                # Use visualizer to show box plots of deltas by group
-                self.deltas_by_group(group_ages, groups, system=system)
-            # Use visualizer to show age distribution per system
-            self.age_distribution(group_ages, groups, name="clinical_groups")
-        else:
-            group_ages = []
-            for g in groups:
-                group_ages.append(self.df_ages.loc[self.df_clinical[g]])
-            self.deltas_by_group(group_ages, groups)
-            self.age_distribution(group_ages, groups, name="clinical_groups")
+        # Show differences in groups per system
+        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
+        for system in systems:
+            dfs_systems = {g: dfs[g][[col for col in dfs[g].columns if system in col]] for g in groups}
+            self.deltas_by_group(dfs_systems, system=system)
 
     def run_classification(self):
         """Run classification between two different clinical groups."""
