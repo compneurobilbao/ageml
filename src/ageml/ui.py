@@ -292,9 +292,10 @@ class Interface:
             self.df_ages = self.load_csv('ages')
         # Check that ages file has required columns
         if self.df_ages is not None:
-            cols = ["age", "predicted age", "corrected age", "delta"]
-            if len(self.df_ages.columns) % 4 != 0:
-                raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
+            cols = ["age", "predicted_age", "corrected_age", "delta"]
+            for col in self.df_ages.columns.to_list():
+                if not any(col.startswith(c) for c in cols):
+                    raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
         elif "ages" in required:
             raise ValueError("Ages file must be provided.")
 
@@ -468,7 +469,7 @@ class Interface:
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
-        cols = ["age", "predicted age", "corrected age", "delta"]
+        cols = ["age", "predicted_age", "corrected_age", "delta"]
         df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
         return model, df_ages, beta
@@ -497,7 +498,7 @@ class Interface:
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
-        cols = ["age", "predicted age", "corrected age", "delta"]
+        cols = ["age", "predicted_age", "corrected_age", "delta"]
         df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
         return df_ages
@@ -722,6 +723,7 @@ class Interface:
                 ageml_model = self.generate_model()
                 models[covar][system], df_pred, betas[covar][system] = self.model_age(dfs['cn'][covar][system],
                                                                                       ageml_model, name=model_name)
+                df_pred = df_pred.drop(columns=['age'])
                 df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                 preds['cn'][covar][system] = df_pred
 
@@ -735,6 +737,7 @@ class Interface:
                     model_name = f"{covar}_{system}"
                     df_pred = self.predict_age(dfs[subject_type][covar][system], models[covar][system],
                                                betas[covar][system], model_name=model_name)
+                    df_pred = df_pred.drop(columns=['age'])
                     df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                     preds[subject_type][covar][system] = df_pred
 
@@ -748,6 +751,9 @@ class Interface:
 
         # Drop duplicates keep first (some subjects may be in more than one subejct type)
         df_ages = df_ages[~df_ages.index.duplicated(keep='first')]
+
+        # Add age information
+        df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
 
         # Save dataframe to csv
         filename = "predicted_age" + naming + ".csv"
