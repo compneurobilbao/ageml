@@ -826,62 +826,28 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "clinical"])
 
-        # Check that arguments given for each group
+        # Check that arguments given for each group and that they exist
         if self.args.group1 is None or self.args.group2 is None:
             raise ValueError("Must provide two groups to classify.")
-        
-        # Check that those groups exist
-        groups = [self.args.group1.lower(), self.args.group2.lower()]
-        if groups[0] not in self.df_clinical.columns or groups[1] not in self.df_clinical.columns:
+        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
             raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
 
         # Obtain dataframes for each clinical group
-        df_group1 = self.df_ages.loc[self.df_clinical[groups[0]]]
-        df_group2 = self.df_ages.loc[self.df_clinical[groups[1]]]
-        # Balance the groups (subsampling)
-        # if df_group1.shape[0] < df_group2.shape[0]:
-        #     print("### Balancing groups... ###")
-        #     df_group2 = df_group2.sample(n=df_group1.shape[0], random_state=42)
-        # elif df_group1.shape[0] > df_group2.shape[0]:
-        #     print("### Balancing groups... ###")
-        #     df_group1 = df_group1.sample(n=df_group2.shape[0], random_state=42)
+        df_group1 = self.df_ages[self.df_clinical[self.args.group1]]
+        df_group2 = self.df_ages[self.df_clinical[self.args.group2]]
 
-        if self.flags["covariates"]:
-            df_cn = self.df_ages.loc[self.df_clinical["cn"]]
+        # Obtain systems
+        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
 
-        # Check if systems are provided in the ages file
-        if any(["system" in col for col in self.df_ages.columns]):
-            self.flags["systems"] = True
-            # Make systems list
-            systems_list = list({col.split("_")[-1] for col in self.df_ages.columns if "system" in col})
-
-        # Classify between groups
-        if self.flags["systems"]:
-            for system in systems_list + ["delta"]:
-                cols = [col for col in self.df_ages.columns.to_list() if system in col]
-                df_group1_system = df_group1[cols]
-                df_group2_system = df_group2[cols]
-                if self.flags['covariates']:
-                    print("Covariate effects will be subtracted from deltas.")
-                    df_cn_system = df_cn[cols]
-                    deltas = df_cn_system['delta'].to_numpy()
-                    covars = self.df_covariates.loc[df_cn_system.index].to_numpy()
-                    _, beta = covariate_correction(deltas, covars)
-                else:
-                    beta = None
-                if system == "delta":
-                    system = "all"
-                self.classify(df_group1_system, df_group2_system, groups, system=system, beta=beta)
-        else:
-            if self.flags['covariates']:
-                print("Covariate effects will be subtracted from deltas.")
-                deltas = df_cn['delta'].to_numpy()
-                covars = self.df_covariates.loc[df_cn.index].to_numpy()
-                _, beta = covariate_correction(deltas, covars)
-            else:
-                beta = None
-            self.classify(df_group1, df_group2, groups, beta=beta)
-
+        # Create a classifier for each system
+        for system in systems:
+            df_group1_system = df_group1[[col for col in df_group1.columns if system in col]]
+            df_group2_system = df_group2[[col for col in df_group2.columns if system in col]]
+            self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], system=system)
+        
+        # Create a classifier for all systems
+        if len(systems) > 1:
+            self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], system="all")
 
 class CLI(Interface):
 
