@@ -96,7 +96,7 @@ class Interface:
         self.setup()
 
         # Initialise objects form library
-        self.set_visualizer()
+        self.set_visualizer(self.dir_path)
 
     def setup(self):
         """Create required directories and files to store results."""
@@ -109,7 +109,6 @@ class Interface:
                 category=UserWarning,
             )
         create_directory(self.dir_path)
-        create_directory(os.path.join(self.dir_path, "figures"))
 
         # Create .txt log file and log time
         self.log_path = os.path.join(self.dir_path, "log.txt")
@@ -122,10 +121,10 @@ class Interface:
 
         self.flags = {"clinical": False, "covariates": False, "covarname": False, "systems": False}
 
-    def set_visualizer(self):
+    def set_visualizer(self, dir):
         """Set visualizer with output directory."""
 
-        self.visualizer = Visualizer(self.dir_path)
+        self.visualizer = Visualizer(dir)
 
     def generate_model(self):
         """Set model with parameters."""
@@ -658,6 +657,11 @@ class Interface:
         # Run age modelling
         print("Running age modelling...")
 
+        # Set up directory
+        command_dir = os.path.join(self.dir_path, "model_age")
+        create_directory(command_dir)
+        self.set_visualizer(command_dir)
+
         # Reset flags
         self.set_flags()
 
@@ -764,6 +768,11 @@ class Interface:
 
         print("Running factors correlation analysis...")
 
+        # Set up directory
+        command_dir = os.path.join(self.dir_path, "factor_correlation")
+        create_directory(command_dir)
+        self.set_visualizer(command_dir)
+
         # Reset flags
         self.set_flags()
 
@@ -795,6 +804,11 @@ class Interface:
 
         print("Running clinical outcomes...")
 
+        # Set up directory
+        command_dir = os.path.join(self.dir_path, "clinical_groups")
+        create_directory(command_dir)
+        self.set_visualizer(command_dir)
+
         # Reset flags
         self.set_flags()
 
@@ -819,6 +833,11 @@ class Interface:
         """Run classification between two different clinical groups."""
 
         print("Running classification...")
+
+        # Set up directory
+        command_dir = os.path.join(self.dir_path, "clinical_classify")
+        create_directory(command_dir)
+        self.set_visualizer(command_dir)
 
         # Reset flags
         self.set_flags()
