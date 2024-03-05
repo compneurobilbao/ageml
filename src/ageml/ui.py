@@ -291,9 +291,13 @@ class Interface:
             self.df_ages = self.load_csv('ages')
         # Check that ages file has required columns
         if self.df_ages is not None:
-            cols = ["age", "predicted_age", "corrected_age", "delta"]
+            cols = ["age", "predicted_age_", "corrected_age_", "delta_"]
             for col in self.df_ages.columns.to_list():
                 if not any(col.startswith(c) for c in cols):
+                    raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
+            # Check that there are at least one of each col
+            for col in cols:
+                if not any(c.startswith(col) for c in self.df_ages.columns.to_list()):
                     raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
         elif "ages" in required:
             raise ValueError("Ages file must be provided.")
@@ -348,7 +352,7 @@ class Interface:
                     print("Number of subjects without any missing data: %d" % len(df))
                     flag_subjects = False
 
-        # TODO only if clinical files found 
+        # TODO only if clinical files found
         if self.flags['clinical']:
             print('Controls found in clinical file, selecting controls from clinical file.')
             print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
@@ -370,7 +374,7 @@ class Interface:
             print("Std age: %.2f" % np.std(vals))
             print("Age range: [%d,%d]" % (np.min(vals), np.max(vals)))
 
-        # Obtain labels and ages 
+        # Obtain labels and ages
         labels = list(ages_dict.keys())
         ages = list(ages_dict.values())
 
@@ -503,7 +507,7 @@ class Interface:
 
         return df_ages
 
-    def factors_vs_deltas(self, dict_ages, df_factors,  group="", significance=0.05):
+    def factors_vs_deltas(self, dict_ages, df_factors, group="", significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
@@ -698,7 +702,7 @@ class Interface:
                 df_sub = self.df_features[self.df_clinical[subject_type]]
             else:
                 df_sub = self.df_features
-            for covar in covars: 
+            for covar in covars:
                 # Keep subjects with the specified covariate
                 if self.flags['covarname']:
                     covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
@@ -708,21 +712,20 @@ class Interface:
                 for system in systems:
                     # Keep only the features of the system
                     if self.flags['systems']:
-                        df_sys = df_cov[['age']+self.dict_systems[system]]
+                        df_sys = df_cov[['age'] + self.dict_systems[system]]
                     else:
                         df_sys = df_cov
                     # Save the dataframe
                     dfs[subject_type][covar][system] = df_sys
 
-
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
         cn_ages = {covar: dfs['cn'][covar][systems[0]]['age'].to_list() for covar in covars}
-        self.age_distribution(cn_ages, name="controls"+naming)
+        self.age_distribution(cn_ages, name="controls" + naming)
 
         # Show features vs age for controls for each system
         for system in systems:
             cn_features = {covar: dfs['cn'][covar][system] for covar in covars}
-            self.features_vs_age(cn_features, name="controls"+naming+"_"+system)
+            self.features_vs_age(cn_features, name="controls" + naming + "_" + system)
 
         # Model age for each system on controls
         for covar in covars:
@@ -874,6 +877,7 @@ class Interface:
         # Create a classifier for all systems
         if len(systems) > 1:
             self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], system="all")
+
 
 class CLI(Interface):
 

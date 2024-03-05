@@ -50,7 +50,7 @@ def clinical():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "CN": [True, False, True, False, True, False, True, False, True, False,
+            "cn": [True, False, True, False, True, False, True, False, True, False,
                    True, False, True, False, True, False, True, False, True, False],
             "group1": [False, True, False, True, False, True, False, True, False, True,
                        False, True, False, True, False, True, False, True, False, True],
@@ -68,12 +68,12 @@ def ages():
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
                     53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                              58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                              87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                      2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "predicted_age_all": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                  58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected_age_all": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                  87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_all": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                          2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
     df.set_index("id", inplace=True)

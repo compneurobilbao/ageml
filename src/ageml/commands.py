@@ -290,6 +290,8 @@ class ClinicalClassification(Interface):
 
         # Set groups
         args.group1, args.group2 = args.groups
+        args.group1 = args.group1.lower()
+        args.group2 = args.group2.lower()
 
         # Set CV params first item is the number of CV splits
         if len(args.cv) == 1:
