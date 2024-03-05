@@ -349,8 +349,9 @@ class Interface:
                     flag_subjects = False
 
         # TODO only if clinical files found 
-        print('Controls found in clinical file, selecting controls from clinical file.')
-        print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
+        if self.flags['clinical']:
+            print('Controls found in clinical file, selecting controls from clinical file.')
+            print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
 
     def age_distribution(self, ages_dict: dict, name=""):
         """Use visualizer to show age distribution.
@@ -693,7 +694,10 @@ class Interface:
         # Obtain dataframes for each subject type, covariate and system
         for subject_type in subject_types:
             # Keep only the subjects of the specified type
-            df_sub = self.df_features[self.df_clinical[subject_type]]
+            if self.flags['clinical']:
+                df_sub = self.df_features[self.df_clinical[subject_type]]
+            else:
+                df_sub = self.df_features
             for covar in covars: 
                 # Keep subjects with the specified covariate
                 if self.flags['covarname']:
@@ -792,7 +796,10 @@ class Interface:
         # For each subject type
         for subject_type in subject_types:
             dfs_systems = {}
-            df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
+            if self.flags['clinical']:
+                df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
+            else:
+                df_sub = self.df_ages
             df_factors = self.df_factors.loc[df_sub.index]
             for system in systems:
                 df_sys = df_sub[[col for col in df_sub.columns if system in col]]
