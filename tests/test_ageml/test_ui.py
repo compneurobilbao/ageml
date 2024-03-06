@@ -115,12 +115,12 @@ def ages():
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
                     53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted_age_": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                               58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected_age_": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                               87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta_": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                       2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "predicted_age_all": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
+                                  58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
+            "corrected_age_all": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
+                                  87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
+            "delta_all": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
+                          2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
     df.set_index("id", inplace=True)
@@ -277,11 +277,12 @@ def test_load_data_cn_not_column(dummy_interface, clinical):
 
 def test_load_data_ages_missing_column(dummy_interface, ages):
     # Test removal of columns
-    cols = ["age", "predicted_age_", "corrected_age_", "delta_"]
+    cols = ["age", "predicted_age", "corrected_age", "delta"]
     for col in cols:
         # Remove column
         df = ages.copy()
-        df.drop(col, axis=1, inplace=True)
+        col_drop = [c for c in df.columns if c.startswith(col)]
+        df.drop(col_drop[0], axis=1, inplace=True)
         file_path = create_csv(df, dummy_interface.dir_path)
         dummy_interface.args.ages = file_path
 
@@ -289,7 +290,7 @@ def test_load_data_ages_missing_column(dummy_interface, ages):
         with pytest.raises(KeyError) as exc_info:
             dummy_interface.load_data()
         assert exc_info.type == KeyError
-        error_message = "Ages file must contain the following columns %s, or derived names." % cols
+        error_message = "Ages file missing the following column %s, or derived names." % col
         assert exc_info.value.args[0] == error_message
 
 
@@ -731,7 +732,7 @@ def test_run_clinical(dummy_interface, ages, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for the existence of the output figures
-    figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot_"]
+    figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot_all"]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"clinical_groups/figures/{fig}.png") for fig in figs
     ]
@@ -782,7 +783,7 @@ def test_run_classification(dummy_interface, ages, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for the existence of the output figures
-    figs = ["roc_curve_cn_vs_group1_"]
+    figs = ["roc_curve_cn_vs_group1_all"]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"clinical_classify/figures/{fig}.png") for fig in figs
     ]

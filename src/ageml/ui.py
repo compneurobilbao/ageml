@@ -56,6 +56,20 @@ class Interface:
 
     load_csv(self, file): Use panda to load csv into dataframe.
 
+    load_features(self, required): Load features from csv file.
+
+    load_covariates(self, required): Load covariates from csv file.
+
+    load_clinical(self, required): Load clinical from csv file.
+
+    load_factors(self, required): Load factors from csv file.
+
+    load_ages(self, required): Load ages from csv file.
+
+    system_parser(self, file): Parse systems file.
+
+    load_systems(self, required): Load systems file.
+
     load_data(self, required): Load data from csv files.
 
     age_distribution(self, dfs, labels=None): Use visualizer to show age distribution.
@@ -183,6 +197,229 @@ class Interface:
         else:
             return None
 
+    def load_features(self, required=False):
+        """Load features from csv file.
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+        
+        Returns
+        -------
+        df: dataframe with features"""
+
+        # Load data
+        df = self.load_csv('features')
+
+        # Check that file
+        if required and df is None:
+            raise ValueError("Features file must be provided.")
+        elif df is None:
+            return df
+        
+        # Check that age column is present
+        if "age" not in df:
+            raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
+
+        return df
+
+    def load_covariates(self, required=False):
+        """Load covariates from csv file.
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+        
+        Returns
+        -------
+        df: dataframe with covariates"""
+
+        # Load data
+        df = self.load_csv('covariates')
+
+        # Check required
+        if required and df is None:
+            raise ValueError("Covariates file must be provided.")
+        elif df is None:
+            return df
+        
+        # Set covariate flag
+        self.flags['covariates'] = True
+
+        # Set covariate for analysis
+        if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
+            self.flags['covarname'] = True
+            self.args.covar_name = self.args.covar_name.lower()
+            if self.args.covar_name not in df:
+                raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
+        
+        return df
+
+    def load_clinical(self, required=False):
+        """Load clinical from csv file.
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+        
+        Returns
+        -------
+        df: dataframe with clinical information"""
+
+        # Load data
+        df = self.load_csv('clinical')
+
+        # Check required
+        if required and df is None:
+            raise ValueError("Clinical file must be provided.")
+        elif df is None:
+            return df
+
+        # Check that CN in columns and boolean type
+        if "cn" not in df:
+            raise KeyError("Clinical file must contain a column name 'CN' or any other case-insensitive variation.")
+        elif [df[col].dtype == bool for col in df.columns].count(False) != 0:
+            raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
+        
+        # Set clinical flag
+        self.flags['clinical'] = True
+
+        return df
+
+    def load_factors(self, required=False):
+        """Load factors from csv file.
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+
+        Returns
+        -------
+        df: dataframe with factors"""
+        
+        # Load data
+        df = self.load_csv('factors')
+
+        # Check required
+        if required and df is None:
+            raise ValueError("Factors file must be provided.")
+        elif df is None:
+            return df
+        
+        return df
+
+    def load_ages(self, required=False):
+        """Load ages from csv file.
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+
+        Returns
+        -------
+        df: dataframe with ages"""
+
+        # Load data
+        df = self.load_csv('ages')
+
+        # Check required
+        if required and df is None:
+            raise ValueError("Ages file must be provided.")
+        elif df is None:
+            return df
+
+        # Required columns
+        req_cols = ["age", "predicted_age", "corrected_age", "delta"]
+        cols = [col.lower() for col in df.columns.to_list()]
+
+        # Check that columns are present
+        for col in req_cols:
+            if not any(c.startswith(col) for c in cols):
+                raise KeyError("Ages file missing the following column %s, or derived names." % col)
+
+        # Check that columns present are of the correct type
+        for col in cols:
+            if not any(col.startswith(c) for c in req_cols):
+                raise KeyError("Ages file contains unknwon column %s" % col)
+
+        return df
+
+    def system_parser(self, file):
+        """Parse systems file.
+
+        Parameters
+        ----------
+        file: file to parse
+
+        Returns
+        -------
+        dict_systems: dictionary with systems and their features"""
+
+        # Initialise dictionary
+        systems = {}
+
+        # Load feature names
+        features = {f.lower() for f in self.df_features.columns.to_list()}
+
+        # Parse file
+        for line in open(file, 'r'):
+            line = line.split("\n")[0]  # Remove newline character
+            line = line.split(':')  # Split by the separator
+
+            # Must have at exactly two elements (system, features)
+            if len(line) != 2:
+                raise ValueError("Systems file must be in the format 'system_name_1:feature1,feature2,...'")
+            
+            # Check features exist
+            systems_features = [f.lower() for f in line[1].split(',')]
+            for f in systems_features:
+                if f not in features:
+                    raise ValueError("Feature '%s' not found in features file." % f)
+            
+            # Save the system name and its features
+            systems[line[0]] = systems_features
+
+        return systems
+
+    def load_systems(self, required=False):
+        """Load systems file.
+        
+        .txt expected. Format: system_name:feature1,feature2,...
+
+        Parameters
+        ----------
+        required: boolean to check if file is required
+
+        Returns
+        -------
+        systems: dictionary with systems and their features"""
+
+        # Initialise dictionary
+        systems = {}
+
+        # Check if systems file is provided
+        if hasattr(self.args, "systems"):
+            if self.args.systems is not None and not self.check_file(self.args.systems):
+                raise ValueError("Systems file '%s' not found." % self.args.systems)
+            elif required and self.args.systems is None:
+                raise ValueError("Systems file must be provided.")
+            elif self.args.systems is None:
+                return systems
+        else:
+            return systems
+        
+        # Set flag
+        self.flags['systems'] = True
+
+        # Parse file
+        systems = self.system_parser(self.args.systems)
+
+        # Check that the dictionary has at least one entry
+        if len(systems) == 0:
+            raise ValueError("Systems file is probably incorrectly formatted. Check it please.")
+        
+        return systems
+
     def load_data(self, required=None):
         """Load data from csv files.
 
@@ -198,109 +435,23 @@ class Interface:
         if required is None:
             required = []
 
-        # Load FEATURES
-        self.df_features = self.load_csv('features')
-        if self.df_features is not None:
-            if "age" not in self.df_features.columns:
-                raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
-        elif "features" in required:
-            raise ValueError("Features file must be provided.")
+        # Load Features
+        self.df_features = self.load_features(required="features" in required)
 
         # Load covariates
-        self.df_covariates = self.load_csv('covariates')
-        if self.df_covariates is not None:
-            self.flags['covariates'] = True
-        elif "covariates" in required:
-            raise ValueError("Covariates file must be provided.")
+        self.df_covariates = self.load_covariates(required="covariates" in required)
 
-        # Check that covar name is given
-        if self.df_covariates is not None and hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
-            # Force covar_name to be lower case
-            self.args.covar_name = self.args.covar_name.lower()
-            # Check that covariate column exists
-            if self.args.covar_name not in self.df_covariates.columns:
-                raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-            self.flags['covarname'] = True
+        # Load clinical
+        self.df_clinical = self.load_clinical(required="clinical" in required)
 
         # Load factors
-        self.df_factors = self.load_csv('factors')
-        if self.df_factors is None and "factors" in required:
-            raise ValueError("Factors file must be provided.")
+        self.df_factors = self.load_factors(required='factors' in required)
 
-        # Load SYSTEMS file. txt expected. Format: system_name:feature1,feature2,...
-        # Check that the file exists. If not, raise error. If yes, load line by line into a dict
-        if hasattr(self.args, "systems") and self.args.systems is not None:
-            self.dict_systems = {}
-            if not self.check_file(self.args.systems):
-                ValueError("Systems file '%s' not found." % self.args.systems)
-            else:
-                # Parse the systems file line by line
-                self.flags['systems'] = True
-                for line in open(self.args.systems, 'r'):
-                    line = line.split("\n")[0]  # Remove newline character
-                    line = line.split(':')  # Split by the separator
-                    # Check that the line has 2 elements
-                    if len(line) != 2:
-                        raise ValueError("Systems file must be in the format 'system_name_1:feature1,feature2,...'")
-                    # Check that the feature names are in the features file. If not, raise a ValueError
-                    lowercase_features = [f.lower() for f in self.df_features.columns.to_list()]
-                    systems_features = [f.lower() for f in line[1].split(',')]
-                    for f in systems_features:
-                        if f not in lowercase_features:
-                            raise ValueError("Feature '%s' not found in features file." % f)
-                    # Save the system name and its features
-                    self.dict_systems[line[0]] = systems_features
-                # Check that the dictionary has at least one entry
-                if len(self.dict_systems) == 0:
-                    raise ValueError("Systems file is probably incorrectly formatted. Check it please.")
-        elif "systems" in required:
-            raise ValueError("Systems file must be provided.")
+        # Load ages
+        self.df_ages = self.load_ages(required="ages" in required)
 
-        # Load CLINICAL file
-        self.df_clinical = self.load_csv('clinical')
-        if self.df_clinical is not None:
-            # Check that CN in columns
-            if "cn" not in self.df_clinical.columns:
-                raise KeyError("Clinical file must contain a column name 'CN' or any other case-insensitive variation.")
-            # Check datatypes of columns are all boolean
-            elif [self.df_clinical[col].dtype == bool for col in self.df_clinical.columns].count(False) != 0:
-                raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
-            else:
-                self.flags['clinical'] = True
-                self.cn_subjects = self.df_clinical[self.df_clinical["cn"]].index
-        elif "clinical" in required:
-            raise ValueError("Clinical file must be provided.")
-
-        # Load AGES file
-        # Check if already has ages loaded
-        if hasattr(self, "df_ages"):
-            if self.df_ages is None:
-                self.df_ages = self.load_csv('ages')
-            else:
-                # Dont over write if None
-                df = self.load_csv('ages')
-                if df is not None:
-                    self.df_ages = df
-                    warning_message = (
-                        "Ages file already loaded, overwriting with  %s provided file."
-                        % self.args.ages
-                    )
-                    print(warning_message)
-                    warnings.warn(warning_message, category=UserWarning)
-        else:
-            self.df_ages = self.load_csv('ages')
-        # Check that ages file has required columns
-        if self.df_ages is not None:
-            cols = ["age", "predicted_age_", "corrected_age_", "delta_"]
-            for col in self.df_ages.columns.to_list():
-                if not any(col.startswith(c) for c in cols):
-                    raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
-            # Check that there are at least one of each col
-            for col in cols:
-                if not any(c.startswith(col) for c in self.df_ages.columns.to_list()):
-                    raise KeyError("Ages file must contain the following columns %s, or derived names." % cols)
-        elif "ages" in required:
-            raise ValueError("Ages file must be provided.")
+        # Load systems
+        self.dict_systems = self.load_systems(required="systems" in required)
 
         # Remove subjects with missing values
         dfs = [
@@ -353,9 +504,9 @@ class Interface:
                     flag_subjects = False
 
         # TODO only if clinical files found
-        if self.flags['clinical']:
-            print('Controls found in clinical file, selecting controls from clinical file.')
-            print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
+        # if self.flags['clinical']:
+        #    print('Controls found in clinical file, selecting controls from clinical file.')
+        #    print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
 
     def age_distribution(self, ages_dict: dict, name=""):
         """Use visualizer to show age distribution.
