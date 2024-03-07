@@ -44,6 +44,8 @@ class Interface:
     ---------------
     setup(self): Creates required directories and files to store results.
 
+    command_setup(self, dir_path): Create required directories and files to store results for command.
+
     set_flags(self): Set flags.
 
     set_visualizer(self): Set visualizer with output directory.
@@ -51,6 +53,8 @@ class Interface:
     generate_model(self): Set model with parameters.
 
     set_classifier(self): Set classifier with parameters.
+
+    update_params(self): Update initial parameters after load.
 
     check_file(self, file): Check that file exists.
 
@@ -117,13 +121,11 @@ class Interface:
     def setup(self):
         """Create required directories and files to store results."""
 
-        # Create directories
+        # Create directory
         self.dir_path = os.path.join(self.args.output, "ageml")
         if os.path.exists(self.dir_path):
-            warnings.warn(
-                "Directory %s already exists files may be overwritten." % self.dir_path,
-                category=UserWarning,
-            )
+            warnings.warn("Directory %s already exists files may be overwritten." % self.dir_path,
+                          category=UserWarning)
         create_directory(self.dir_path)
 
         # Create .txt log file and log time
@@ -132,10 +134,32 @@ class Interface:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
 
+    def command_setup(self, dir_path):
+        """Create required directories and files to store results for command.
+        
+        Parameters
+        ----------
+        dir_path: directory path to create"""
+
+        # Create directory
+        command_dir = os.path.join(self.dir_path, dir_path)
+        create_directory(command_dir)
+        self.set_visualizer(command_dir)
+
+        # Reset flags
+        self.set_flags()
+
+        # Set initial parameters for model to defaults
+        self.naming = ""
+        self.subject_types = ['cn']
+        self.covars = ['all']
+        self.systems = ['all']
+
     def set_flags(self):
         """Set flags."""
 
-        self.flags = {"clinical": False, "covariates": False, "covarname": False, "systems": False}
+        self.flags = {"clinical": False, "covariates": False, "covarname": False,
+                      "systems": False, "ages": False}
 
     def set_visualizer(self, dir):
         """Set visualizer with output directory."""
@@ -167,6 +191,21 @@ class Interface:
             self.args.classifier_ci)
         
         return classifier
+
+    def update_params(self):
+        """Update initial parameters after load."""
+
+        # Check possible flags of interest
+        if self.flags['clinical']:
+            self.subject_types = self.df_clinical.columns.to_list()
+        if self.flags['covarname']:
+            self.covars = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
+            self.naming += f"_{self.args.covar_name}"
+        if self.flags['systems']:
+            self.systems = list(self.dict_systems.keys())
+            self.naming += "_multisystem"
+        if self.flags['ages']:
+            self.systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
 
     def check_file(self, file):
         """Check that file exists."""
@@ -331,6 +370,7 @@ class Interface:
             return df
 
         # Required columns
+        self.flags['ages'] = True
         req_cols = ["age", "predicted_age", "corrected_age", "delta"]
         cols = [col.lower() for col in df.columns.to_list()]
 
@@ -511,6 +551,9 @@ class Interface:
             elif self.df_ages is not None:
                 index = self.df_ages.index
             self.df_clinical = pd.DataFrame(index=index, columns=['cn'], data=True)
+
+        # Update initial parameters after load
+        self.update_params()
 
     def age_distribution(self, ages_dict: dict, name=""):
         """Use visualizer to show age distribution.
@@ -818,50 +861,31 @@ class Interface:
         print("Running age modelling...")
 
         # Set up directory
-        command_dir = os.path.join(self.dir_path, "model_age")
-        create_directory(command_dir)
-        self.set_visualizer(command_dir)
-
-        # Reset flags
-        self.set_flags()
-
-        # Set initial parameters for model to defaults
-        naming = ""
-        subject_types = ['cn']
-        covars = ['all']
-        systems = ['all']
+        self.command_setup('model_age')
 
         # Load data
         self.load_data(required=["features"])
 
-        # Check possible flags of interest
-        if self.flags['clinical']:
-            subject_types = self.df_clinical.columns.to_list()
-        if self.flags['covarname']:
-            covars = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
-            naming += f"_{self.args.covar_name}"
-        if self.flags['systems']:
-            systems = list(self.dict_systems.keys())
-            naming += "_multisystem"
-
         # Initialized dictionaries
-        dfs = {subject_type: {covar: {system: {} for system in systems} for covar in covars} for subject_type in subject_types}
-        preds = {subject_type: {covar: {system: {} for system in systems} for covar in covars} for subject_type in subject_types}
-        models = {covar: {system: {} for system in systems} for covar in covars}
-        betas = {covar: {system: {} for system in systems} for covar in covars}
+        dfs = {subject_type: {covar: {system: {} for system in self.systems}
+               for covar in self.covars} for subject_type in self.subject_types}
+        preds = {subject_type: {covar: {system: {} for system in self.systems}
+                 for covar in self.covars} for subject_type in self.subject_types}
+        models = {covar: {system: {} for system in self.systems} for covar in self.covars}
+        betas = {covar: {system: {} for system in self.systems} for covar in self.covars}
 
         # Obtain dataframes for each subject type, covariate and system
-        for subject_type in subject_types:
+        for subject_type in self.subject_types:
             # Keep only the subjects of the specified type
             df_sub = self.df_features[self.df_clinical[subject_type]]
-            for covar in covars:
+            for covar in self.covars:
                 # Keep subjects with the specified covariate
                 if self.flags['covarname']:
                     covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
                     df_cov = df_sub[df_sub.index.isin(covar_index)]
                 else:
                     df_cov = df_sub
-                for system in systems:
+                for system in self.systems:
                     # Keep only the features of the system
                     if self.flags['systems']:
                         df_sys = df_cov[['age'] + self.dict_systems[system]]
@@ -871,17 +895,17 @@ class Interface:
                     dfs[subject_type][covar][system] = df_sys
 
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
-        cn_ages = {covar: dfs['cn'][covar][systems[0]]['age'].to_list() for covar in covars}
-        self.age_distribution(cn_ages, name="controls" + naming)
+        cn_ages = {covar: dfs['cn'][covar][self.systems[0]]['age'].to_list() for covar in self.covars}
+        self.age_distribution(cn_ages, name="controls" + self.naming)
 
         # Show features vs age for controls for each system
-        for system in systems:
-            cn_features = {covar: dfs['cn'][covar][system] for covar in covars}
-            self.features_vs_age(cn_features, name="controls" + naming + "_" + system)
+        for system in self.systems:
+            cn_features = {covar: dfs['cn'][covar][system] for covar in self.covars}
+            self.features_vs_age(cn_features, name="controls" + self.naming + "_" + system)
 
         # Model age for each system on controls
-        for covar in covars:
-            for system in systems:
+        for covar in self.covars:
+            for system in self.systems:
                 model_name = f"{covar}_{system}"
                 ageml_model = self.generate_model()
                 models[covar][system], df_pred, betas[covar][system] = self.model_age(dfs['cn'][covar][system],
@@ -891,12 +915,12 @@ class Interface:
                 preds['cn'][covar][system] = df_pred
 
         # Apply to all other subject types
-        for subject_type in subject_types:
+        for subject_type in self.subject_types:
             # Do not apply to controls
             if subject_type == 'cn':
                 continue
-            for covar in covars:
-                for system in systems:
+            for covar in self.covars:
+                for system in self.systems:
                     model_name = f"{covar}_{system}"
                     df_pred = self.predict_age(dfs[subject_type][covar][system], models[covar][system],
                                                betas[covar][system], model_name=model_name)
@@ -906,9 +930,9 @@ class Interface:
 
         # Concatenate predictions into a DataFrame
         stack = []
-        for subject_type in subject_types:
-            for covar in covars:
-                df_systems = pd.concat([preds[subject_type][covar][system] for system in systems], axis=1)
+        for subject_type in self.subject_types:
+            for covar in self.covars:
+                df_systems = pd.concat([preds[subject_type][covar][system] for system in self.systems], axis=1)
                 stack.append(df_systems)
         df_ages = pd.concat(stack, axis=0)
 
@@ -919,7 +943,7 @@ class Interface:
         df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
 
         # Save dataframe to csv
-        filename = "predicted_age" + naming + ".csv"
+        filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def run_factor_correlation(self):
@@ -927,33 +951,18 @@ class Interface:
 
         print("Running factors correlation analysis...")
 
-        # Set up directory
-        command_dir = os.path.join(self.dir_path, "factor_correlation")
-        create_directory(command_dir)
-        self.set_visualizer(command_dir)
-
-        # Reset flags
-        self.set_flags()
-
-        # Initial parameters
-        subject_types = ['cn']
+        # Set up
+        self.command_setup('factor_correlation')
 
         # Load data
         self.load_data(required=["ages", "factors"])
 
-        # Check possible flags of interest
-        if self.flags['clinical']:
-            subject_types = self.df_clinical.columns.to_list()
-
-        # Obtain systems
-        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
-
-        # For each subject type
-        for subject_type in subject_types:
+        # For each subject type and system run correlation analysis
+        for subject_type in self.subject_types:
             dfs_systems = {}
             df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
             df_factors = self.df_factors.loc[df_sub.index]
-            for system in systems:
+            for system in self.systems:
                 df_sys = df_sub[[col for col in df_sub.columns if system in col]]
                 dfs_systems[system] = df_sys
             self.factors_vs_deltas(dfs_systems, df_factors, subject_type)
@@ -963,29 +972,22 @@ class Interface:
 
         print("Running clinical outcomes...")
 
-        # Set up directory
-        command_dir = os.path.join(self.dir_path, "clinical_groups")
-        create_directory(command_dir)
-        self.set_visualizer(command_dir)
-
-        # Reset flags
-        self.set_flags()
+        # Set up
+        self.command_setup('clinical_groups')
 
         # Load data
         self.load_data(required=["ages", "clinical"])
 
         # Obtain dataframes for each group
-        groups = self.df_clinical.columns.to_list()
-        dfs = {g: self.df_ages.loc[self.df_clinical[g]] for g in groups}
+        dfs = {g: self.df_ages.loc[self.df_clinical[g]] for g in self.subject_types}
     
         # Use visualizer to show age distribution per clinical group
-        ages = {g: dfs[g].iloc[:, 0].to_list() for g in groups}
+        ages = {g: dfs[g].iloc[:, 0].to_list() for g in self.subject_types}
         self.age_distribution(ages, name="clinical_groups")
 
         # Show differences in groups per system
-        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
-        for system in systems:
-            dfs_systems = {g: dfs[g][[col for col in dfs[g].columns if system in col]] for g in groups}
+        for system in self.systems:
+            dfs_systems = {g: dfs[g][[col for col in dfs[g].columns if system in col]] for g in self.subject_types}
             self.deltas_by_group(dfs_systems, system=system)
 
     def run_classification(self):
@@ -993,13 +995,8 @@ class Interface:
 
         print("Running classification...")
 
-        # Set up directory
-        command_dir = os.path.join(self.dir_path, "clinical_classify")
-        create_directory(command_dir)
-        self.set_visualizer(command_dir)
-
-        # Reset flags
-        self.set_flags()
+        # Set up
+        self.command_setup('clinical_classify')
 
         # Load data
         self.load_data(required=["ages", "clinical"])
@@ -1009,22 +1006,18 @@ class Interface:
             raise ValueError("Must provide two groups to classify.")
         elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
             raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
-
-        # Obtain dataframes for each clinical group
-        df_group1 = self.df_ages[self.df_clinical[self.args.group1]]
-        df_group2 = self.df_ages[self.df_clinical[self.args.group2]]
-
-        # Obtain systems
-        systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
+        else:
+            df_group1 = self.df_ages[self.df_clinical[self.args.group1]]
+            df_group2 = self.df_ages[self.df_clinical[self.args.group2]]
 
         # Create a classifier for each system
-        for system in systems:
+        for system in self.systems:
             df_group1_system = df_group1[[col for col in df_group1.columns if system in col]]
             df_group2_system = df_group2[[col for col in df_group2.columns if system in col]]
             self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], system=system)
         
         # Create a classifier for all systems
-        if len(systems) > 1:
+        if len(self.systems) > 1:
             self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], system="all")
 
 
