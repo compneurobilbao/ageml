@@ -70,6 +70,8 @@ class Interface:
 
     load_systems(self, required): Load systems file.
 
+    remove_missing_data(self): Remove subjects with missing values.
+
     load_data(self, required): Load data from csv files.
 
     age_distribution(self, dfs, labels=None): Use visualizer to show age distribution.
@@ -420,6 +422,48 @@ class Interface:
         
         return systems
 
+    def remove_missing_data(self):
+        """Remove subjects with missing values."""
+
+        # Dataframes
+        dfs = {'features': self.df_features, 'covariates': self.df_covariates,
+               'factors': self.df_factors, 'clinical': self.df_clinical, 'ages': self.df_ages}
+        dfs = {label: df for label, df in dfs.items() if df is not None}
+
+        # Subjects before removing missing data
+        init_count = {label: len(df) for label, df in dfs.items()}
+        for label in dfs.keys():
+            print("Number of subjects in dataframe %s: %d" % (label, init_count[label]))
+
+        # Check for missing data
+        print('Removing subjects with missing data...')
+        for label, df in dfs.items():
+            missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
+            if missing_subjects.__len__() != 0:
+                warn_message = "Subjects with missing data in %s: %s" % (label, missing_subjects)
+                print(warn_message)
+                warnings.warn(warn_message, category=UserWarning)
+                dfs[label] = df.drop(missing_subjects)
+
+        # Check that all dataframes have the same subjects
+        print('Removing subjects not shared among dataframes...')
+        for l1, df1 in dfs.items():
+            for l2, df2 in dfs.items():
+                if l1 != l2:
+                    non_shared_idx = df1.index[~df1.index.isin(set(df2.index.to_list()))]
+                    if non_shared_idx.__len__() != 0:
+                        warn_message = ("Subjects in dataframe %s not in dataframe %s: %s"
+                                        % (l1, l2, non_shared_idx.to_list()))
+                        print(warn_message)
+                        warnings.warn(warn_message, category=UserWarning)
+                        dfs[l1] = df1.drop(non_shared_idx)
+
+        # Set dataframes
+        for label, df in dfs.items():
+            print("Final number of subjects in dataframe %s: %d (%.2f %% of initial)" %
+                  (label, len(df), len(df) / init_count[label] * 100))
+            setattr(self, f'df_{label}', df)
+
     def load_data(self, required=None):
         """Load data from csv files.
 
@@ -453,60 +497,20 @@ class Interface:
         # Load systems
         self.dict_systems = self.load_systems(required="systems" in required)
 
-        # Remove subjects with missing values
-        dfs = [
-            self.df_features,
-            self.df_covariates,
-            self.df_factors,
-            self.df_clinical,
-            self.df_ages,
-        ]
-        labels = ['features', 'covariates', 'factors', 'clinical', 'ages']
-        self.subjects_missing_data = []
-        for label, df in zip(labels, dfs):
-            if df is not None:
-                print("Number of subjects in dataframe %s: %d" % (label, df.shape[0]))
-                missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
-                self.subjects_missing_data = (
-                    self.subjects_missing_data + missing_subjects
-                )
-                if missing_subjects.__len__() != 0:
-                    warn_message = "Subjects with missing data in %s: %s" % (label, missing_subjects)
-                    print(warn_message)
-                    warnings.warn(warn_message, category=UserWarning)
+        # Removes subjects with missing values
+        self.remove_missing_data()
 
-        # Check that all dataframes have the same subjects
-        for i in range(len(dfs)):
-            for j in range(len(dfs)):
-                if i != j:
-                    if dfs[i] is not None and dfs[j] is not None:
-                        # Find subjects in one dataframe but not the other
-                        non_shared_subjects = [s for s in dfs[i].index.to_list()
-                                               if s not in dfs[j].index.to_list()]
-                        if non_shared_subjects.__len__() != 0:
-                            warn_message = ("Subjects in dataframe %s not in dataframe %s: %s"
-                                            % (labels[i], labels[j], non_shared_subjects))
-                            print(warn_message)
-                            warnings.warn(warn_message, category=UserWarning)
-                            self.subjects_missing_data = (
-                                self.subjects_missing_data + non_shared_subjects
-                            )
-
-        # Remove subjects with missing values
-        self.subjects_missing_data = set(self.subjects_missing_data)
-        flag_subjects = True
-        for df in dfs:
-            if df is not None:
-                df.drop(self.subjects_missing_data, inplace=True, errors="ignore")
-                # Print only once number of final subjects
-                if flag_subjects:
-                    print("Number of subjects without any missing data: %d" % len(df))
-                    flag_subjects = False
-
-        # TODO only if clinical files found
-        # if self.flags['clinical']:
-        #    print('Controls found in clinical file, selecting controls from clinical file.')
-        #    print('Number of CN subjects found: %d' % self.cn_subjects.__len__())
+        # Show number of subjects per clinical category
+        if self.flags['clinical']:
+            for col in self.df_clinical.columns:
+                print("Number of %s subjects: %d" % (col, self.df_clinical[col].sum()))
+        else:
+            print("No clinical information provided using all subjects as CN.")
+            if self.df_features is not None:
+                index = self.df_features.index
+            elif self.df_ages is not None:
+                index = self.df_ages.index
+            self.df_clinical = pd.DataFrame(index=index, columns=['cn'], data=True)
 
     def age_distribution(self, ages_dict: dict, name=""):
         """Use visualizer to show age distribution.
@@ -849,10 +853,7 @@ class Interface:
         # Obtain dataframes for each subject type, covariate and system
         for subject_type in subject_types:
             # Keep only the subjects of the specified type
-            if self.flags['clinical']:
-                df_sub = self.df_features[self.df_clinical[subject_type]]
-            else:
-                df_sub = self.df_features
+            df_sub = self.df_features[self.df_clinical[subject_type]]
             for covar in covars:
                 # Keep subjects with the specified covariate
                 if self.flags['covarname']:
@@ -950,10 +951,7 @@ class Interface:
         # For each subject type
         for subject_type in subject_types:
             dfs_systems = {}
-            if self.flags['clinical']:
-                df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
-            else:
-                df_sub = self.df_ages
+            df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
             df_factors = self.df_factors.loc[df_sub.index]
             for system in systems:
                 df_sys = df_sub[[col for col in df_sub.columns if system in col]]
