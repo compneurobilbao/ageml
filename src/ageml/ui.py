@@ -50,6 +50,10 @@ class Interface:
 
     set_visualizer(self): Set visualizer with output directory.
 
+    set_dict(self): Initialise dictionaries for data storage.
+
+    set_features_dataframes(self): Set features dataframes for each subject type, covariate and system.
+
     generate_model(self): Set model with parameters.
 
     set_classifier(self): Set classifier with parameters.
@@ -84,7 +88,13 @@ class Interface:
 
     model_age(self, df, model): Use AgeML to fit age model with data.
 
+    model_all(self): Model age for each system and covariate on controls.
+
     predict_age(self, df, model, model_name): Use AgeML to predict age with data.
+
+    predict_all(self): Predict age for each system and covariate on all subject types excpet cn.
+
+    save_predictions(self): Save age predictions to csv.
 
     factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
@@ -159,12 +169,42 @@ class Interface:
         """Set flags."""
 
         self.flags = {"clinical": False, "covariates": False, "covarname": False,
-                      "systems": False, "ages": False}
+                      "systems": False, "ages": False, "features": False}
 
     def set_visualizer(self, dir):
         """Set visualizer with output directory."""
 
         self.visualizer = Visualizer(dir)
+
+    def set_dict(self):
+        """Initialise dictionaries for data storage."""
+
+        self.dfs = {subject_type: {covar: {system: {} for system in self.systems}
+                    for covar in self.covars} for subject_type in self.subject_types}
+        self.preds = {subject_type: {covar: {system: {} for system in self.systems}
+                      for covar in self.covars} for subject_type in self.subject_types}
+        self.models = {covar: {system: {} for system in self.systems} for covar in self.covars}
+        self.betas = {covar: {system: {} for system in self.systems} for covar in self.covars}
+
+    def set_features_dataframes(self):
+        """Set features dataframes for each subject type, covariate and system."""
+
+        # Obtain dataframes for each subject type, covariate and system
+        for subject_type in self.subject_types:
+            # Keep only the subjects of the specified type
+            df_sub = self.df_features[self.df_clinical[subject_type]]
+            for covar in self.covars:
+                # Keep subjects with the specified covariate
+                if self.flags['covarname']:
+                    covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
+                    df_cov = df_sub[df_sub.index.isin(covar_index)]
+                else:
+                    df_cov = df_sub
+                for system in self.systems:
+                    # Keep only the features of the system
+                    df_sys = df_cov[['age'] + self.dict_systems[system]]
+                    # Save the dataframe
+                    self.dfs[subject_type][covar][system] = df_sys
 
     def generate_model(self):
         """Set model with parameters."""
@@ -204,6 +244,8 @@ class Interface:
         if self.flags['systems']:
             self.systems = list(self.dict_systems.keys())
             self.naming += "_multisystem"
+        elif self.flags['features']:
+            self.dict_systems['all'] = self.df_features.columns.drop('age').to_list()
         if self.flags['ages']:
             self.systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
 
@@ -261,6 +303,9 @@ class Interface:
         # Check that age column is present
         if "age" not in df:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
+
+        # Set features flag
+        self.flags['features'] = True
 
         return df
 
@@ -676,6 +721,19 @@ class Interface:
 
         return model, df_ages, beta
 
+    def model_all(self):
+        """Model age for each system and covariate on controls."""
+
+        for covar in self.covars:
+            for system in self.systems:
+                model_name = f"{covar}_{system}"
+                ageml_model = self.generate_model()
+                self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
+                                                                                                ageml_model, name=model_name)
+                df_pred = df_pred.drop(columns=['age'])
+                df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                self.preds['cn'][covar][system] = df_pred
+
     def predict_age(self, df, model, beta: np.ndarray = None, model_name: str = None):
         """Use AgeML to predict age with data."""
 
@@ -704,6 +762,43 @@ class Interface:
         df_ages = pd.DataFrame(data, index=df.index, columns=cols)
 
         return df_ages
+
+    def predict_all(self):
+        """Predict age for each system and covariate on all subject types excpet cn."""
+
+        for subject_type in self.subject_types:
+            # Do not apply to controls
+            if subject_type == 'cn':
+                continue
+            for covar in self.covars:
+                for system in self.systems:
+                    model_name = f"{covar}_{system}"
+                    df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
+                                               self.betas[covar][system], model_name=model_name)
+                    df_pred = df_pred.drop(columns=['age'])
+                    df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                    self.preds[subject_type][covar][system] = df_pred
+
+    def save_predictions(self):
+        """Save age predictions to csv."""
+
+        # Concatenate predictions into a DataFrame
+        stack = []
+        for subject_type in self.subject_types:
+            for covar in self.covars:
+                df_systems = pd.concat([self.preds[subject_type][covar][system] for system in self.systems], axis=1)
+                stack.append(df_systems)
+        df_ages = pd.concat(stack, axis=0)
+
+        # Drop duplicates keep first (some subjects may be in more than one subejct type)
+        df_ages = df_ages[~df_ages.index.duplicated(keep='first')]
+
+        # Add age information
+        df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
+
+        # Save dataframe to csv
+        filename = "predicted_age" + self.naming + ".csv"
+        df_ages.to_csv(os.path.join(self.dir_path, filename))
 
     def factors_vs_deltas(self, dict_ages, df_factors, group="", significance=0.05):
         """Calculate correlations between factors and deltas.
@@ -867,84 +962,28 @@ class Interface:
         self.load_data(required=["features"])
 
         # Initialized dictionaries
-        dfs = {subject_type: {covar: {system: {} for system in self.systems}
-               for covar in self.covars} for subject_type in self.subject_types}
-        preds = {subject_type: {covar: {system: {} for system in self.systems}
-                 for covar in self.covars} for subject_type in self.subject_types}
-        models = {covar: {system: {} for system in self.systems} for covar in self.covars}
-        betas = {covar: {system: {} for system in self.systems} for covar in self.covars}
+        self.set_dict()
 
-        # Obtain dataframes for each subject type, covariate and system
-        for subject_type in self.subject_types:
-            # Keep only the subjects of the specified type
-            df_sub = self.df_features[self.df_clinical[subject_type]]
-            for covar in self.covars:
-                # Keep subjects with the specified covariate
-                if self.flags['covarname']:
-                    covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
-                    df_cov = df_sub[df_sub.index.isin(covar_index)]
-                else:
-                    df_cov = df_sub
-                for system in self.systems:
-                    # Keep only the features of the system
-                    if self.flags['systems']:
-                        df_sys = df_cov[['age'] + self.dict_systems[system]]
-                    else:
-                        df_sys = df_cov
-                    # Save the dataframe
-                    dfs[subject_type][covar][system] = df_sys
+        # Set dataframes
+        self.set_features_dataframes()
 
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
-        cn_ages = {covar: dfs['cn'][covar][self.systems[0]]['age'].to_list() for covar in self.covars}
+        cn_ages = {covar: self.dfs['cn'][covar][self.systems[0]]['age'].to_list() for covar in self.covars}
         self.age_distribution(cn_ages, name="controls" + self.naming)
 
         # Show features vs age for controls for each system
         for system in self.systems:
-            cn_features = {covar: dfs['cn'][covar][system] for covar in self.covars}
+            cn_features = {covar: self.dfs['cn'][covar][system] for covar in self.covars}
             self.features_vs_age(cn_features, name="controls" + self.naming + "_" + system)
 
         # Model age for each system on controls
-        for covar in self.covars:
-            for system in self.systems:
-                model_name = f"{covar}_{system}"
-                ageml_model = self.generate_model()
-                models[covar][system], df_pred, betas[covar][system] = self.model_age(dfs['cn'][covar][system],
-                                                                                      ageml_model, name=model_name)
-                df_pred = df_pred.drop(columns=['age'])
-                df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
-                preds['cn'][covar][system] = df_pred
+        self.model_all()
 
-        # Apply to all other subject types
-        for subject_type in self.subject_types:
-            # Do not apply to controls
-            if subject_type == 'cn':
-                continue
-            for covar in self.covars:
-                for system in self.systems:
-                    model_name = f"{covar}_{system}"
-                    df_pred = self.predict_age(dfs[subject_type][covar][system], models[covar][system],
-                                               betas[covar][system], model_name=model_name)
-                    df_pred = df_pred.drop(columns=['age'])
-                    df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
-                    preds[subject_type][covar][system] = df_pred
+        # Predict to all other subject types
+        self.predict_all()
 
-        # Concatenate predictions into a DataFrame
-        stack = []
-        for subject_type in self.subject_types:
-            for covar in self.covars:
-                df_systems = pd.concat([preds[subject_type][covar][system] for system in self.systems], axis=1)
-                stack.append(df_systems)
-        df_ages = pd.concat(stack, axis=0)
-
-        # Drop duplicates keep first (some subjects may be in more than one subejct type)
-        df_ages = df_ages[~df_ages.index.duplicated(keep='first')]
-
-        # Add age information
-        df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
-
-        # Save dataframe to csv
-        filename = "predicted_age" + self.naming + ".csv"
-        df_ages.to_csv(os.path.join(self.dir_path, filename))
+        # Save prediction
+        self.save_predictions()
 
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
