@@ -959,6 +959,7 @@ def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, caps
     # Create temporary directory to store data
     tempDir = tempfile.TemporaryDirectory()
     dummy_cli.args.output = tempDir.name
+    dummy_cli.setup()
     dummy_cli.set_visualizer(tempDir.name)
 
     # Create features csv file
@@ -987,6 +988,7 @@ def test_clinical_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
     # Create temporary directory to store data
     tempDir = tempfile.TemporaryDirectory()
     dummy_cli.args.output = tempDir.name
+    dummy_cli.setup()
     dummy_cli.set_visualizer(tempDir.name)
 
     # Create features csv file
@@ -1078,6 +1080,7 @@ def test_factor_correlation_command_CLI(dummy_cli, ages, factors, monkeypatch, c
     # Create temporary directory to store data
     tempDir = tempfile.TemporaryDirectory()
     dummy_cli.args.output = tempDir.name
+    dummy_cli.setup()
     dummy_cli.set_visualizer(tempDir.name)
 
     # Create features csv file
@@ -1186,6 +1189,7 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     # Create temporary directory to store data
     tempDir = tempfile.TemporaryDirectory()
     dummy_cli.args.output = tempDir.name
+    dummy_cli.setup()
     dummy_cli.set_visualizer(tempDir.name)
 
     # Create features csv file

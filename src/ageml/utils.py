@@ -69,14 +69,29 @@ def significant_markers(bon, fdr):
     return markers
 
 
+class Logger:
+    """Class to log stdout to log.txt."""
+
+    def __init__(self, instance):
+        self.terminal = sys.stdout
+        self.instance = instance
+
+    def write(self, message):
+        self.terminal.write(message)
+        with open(self.instance.log_path, "a") as f:
+            f.write(message)
+
+    def flush(self):
+        pass
+
+
 def log(func):
     """Decorator function to log stdout to log.txt."""
 
     def wrapper(instance, *args, **kwargs):
         # Redirect the standard output to capture print statements
         original_stdout = sys.stdout
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
+        sys.stdout = Logger(instance)
 
         try:
             # Call the function
@@ -84,13 +99,6 @@ def log(func):
         finally:
             # Restore the original standard output
             sys.stdout = original_stdout
-
-        # Log the captured output to the file
-        with open(instance.log_path, "a") as log_file:
-            log_file.write(captured_output.getvalue())
-
-        # Print the captured output to the console
-        print("\n".join(captured_output.getvalue().split("\n")[:-1]))
 
         return result
 

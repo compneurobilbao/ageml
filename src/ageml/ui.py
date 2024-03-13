@@ -139,6 +139,12 @@ class Interface:
         else:
             create_directory(self.dir_path)
 
+        # Create .txt log file for which command run
+        self.log_path = os.path.join(self.dir_path, "log.txt")
+        with open(self.log_path, "a") as f:
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(current_time + "\n")
+
     def command_setup(self, dir_path):
         """Create required directories and files to store results for command.
         
@@ -154,7 +160,7 @@ class Interface:
         else:
             create_directory(command_dir)
 
-        # Create .txt log file and log time
+        # Create .txt log file to save results and log time
         self.log_path = os.path.join(command_dir, "log.txt")
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
