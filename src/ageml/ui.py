@@ -129,20 +129,15 @@ class Interface:
         self.set_visualizer(self.dir_path)
 
     def setup(self):
-        """Create required directories and files to store results."""
+        """Create main directory."""
 
         # Create directory
         self.dir_path = os.path.join(self.args.output, "ageml")
         if os.path.exists(self.dir_path):
             warnings.warn("Directory %s already exists files may be overwritten." % self.dir_path,
                           category=UserWarning)
-        create_directory(self.dir_path)
-
-        # Create .txt log file and log time
-        self.log_path = os.path.join(self.dir_path, "log.txt")
-        with open(self.log_path, "a") as f:
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            f.write(current_time + "\n")
+        else:
+            create_directory(self.dir_path)
 
     def command_setup(self, dir_path):
         """Create required directories and files to store results for command.
@@ -153,7 +148,19 @@ class Interface:
 
         # Create directory
         command_dir = os.path.join(self.dir_path, dir_path)
-        create_directory(command_dir)
+        if os.path.exists(command_dir):
+            warnings.warn("Directory %s already exists files may be overwritten." % command_dir,
+                          category=UserWarning)
+        else:
+            create_directory(command_dir)
+
+        # Create .txt log file and log time
+        self.log_path = os.path.join(command_dir, "log.txt")
+        with open(self.log_path, "a") as f:
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(current_time + "\n")
+        
+        # Set visualizer as command directory
         self.set_visualizer(command_dir)
 
         # Reset flags

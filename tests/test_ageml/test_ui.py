@@ -394,7 +394,7 @@ def test_run_age(dummy_interface, features):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "model_age/log.txt")
     assert os.path.exists(log_path)
 
     # Check for the existence of the output CSV
@@ -431,7 +431,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "model_age/log.txt")
     assert os.path.exists(log_path)
 
     # Check for the existence of the output CSV
@@ -692,7 +692,7 @@ def test_run_factor_correlation(dummy_interface, ages, factors):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "factor_correlation/log.txt")
     assert os.path.exists(log_path)
 
 
@@ -716,7 +716,7 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "factor_correlation/log.txt")
     assert os.path.exists(log_path)
 
 
@@ -739,7 +739,7 @@ def test_run_clinical(dummy_interface, ages, clinical):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "clinical_groups/log.txt")
     assert os.path.exists(log_path)
 
 
@@ -765,7 +765,7 @@ def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "clinical_groups/log.txt")
     assert os.path.exists(log_path)
 
 
@@ -790,7 +790,7 @@ def test_run_classification(dummy_interface, ages, clinical):
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "clinical_classify/log.txt")
     assert os.path.exists(log_path)
 
 
@@ -818,7 +818,7 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "log.txt")
+    log_path = os.path.join(dummy_interface.dir_path, "clinical_classify/log.txt")
     assert os.path.exists(log_path)
 
 
