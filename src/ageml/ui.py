@@ -470,14 +470,19 @@ class Interface:
             if len(line) != 2:
                 raise ValueError("Systems file must be in the format 'system_name_1:feature1,feature2,...'")
             
-            # Check features exist
-            systems_features = [f.lower() for f in line[1].split(',')]
+            # Obtain system features ignoring trailing white spaces
+            system = line[0].strip()
+            systems_features = [f.lower().strip() for f in line[1].split(',')]
+
+            # Check features exist and not repeated
             for f in systems_features:
                 if f not in features:
                     raise ValueError("Feature '%s' not found in features file." % f)
+                elif systems_features.count(f) > 1:
+                    raise ValueError("Feature '%s' is repeated in the system: %s." % (f, system))
             
             # Save the system name and its features
-            systems[line[0]] = systems_features
+            systems[system] = systems_features
 
         return systems
 
@@ -660,7 +665,7 @@ class Interface:
 
         # Select data to visualize
         print("-----------------------------------")
-        print("Features by correlation with Age of Controls")
+        print("Features by correlation with Age of Controls %s" % name)
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Make lists to store covariate info for each dataframe
@@ -949,10 +954,14 @@ class Interface:
 
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
+
+        # Print regressor weights
         if len(delta_cols) > 1:
-            print("Logistic regressor weigths:")
-            for coef, delta in zip(self.classifier.model.coef_[0], delta_cols):
-                print(f"    {delta} = {coef:.3f}")
+            print("Logistic regressor weigths coef (norm_coef):")
+            coefs = self.classifier.model.coef_[0]
+            max_coef = np.max(np.abs(coefs))
+            for coef, delta in zip(coefs, delta_cols):
+                print(f"{delta} = {coef:.3f} ({np.abs(coef)/max_coef:.3f})")
 
         # Visualize AUC
         self.visualizer.classification_auc(y, y_pred, groups, system)

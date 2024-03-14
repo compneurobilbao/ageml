@@ -77,7 +77,7 @@ class Visualizer:
 
         # Plot age distribution
         for Y in Ys:
-            plt.hist(Y, bins=20, alpha=1 / len(Ys))
+            plt.hist(Y, bins=20, alpha=1 / len(Ys), density=True)
         if labels is not None:
             plt.legend(labels)
         plt.xlabel("Age (years)")
