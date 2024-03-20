@@ -328,6 +328,33 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     assert exc_info.value.args[0] == "Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'."
 
 
+def test_load_data_clinical_empty_column(dummy_interface, clinical):
+    # Make a column all False
+    clinical.loc[:, "CN"] = False
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+
+    # Test error risen
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Clinical column cn has no subjects."
+
+
+def test_load_data_clinical_empty_row(dummy_interface, clinical):
+
+    # Make a row all False
+    clinical.loc[2, :] = False
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.clinical = clinical_path
+
+    # Test error risen
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file."
+
+
 def test_load_data_nan_values_warning(dummy_interface, features):
     # Remove from features a few values
     features.loc[2, "feature1"] = np.nan

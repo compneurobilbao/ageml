@@ -380,6 +380,15 @@ class Interface:
         elif [df[col].dtype == bool for col in df.columns].count(False) != 0:
             raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
         
+        # Check that all columns have at least two subjects and show which column
+        for col in df.columns:
+            if df[col].sum() == 0:
+                raise ValueError("Clinical column %s has no subjects." % col)
+
+        # Find rows with all False
+        if not df.any(axis=1).all():
+            raise ValueError("Clinical file contains rows with all False values. Please check the file.")
+
         # Set clinical flag
         self.flags['clinical'] = True
 
@@ -813,6 +822,9 @@ class Interface:
 
         # Add age information
         df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
+
+        # Handle NaNs
+        df_ages = df_ages.fillna("")
 
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
