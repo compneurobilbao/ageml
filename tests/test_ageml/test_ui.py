@@ -418,14 +418,15 @@ def test_run_age(dummy_interface, features):
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs
     ]
+    print(os.listdir(os.path.join(dummy_interface.dir_path, "model_age/figures")))
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "model_age/log.txt")
+    log_path = os.path.join(dummy_interface.command_dir, "log.txt")
     assert os.path.exists(log_path)
 
     # Check for the existence of the output CSV
-    csv_path = os.path.join(dummy_interface.dir_path, "predicted_age.csv")
+    csv_path = os.path.join(dummy_interface.command_dir, "predicted_age.csv")
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
@@ -462,7 +463,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
     assert os.path.exists(log_path)
 
     # Check for the existence of the output CSV
-    csv_path = os.path.join(dummy_interface.dir_path, "predicted_age.csv")
+    csv_path = os.path.join(dummy_interface.dir_path, "model_age/predicted_age.csv")
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
@@ -490,15 +491,15 @@ def test_run_age_cov(dummy_interface, features, covariates):
             "age_bias_correction_m_all",
             "chronological_vs_pred_age_f_all",
             "chronological_vs_pred_age_m_all",
-            f"age_distribution_controls_{dummy_interface.args.covar_name}",
-            f"features_vs_age_controls_{dummy_interface.args.covar_name}_all"]
+            "age_distribution_controls",
+            "features_vs_age_controls_all"]
     # Print files in path
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check for the existence of the output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+                            f"model_age/predicted_age_{dummy_interface.args.covar_name}.csv")
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
@@ -529,14 +530,14 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
             "age_bias_correction_m_all",
             "chronological_vs_pred_age_f_all",
             "chronological_vs_pred_age_m_all",
-            f"age_distribution_controls_{dummy_interface.args.covar_name}",
-            f"features_vs_age_controls_{dummy_interface.args.covar_name}_all"]
+            "age_distribution_controls",
+            "features_vs_age_controls_all"]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check for the existence of the output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+                            f"model_age/predicted_age_{dummy_interface.args.covar_name}.csv")
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
@@ -559,18 +560,18 @@ def test_run_age_systems(dummy_interface, systems, features):
     
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
-    figs = ["age_distribution_controls_multisystem"]
+    figs = ["age_distribution_controls"]
     for system_name in system_names:
         figs.append(f"age_bias_correction_all_{system_name}")
         figs.append(f"chronological_vs_pred_age_all_{system_name}")
-        figs.append(f"features_vs_age_controls_multisystem_{system_name}")
+        figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            "predicted_age_multisystem.csv")
+                            "model_age/predicted_age_multisystem.csv")
     assert os.path.exists(csv_path)
     
     # Check that the output CSV has the right columns
@@ -596,18 +597,18 @@ def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
     
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
-    figs = ["age_distribution_controls_multisystem"]
+    figs = ["age_distribution_controls"]
     for system_name in system_names:
         figs.append(f"age_bias_correction_all_{system_name}")
         figs.append(f"chronological_vs_pred_age_all_{system_name}")
-        figs.append(f"features_vs_age_controls_multisystem_{system_name}")
+        figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            "predicted_age_multisystem.csv")
+                            "model_age/predicted_age_multisystem.csv")
     assert os.path.exists(csv_path)
     
     # Check that the output CSV has the right columns
@@ -635,20 +636,20 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
-    figs = ["age_distribution_controls_gender_multisystem"]
+    figs = ["age_distribution_controls"]
     for system_name in system_names:
         figs.append(f"age_bias_correction_f_{system_name}")
         figs.append(f"age_bias_correction_m_{system_name}")
         figs.append(f"chronological_vs_pred_age_f_{system_name}")
         figs.append(f"chronological_vs_pred_age_m_{system_name}")
-        figs.append(f"features_vs_age_controls_gender_multisystem_{system_name}")
+        figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+                            f"model_age/predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
     assert os.path.exists(csv_path)
     
     # Check that the output CSV has the right columns
@@ -679,20 +680,20 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
-    figs = ["age_distribution_controls_gender_multisystem"]
+    figs = ["age_distribution_controls"]
     for system_name in system_names:
         figs.append(f"age_bias_correction_f_{system_name}")
         figs.append(f"age_bias_correction_m_{system_name}")
         figs.append(f"chronological_vs_pred_age_f_{system_name}")
         figs.append(f"chronological_vs_pred_age_m_{system_name}")
-        figs.append(f"features_vs_age_controls_gender_multisystem_{system_name}")
+        figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
     
     # Check existence of output CSV
     csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+                            f"model_age/predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
     assert os.path.exists(csv_path)
    
     # Check that the output CSV has the right columns
@@ -712,7 +713,7 @@ def test_run_factor_correlation(dummy_interface, ages, factors):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for the existence of the output figures
-    figs = ["factors_vs_deltas_system_cn"]
+    figs = ["factors_vs_deltas_cn"]
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs
     ]
@@ -736,7 +737,7 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
 
     # Check for the existence of the output figures
     figs = []
-    figs.append("factors_vs_deltas_system_cn")
+    figs.append("factors_vs_deltas_cn")
     svg_paths = [
         os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs
     ]

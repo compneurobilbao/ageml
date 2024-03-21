@@ -23,7 +23,7 @@ import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log
+from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
 from ageml.modelling import AgeML, Classifier
 from ageml.processing import find_correlations, covariate_correction
 
@@ -153,21 +153,21 @@ class Interface:
         dir_path: directory path to create"""
 
         # Create directory
-        command_dir = os.path.join(self.dir_path, dir_path)
-        if os.path.exists(command_dir):
-            warnings.warn("Directory %s already exists files may be overwritten." % command_dir,
+        self.command_dir = os.path.join(self.dir_path, dir_path)
+        if os.path.exists(self.command_dir):
+            warnings.warn("Directory %s already exists files may be overwritten." % self.command_dir,
                           category=UserWarning)
         else:
-            create_directory(command_dir)
+            create_directory(self.command_dir)
 
         # Create .txt log file to save results and log time
-        self.log_path = os.path.join(command_dir, "log.txt")
+        self.log_path = os.path.join(self.command_dir, "log.txt")
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
         
         # Set visualizer as command directory
-        self.set_visualizer(command_dir)
+        self.set_visualizer(self.command_dir)
 
         # Reset flags
         self.set_flags()
@@ -637,9 +637,9 @@ class Interface:
 
         # Select age information
         print("-----------------------------------")
-        print("Age distribution %s" % name)
+        print("Age distribution of %s" % name)
         for key, vals in ages_dict.items():
-            print(key)
+            print("[Group: %s]" % key)
             print("Mean age: %.2f" % np.mean(vals))
             print("Std age: %.2f" % np.std(vals))
             print("Age range: [%d,%d]" % (np.min(vals), np.max(vals)))
@@ -664,7 +664,7 @@ class Interface:
         # Use visualiser
         self.visualizer.age_distribution(ages, labels, name)
 
-    def features_vs_age(self, features_dict: dict, significance: float = 0.05, name: str = ""):
+    def features_vs_age(self, features_dict: dict, tag, significance: float = 0.05, ):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
@@ -674,7 +674,7 @@ class Interface:
 
         # Select data to visualize
         print("-----------------------------------")
-        print("Features by correlation with Age of Controls %s" % name)
+        print("Features by correlation with Age of Controls [System: %s]" % tag.system)
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Make lists to store covariate info for each dataframe
@@ -703,9 +703,9 @@ class Interface:
 
         # Use visualizer to show results
         self.visualizer.features_vs_age(X_list, y_list, corr_list, order_list,
-                                        significance_list, feature_names, list(features_dict.keys()), name)
+                                        significance_list, feature_names, tag, list(features_dict.keys()))
 
-    def model_age(self, df, model, name: str = ""):
+    def model_age(self, df, model, tag):
         """Use AgeML to fit age model with data.
 
         Parameters
@@ -716,11 +716,7 @@ class Interface:
 
         # Show training pipeline
         print("-----------------------------------")
-        if name == "":
-            print(f"Training Age Model for all controls ({self.args.model_type})")
-
-        else:
-            print(f"Training Age Model ({self.args.model_type}): {name}")
+        print(f"Training Age Model [Covariate:{tag.covar}, System:{tag.system}]")
         print(model.pipeline)
 
         # Select data to model
@@ -735,8 +731,8 @@ class Interface:
 
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
-        self.visualizer.true_vs_pred_age(y, y_pred, name)
-        self.visualizer.age_bias_correction(y, y_pred, y_corrected, name)
+        self.visualizer.true_vs_pred_age(y, y_pred, tag)
+        self.visualizer.age_bias_correction(y, y_pred, y_corrected, tag)
 
         # Calculate deltas
         deltas = y_corrected - y
@@ -753,20 +749,21 @@ class Interface:
 
         for covar in self.covars:
             for system in self.systems:
-                model_name = f"{covar}_{system}"
+                tag = NameTag(covar=covar, system=system)
                 ageml_model = self.generate_model()
                 self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
-                                                                                                ageml_model, name=model_name)
+                                                                                                ageml_model, tag=tag)
                 df_pred = df_pred.drop(columns=['age'])
                 df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                 self.preds['cn'][covar][system] = df_pred
 
-    def predict_age(self, df, model, beta: np.ndarray = None, model_name: str = None):
+    def predict_age(self, df, model, tag: NameTag, beta: np.ndarray = None,):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
         print("-----------------------------------")
-        print(f"Predicting with Age Model ({self.args.model_type}): {model_name}")
+        print(f"Predicting for {tag.group}")
+        print(f"with Age Model [Covariate:{tag.covar}, System:{tag.system}]")
         print(model.pipeline)
 
         # Select data to model
@@ -799,9 +796,9 @@ class Interface:
                 continue
             for covar in self.covars:
                 for system in self.systems:
-                    model_name = f"{covar}_{system}"
+                    tag = NameTag(group=subject_type, covar=covar, system=system)
                     df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
-                                               self.betas[covar][system], model_name=model_name)
+                                               tag, self.betas[covar][system])
                     df_pred = df_pred.drop(columns=['age'])
                     df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                     self.preds[subject_type][covar][system] = df_pred
@@ -828,9 +825,9 @@ class Interface:
 
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
-        df_ages.to_csv(os.path.join(self.dir_path, filename))
+        df_ages.to_csv(os.path.join(self.command_dir, filename))
 
-    def factors_vs_deltas(self, dict_ages, df_factors, group="", significance=0.05):
+    def factors_vs_deltas(self, dict_ages, df_factors, tag, significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
@@ -841,7 +838,7 @@ class Interface:
 
         # Select age information
         print("-----------------------------------")
-        print("Correlations between lifestyle factors for %s" % group)
+        print("Correlations between lifestyle factors for %s" % tag.group)
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Iterate over systems
@@ -852,7 +849,7 @@ class Interface:
         factor_names = df_factors.columns.to_list()
 
         for system, df in dict_ages.items():
-            print(system)
+            print(f"System: {system}")
 
             # Select data to visualize
             deltas = df['delta_%s' % system].to_numpy()
@@ -872,9 +869,9 @@ class Interface:
                 print("%d. %s %s: %.2f (%.2g)" % (i + 1, significant[o], factor_names[o], corr[o], p_values[o]))
 
         # Use visualizer to show bar graph
-        self.visualizer.factors_vs_deltas(corrs, list(dict_ages.keys()), factor_names, significants, group)
+        self.visualizer.factors_vs_deltas(corrs, list(dict_ages.keys()), factor_names, significants, tag)
 
-    def deltas_by_group(self, dfs, system: str = None, significance: float = 0.05):
+    def deltas_by_group(self, dfs, tag, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
         
         Parameters
@@ -885,14 +882,14 @@ class Interface:
 
         # Select age information
         print("-----------------------------------")
-        print("Delta distribution by group %s" % system)
+        print("Delta distribution for System:%s" % tag.system)
 
         # Obtain deltas means and stds
         deltas = []
         for group, df in dfs.items():
-            vals = df["delta_%s" % system].to_numpy()
+            vals = df["delta_%s" % tag.system].to_numpy()
             deltas.append(vals)
-            print(group)
+            print(f"[Group: {group}]")
             print("Mean delta: %.2f" % np.mean(vals))
             print("Std delta: %.2f" % np.std(vals))
             print("Delta range: [%d, %d]" % (np.min(vals), np.max(vals)))
@@ -926,9 +923,9 @@ class Interface:
                 print(pval_message)
 
         # Use visualizer
-        self.visualizer.deltas_by_groups(deltas, labels, system)
+        self.visualizer.deltas_by_groups(deltas, labels, tag)
 
-    def classify(self, df1, df2, groups, system: str = None, beta: np.ndarray = None):
+    def classify(self, df1, df2, groups, tag, beta: np.ndarray = None):
         """Classify two groups based on deltas.
 
         Parameters
@@ -941,7 +938,7 @@ class Interface:
 
         # Classification
         print("-----------------------------------")
-        print(f"Classification between groups {groups[0]} and {groups[1]} (system: {system})")
+        print(f"Classification between groups {groups[0]} and {groups[1]} [System: {tag.system}]")
 
         # Select delta information
         delta_cols = [col for col in df1.columns if "delta" in col]
@@ -976,7 +973,7 @@ class Interface:
                 print(f"{delta} = {coef:.3f} ({np.abs(coef)/max_coef:.3f})")
 
         # Visualize AUC
-        self.visualizer.classification_auc(y, y_pred, groups, system)
+        self.visualizer.classification_auc(y, y_pred, groups, tag)
 
     @log
     def run_wrapper(self, run):
@@ -1003,12 +1000,12 @@ class Interface:
 
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
         cn_ages = {covar: self.dfs['cn'][covar][self.systems[0]]['age'].to_list() for covar in self.covars}
-        self.age_distribution(cn_ages, name="controls" + self.naming)
+        self.age_distribution(cn_ages, name="Controls")
 
         # Show features vs age for controls for each system
         for system in self.systems:
             cn_features = {covar: self.dfs['cn'][covar][system] for covar in self.covars}
-            self.features_vs_age(cn_features, name="controls" + self.naming + "_" + system)
+            self.features_vs_age(cn_features, tag=NameTag(system=system))
 
         # Model age for each system on controls
         self.model_all()
@@ -1032,13 +1029,14 @@ class Interface:
 
         # For each subject type and system run correlation analysis
         for subject_type in self.subject_types:
+            tag = NameTag(group=subject_type)
             dfs_systems = {}
             df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
             df_factors = self.df_factors.loc[df_sub.index]
             for system in self.systems:
                 df_sys = df_sub[[col for col in df_sub.columns if system in col]]
                 dfs_systems[system] = df_sys
-            self.factors_vs_deltas(dfs_systems, df_factors, subject_type)
+            self.factors_vs_deltas(dfs_systems, df_factors, tag)
 
     def run_clinical(self):
         """Analyse differences between deltas in clinical groups."""
@@ -1056,12 +1054,12 @@ class Interface:
     
         # Use visualizer to show age distribution per clinical group
         ages = {g: dfs[g].iloc[:, 0].to_list() for g in self.subject_types}
-        self.age_distribution(ages, name="clinical_groups")
+        self.age_distribution(ages, name="Clinical Groups")
 
         # Show differences in groups per system
         for system in self.systems:
             dfs_systems = {g: dfs[g][[col for col in dfs[g].columns if system in col]] for g in self.subject_types}
-            self.deltas_by_group(dfs_systems, system=system)
+            self.deltas_by_group(dfs_systems, tag=NameTag(system=system))
 
     def run_classification(self):
         """Run classification between two different clinical groups."""
@@ -1087,11 +1085,11 @@ class Interface:
         for system in self.systems:
             df_group1_system = df_group1[[col for col in df_group1.columns if system in col]]
             df_group2_system = df_group2[[col for col in df_group2.columns if system in col]]
-            self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], system=system)
+            self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], tag=NameTag(system=system))
         
         # Create a classifier for all systems
         if len(self.systems) > 1:
-            self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], system="all")
+            self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], tag=NameTag(system="all"))
 
 
 class CLI(Interface):

@@ -103,3 +103,12 @@ def log(func):
         return result
 
     return wrapper
+
+
+class NameTag:
+    """Class to create unique names for objects."""
+
+    def __init__(self, group="", covar="", system=""):
+        self.group = group
+        self.covar = covar
+        self.system = system
