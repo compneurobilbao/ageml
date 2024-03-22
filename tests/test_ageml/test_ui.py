@@ -748,6 +748,19 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
     assert os.path.exists(log_path)
 
 
+def test_run_age_few_subjects(dummy_interface, features):
+    # Run the modelling pipeline
+    features = features.iloc[:2, :]
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+
+    # Catch error
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.run_age()
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Not enough controls for modelling for each CV split."
+
+
 def test_run_clinical(dummy_interface, ages, clinical):
     # Run the clinical pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
@@ -880,6 +893,23 @@ def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
     assert exc_info.type == ValueError
     error_msg = "Classes must be one of the following: ['%s', '%s']" % ('cn', 'group1')
     assert exc_info.value.args[0] == error_msg
+
+
+def test_classification_few_subjects(dummy_interface, ages, clinical):
+    # Run create classification pipeline with no groups
+    ages = ages.iloc[:2, :]
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.args.group1 = 'cn'
+    dummy_interface.args.group2 = 'group1'
+    
+    # Run classification and capture error
+    with pytest.raises(ValueError) as exc_info:
+        dummy_interface.run_classification()
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Not enough subjects for classification for each CV split."
 
 
 def test_interface_setup_dir_existing_warning(dummy_interface):

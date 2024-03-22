@@ -722,6 +722,10 @@ class Interface:
         # Select data to model
         X, y, _ = feature_extractor(df)
 
+        # Throw error if we do not have enough controls for modelling
+        if X.shape[0] / self.args.model_cv_split < 2:
+            raise ValueError("Not enough controls for modelling for each CV split.")
+
         # Covariate correction
         if self.flags["covariates"] and not self.flags['covarname']:
             print("Covariate effects will be subtracted from features.")
@@ -747,12 +751,15 @@ class Interface:
     def model_all(self):
         """Model age for each system and covariate on controls."""
 
+        # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
                 tag = NameTag(covar=covar, system=system)
+                # Generate model
                 ageml_model = self.generate_model()
                 self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
                                                                                                 ageml_model, tag=tag)
+                # Save predictions
                 df_pred = df_pred.drop(columns=['age'])
                 df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                 self.preds['cn'][covar][system] = df_pred
@@ -952,6 +959,10 @@ class Interface:
         else:
             X = np.concatenate((deltas1, deltas2))
             y = np.concatenate((np.zeros(deltas1.shape[0]), np.ones(deltas2.shape[0])))
+
+        # Throw error if we do not have enough controls for modelling
+        if X.shape[0] / self.args.classifier_cv_split < 2:
+            raise ValueError("Not enough subjects for classification for each CV split.")
 
         # Generate classifier
         self.classifier = self.generate_classifier()
