@@ -834,7 +834,8 @@ class Interface:
         filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.command_dir, filename))
 
-    def factors_vs_deltas(self, dict_ages, df_factors, tag, significance=0.05):
+    def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None,
+                          significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
@@ -854,6 +855,10 @@ class Interface:
         # Facotr information
         factors = df_factors.to_numpy()
         factor_names = df_factors.columns.to_list()
+
+        # Applyc covariate correction
+        if self.flags["covariates"]:
+            factors, _ = covariate_correction(factors, covars, beta)
 
         for system, df in dict_ages.items():
             print(f"System: {system}")
@@ -1038,6 +1043,13 @@ class Interface:
         # Load data
         self.load_data(required=["ages", "factors"])
 
+        # Calculate covariate correction for factors
+        if self.flags["covariates"]:
+            print("Applying covariate correction for factors...")
+            factors = self.df_factors.loc[self.df_clinical['cn']].to_numpy()
+            covars = self.df_covariates.loc[self.df_clinical['cn']].to_numpy()
+            _, beta = covariate_correction(factors, covars)
+
         # For each subject type and system run correlation analysis
         for subject_type in self.subject_types:
             tag = NameTag(group=subject_type)
@@ -1047,7 +1059,11 @@ class Interface:
             for system in self.systems:
                 df_sys = df_sub[[col for col in df_sub.columns if system in col]]
                 dfs_systems[system] = df_sys
-            self.factors_vs_deltas(dfs_systems, df_factors, tag)
+            if self.flags["covariates"]:
+                covars = self.df_covariates.loc[df_sub.index].to_numpy()
+                self.factors_vs_deltas(dfs_systems, df_factors, tag, covars, beta)
+            else:
+                self.factors_vs_deltas(dfs_systems, df_factors, tag)
 
     def run_clinical(self):
         """Analyse differences between deltas in clinical groups."""
