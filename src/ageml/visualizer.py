@@ -158,7 +158,7 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.title(f"Chronological vs Predicted Age \n [Covariate: {tag.covar}, System:{tag.system}")
+        plt.title(f"Chronological vs Predicted Age \n [Covariate: {tag.covar}, System: {tag.system}]")
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
         
@@ -210,7 +210,7 @@ class Visualizer:
         filename = (f"age_bias_correction"
                     f"{'_' + tag.covar if tag.covar != '' else ''}"
                     f"{'_' + tag.system if tag.system != '' else ''}.png")
-        plt.suptitle(f"[Covariate: {tag.covar}, System:{tag.system}\n", y=1.00)
+        plt.suptitle(f"[Covariate: {tag.covar}, System: {tag.system}]\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 

@@ -389,9 +389,15 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
 
 
 def test_age_distribution_warning(dummy_interface):
+    
+    # Create different distributions
     dist1 = np.random.normal(loc=50, scale=1, size=100)
     dist2 = np.random.normal(loc=0, scale=1, size=100)
     dists = {'dist1': dist1, 'dist2': dist2}
+    
+    # Set visualized in temporal directory
+    dummy_interface.set_visualizer(tempfile.mkdtemp())
+
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.age_distribution(dists)
     assert isinstance(warn_record.list[0].message, UserWarning)

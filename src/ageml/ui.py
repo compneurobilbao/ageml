@@ -125,9 +125,6 @@ class Interface:
         # Set up directory for storage of results
         self.setup()
 
-        # Initialise objects form library
-        self.set_visualizer(self.dir_path)
-
     def setup(self):
         """Create main directory."""
 
