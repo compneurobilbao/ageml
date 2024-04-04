@@ -3,28 +3,28 @@
 ---
 This guide shows the guidelines to contribute to this project.
 
-//TODO: Explain which is our commit, merge, push, etc. philosophy (Good-to-knows)
+<!-- TODO: Explain which is our commit, merge, push, etc. philosophy (Good-to-knows) -->
 
 ## Project Structure
 
 The project structure is composed by files which are tracked or ignored by git. Usually only code-related files are
 tracked, while big files, such as images or binaries, should be avoided.
 
-```
+```text
 ageml
 │
 ├── bin                             # Scripts, CLIs and GUIs that use the package. Not packaged. Helpful for debugging.
 │   ├── scripts/
 │   ├── main.py                     # Usually, main entry point for the main application.
-│   └── anything_that_should_not_be_exported_as_a_package
-
+│   └── all_that_should_not_be_in_the_build
 │
 │
-├── data                            # **Not tracked** - where test data should be included in the developers' file systems
+│
+├── data                            # NOT TRACKED BY GIT. Where test data should be included in the developers' file systems
 │   └──.gitkeep
 │
 ├── docs
-│   ├──CONTRIBUTING.md          # Contribution Guidelines.
+│   ├──CONTRIBUTING.md              # Contribution Guidelines.
 │   └──...
 │
 ├── resources                       # Folder with figures and other supporting files 
@@ -55,22 +55,46 @@ ageml
 ├── poetry.lock                     # Dependency for building the system
 ├── noxfile.py                      # Defines the linting, coverage, pytest sessions
 ├── setup.cfg                       # Defines the linting rules
+├── LICENSE                         # Apache 2.0 License file
+├── NOTICE                          # Notice file required by the Apache 2.0 License
 └── .gitignore                      # Files/directories that should not be tracked
 ```
 
-## Prepare and set up the package
+## Developer Setup
 
-To install the required packages for creating the environment with poetry.
-NOTE: If you are using Mac OS, make sure you are installing pip correctly, either by installing python3 via homebrew, or other tested methods.
-`pip install poetry nox nox-poetry`
+### 1. Prepare and set up the package
+
+Poetry is our environment manager and build system. To install the required packages for creating the environment with poetry.
+
+__Note__: If you are using Mac OS, make sure you are installing `pip` correctly, either by installing python3 via homebrew, or other tested methods.
+
+```bash
+pip install poetry nox nox-poetry
+```
 
 If you want the virtual environment of the project to be located in the project root, run this line (make sure you have poetry installed running `poetry --version`):
-`poetry config virtualenvs.in-project true` (makes sense)
 
-Poetry will provide to install in the virtual environment (in developer mode) when running_ `poetry install`.
-A _pyproject.toml_ file is provided for creating the environment using poetry.
+```bash
+poetry config virtualenvs.in-project true
+```
 
-### Activate the environment
+### 2. Clone the git repository
+
+Run in your terminal:
+
+```bash
+git clone https://github.com/compneurobilbao/ageml.git && cd ageml
+```
+
+Once inside the cloned folder (where the _pyproject.toml_ file is located), Poetry will install in the virtual environment (in developer mode) when running:
+
+```bash
+poetry install
+```
+
+Refer to the [poetry documentation](https://python-poetry.org/docs/) for more information.
+
+### 3. Activate the environment
 
 At this point, a virtual environment should have been created automatically with all the required dependencies.
 If this is something that could be launched somehow, activate the poetry shell:
@@ -87,8 +111,8 @@ Or you can also run:
 
 ### Running the tests
 
-Before pushing anything with significant changes in code/functionality, tests should be (ideally) run locally.
-With the environment activated, run:
+Before pushing anything with significant changes in code/functionality, tests should be (ideally) run locally. This can be done using pre-commit hooks, or manually.
+To run the tests manually, first activate the environment, and then run:
 
 ```(bash)
 nox -s test
@@ -103,14 +127,14 @@ nox -s lint
 For coverage:
 
 ```(bash)
-nox -s cover
+nox -s coverage
 ```
 
 ### Commits
 
-We try to follow the [**seven rules of a great Git commit message**](https://cbea.ms/git-commit/).
+We try to follow the [__seven rules of a great Git commit message__](https://cbea.ms/git-commit/).
 
-We like using the following standard prefixes for commit messages:
+We like using the following standard prefixes for commit messages. Rigidness is not of our liking, so as long as the commit message is informative about its changes, you are good to go.
 
 - `BUG:` *Fix for runtime crash or incorrect result*
 - `DOC:` *Documentation change*
@@ -126,4 +150,4 @@ We like using the following standard prefixes for commit messages:
 
 ### Coding Style Guide
 
-// TODO
+We try following the [PEP-8 Standard](https://peps.python.org/pep-0008/), and we use [Flake-8](https://flake8.pycqa.org/en/latest/) for linting the code.
