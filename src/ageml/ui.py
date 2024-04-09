@@ -893,10 +893,22 @@ class Interface:
         print("-----------------------------------")
         print("Delta distribution for System:%s" % tag.system)
 
+        # Apply covariate correction
+        if self.flags["covariates"]:
+            df_cn = dfs['cn']
+            cn_idx = df_cn.index
+            covars = self.df_covariates.loc[cn_idx].to_numpy()
+            deltas = df_cn["delta_%s" % tag.system].to_numpy()
+            _, beta = covariate_correction(deltas, covars)
+
         # Obtain deltas means and stds
         deltas = []
         for group, df in dfs.items():
             vals = df["delta_%s" % tag.system].to_numpy()
+            # Apply covariate correction
+            if self.flags["covariates"]:
+                covars = self.df_covariates.loc[df.index].to_numpy()
+                vals, _ = covariate_correction(vals, covars, beta)
             deltas.append(vals)
             print(f"[Group: {group}]")
             print("Mean delta: %.2f" % np.mean(vals))
@@ -953,6 +965,17 @@ class Interface:
         delta_cols = [col for col in df1.columns if "delta" in col]
         deltas1 = df1[delta_cols].to_numpy()
         deltas2 = df2[delta_cols].to_numpy()
+
+        # Covariate correction
+        if self.flags["covariates"]:
+            df_cn = self.df_ages[self.df_clinical['cn']]
+            covars = self.df_covariates.loc[df_cn.index].to_numpy()
+            deltas_cn = df_cn[delta_cols].to_numpy()
+            _, beta = covariate_correction(deltas_cn, covars)
+            covars1 = self.df_covariates.loc[df1.index].to_numpy()
+            covars2 = self.df_covariates.loc[df2.index].to_numpy()
+            deltas1, _ = covariate_correction(deltas1, covars1, beta)
+            deltas2, _ = covariate_correction(deltas2, covars2, beta)
 
         # Create X and y for classification
         if len(delta_cols) == 1:
