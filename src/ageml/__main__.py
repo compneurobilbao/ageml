@@ -7,5 +7,5 @@ def main():
     ageml.ui.CLI()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

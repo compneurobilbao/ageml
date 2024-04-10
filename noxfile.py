@@ -22,6 +22,6 @@ def coverage(s: Session) -> None:
 
 @session(reuse_venv=True)
 def lint(s: Session) -> None:
-    # Run pyproject-flake8 entrypoint to support reading configuration from pyproject.toml.
+    # Run the ruff linter, way faster than flake8
     s.run("poetry", "install", external=True)
-    s.run("flake8")
+    s.run("ruff", "check")
