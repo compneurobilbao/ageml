@@ -2,7 +2,7 @@
 
 `ageml` is a Python package for Age Modelling with Machine Learning made easy.
 
-[![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/records/10255550)
+[![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.10255549)
 [![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
 [![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=task_5_basic_tests)](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml)
 
@@ -43,7 +43,7 @@ The developer installation is described in the [contribution guidelines](./docs/
 
 ## How to cite
 
-If you use `ageml` in your work, please cite the all-time [Zenodo DOI](https://doi.org/10.5281/zenodo.10255549) 10.5281/zenodo.10255549
+If you use `ageml` in your work, please cite the all-time [Zenodo DOI](https://zenodo.org/doi/10.5281/zenodo.10255549) 10.5281/zenodo.10255549
 
 ## How to Contribute to the project
 
