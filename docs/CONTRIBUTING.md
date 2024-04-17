@@ -27,15 +27,15 @@ ageml
 │   ├──CONTRIBUTING.md              # Contribution Guidelines.
 │   └──...
 │
-├── resources                       # Folder with figures and other supporting files 
+├── resources                       # Folder with figures and other supporting files
 │
 │
 ├── src                             # Contains all the source code of the package
-│    └── ageml                    
-│         ├── ...   
+│    └── ageml
+│         ├── ...
 │         ├── my_awesome_subpkg1
 │         │   ├── __init__.py
-│         │   └── awesome_fun.py                           
+│         │   └── awesome_fun.py
 │         └── my_awesome_subpkg2
 │             ├── __init__.py
 │             └── awesome_fun.py
@@ -49,8 +49,8 @@ ageml
 │       └── test_awesome_fun
 │
 │
-├── .coverage                       # File to measure code coverage, percentage of tested code lines 
-├── README.md                        
+├── .coverage                       # File to measure code coverage, percentage of tested code lines
+├── README.md
 ├── pyproject.toml                  # Requirements for environment settings, packaging and so on
 ├── poetry.lock                     # Dependency for building the system
 ├── noxfile.py                      # Defines the linting, coverage, pytest sessions

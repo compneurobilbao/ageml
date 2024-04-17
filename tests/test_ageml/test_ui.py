@@ -42,14 +42,94 @@ class ExampleArguments(object):
 def features():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                    53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "feature1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.7,
-                         1.4, 2.2, 3.8, 4.5, 5.4, 6.2, 7.8, 8.2, 9.2, 2.6],
-            "feature2": [9.4, 8.2, 7.5, 6.4, 5.3, 4.1, 3.9, 2.2, 1.3, 9.4,
-                         9.3, 8.1, 7.9, 6.5, 5.0, 4.0, 3.7, 2.1, 1.4, 8.3],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "age": [
+                50,
+                55,
+                60,
+                65,
+                70,
+                75,
+                80,
+                85,
+                90,
+                57,
+                53,
+                57,
+                61,
+                65,
+                69,
+                73,
+                77,
+                81,
+                85,
+                89,
+            ],
+            "feature1": [
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                1.7,
+                1.4,
+                2.2,
+                3.8,
+                4.5,
+                5.4,
+                6.2,
+                7.8,
+                8.2,
+                9.2,
+                2.6,
+            ],
+            "feature2": [
+                9.4,
+                8.2,
+                7.5,
+                6.4,
+                5.3,
+                4.1,
+                3.9,
+                2.2,
+                1.3,
+                9.4,
+                9.3,
+                8.1,
+                7.9,
+                6.5,
+                5.0,
+                4.0,
+                3.7,
+                2.1,
+                1.4,
+                8.3,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -60,12 +140,72 @@ def features():
 def factors():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "factor1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.3,
-                        1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 2.2],
-            "factor2": [0.1, 1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4,
-                        4.7, 3.7, 2.3, 1.2, 0.9, 0.3, 0.2, 0.1, 0.1, 0.1],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "factor1": [
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                1.3,
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                2.2,
+            ],
+            "factor2": [
+                0.1,
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                4.7,
+                3.7,
+                2.3,
+                1.2,
+                0.9,
+                0.3,
+                0.2,
+                0.1,
+                0.1,
+                0.1,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -76,10 +216,50 @@ def factors():
 def covariates():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "gender": ['f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f',
-                       'f', 'f', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f'],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "gender": [
+                "f",
+                "m",
+                "m",
+                "m",
+                "f",
+                "f",
+                "f",
+                "m",
+                "m",
+                "f",
+                "f",
+                "f",
+                "m",
+                "m",
+                "f",
+                "f",
+                "f",
+                "m",
+                "m",
+                "f",
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -88,19 +268,79 @@ def covariates():
 
 @pytest.fixture
 def systems():
-    return 'pottongosystem:feature1\nmondongsystem:feature2'
+    return "pottongosystem:feature1\nmondongsystem:feature2"
 
 
 @pytest.fixture
 def clinical():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "CN": [True, False, True, False, True, False, True, False, True, False,
-                   True, False, True, False, True, False, True, False, True, False],
-            "group1": [False, True, False, True, False, True, False, True, False, True,
-                       False, True, False, True, False, True, False, True, False, True],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "CN": [
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+            ],
+            "group1": [
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+                False,
+                True,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -111,16 +351,95 @@ def clinical():
 def ages():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                    53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                              58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                              87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                      2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "age": [
+                50,
+                55,
+                60,
+                65,
+                70,
+                75,
+                80,
+                85,
+                90,
+                57,
+                53,
+                57,
+                61,
+                65,
+                69,
+                73,
+                77,
+                81,
+                85,
+                89,
+            ],
+            "predicted age": [
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                51,
+                58,
+                73,
+                80,
+                89,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+            ],
+            "corrected age": [
+                51,
+                58,
+                73,
+                80,
+                89,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+            ],
+            "delta": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1, 2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
     df.set_index("id", inplace=True)
@@ -131,24 +450,204 @@ def ages():
 def ages_multisystem():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "age_system_pottongosystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                                          53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age_system_pottongosystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                                                    58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age_system_pottongosystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                                                    87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta_system_pottongosystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                                            2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
-            "age_system_mondongsystem": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                                         53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "predicted age_system_mondongsystem": [55, 67, 57, 75, 85, 64, 87, 93, 49, 51,
-                                                   58, 73, 80, 89, 55, 67, 57, 75, 85, 64],
-            "corrected age_system_mondongsystem": [51, 58, 73, 80, 89, 67, 57, 75, 85, 64,
-                                                   87, 93, 49, 55, 67, 57, 75, 85, 64, 87],
-            "delta_system_mondongsystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1,
-                                           2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "age_system_pottongosystem": [
+                50,
+                55,
+                60,
+                65,
+                70,
+                75,
+                80,
+                85,
+                90,
+                57,
+                53,
+                57,
+                61,
+                65,
+                69,
+                73,
+                77,
+                81,
+                85,
+                89,
+            ],
+            "predicted age_system_pottongosystem": [
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                51,
+                58,
+                73,
+                80,
+                89,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+            ],
+            "corrected age_system_pottongosystem": [
+                51,
+                58,
+                73,
+                80,
+                89,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+            ],
+            "delta_system_pottongosystem": [
+                1,
+                -2,
+                3,
+                0,
+                -1,
+                2,
+                1,
+                0,
+                -3,
+                1,
+                2,
+                1,
+                0,
+                -1,
+                2,
+                1,
+                0,
+                -3,
+                1,
+                2,
+            ],
+            "age_system_mondongsystem": [
+                50,
+                55,
+                60,
+                65,
+                70,
+                75,
+                80,
+                85,
+                90,
+                57,
+                53,
+                57,
+                61,
+                65,
+                69,
+                73,
+                77,
+                81,
+                85,
+                89,
+            ],
+            "predicted age_system_mondongsystem": [
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                51,
+                58,
+                73,
+                80,
+                89,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+            ],
+            "corrected age_system_mondongsystem": [
+                51,
+                58,
+                73,
+                80,
+                89,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+                93,
+                49,
+                55,
+                67,
+                57,
+                75,
+                85,
+                64,
+                87,
+            ],
+            "delta_system_mondongsystem": [
+                1,
+                -2,
+                3,
+                0,
+                -1,
+                2,
+                1,
+                0,
+                -3,
+                1,
+                2,
+                1,
+                0,
+                -1,
+                2,
+                1,
+                0,
+                -3,
+                1,
+                2,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -169,7 +668,7 @@ def create_txt(txt, path):
     letters = string.ascii_lowercase
     txt_name = "".join(random.choice(letters) for i in range(20)) + ".txt"
     file_path = os.path.join(path, txt_name)
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         f.write(txt)
     return file_path
 
@@ -228,7 +727,7 @@ def test_interface_setup(dummy_interface):
 def test_load_csv(dummy_interface, features):
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
-    data = dummy_interface.load_csv('features')
+    data = dummy_interface.load_csv("features")
 
     # Check that the data is a pandas dataframe
     assert isinstance(data, pd.core.frame.DataFrame)
@@ -358,7 +857,10 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
     expected = "Subjects in dataframe features not in dataframe clinical: [%d]" % (4)
     assert warn_record.list[0].message.args[0] == expected
     assert isinstance(warn_record.list[1].message, UserWarning)
-    expected = "Subjects in dataframe clinical not in dataframe features: [%d, %d]" % (2, 3)
+    expected = "Subjects in dataframe clinical not in dataframe features: [%d, %d]" % (
+        2,
+        3,
+    )
     assert warn_record.list[1].message.args[0] == expected
 
 
@@ -390,9 +892,7 @@ def test_run_age(dummy_interface, features):
         "features_vs_age_controls",
         "chronological_vs_pred_age_all_all",
     ]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -427,9 +927,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
         "features_vs_age_controls",
         "chronological_vs_pred_age_all_all",
     ]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -456,27 +954,31 @@ def test_run_age_cov(dummy_interface, features, covariates):
     dummy_interface.args.covar_name = "gender"
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = [f"age_bias_correction_{dummy_interface.args.covar_name}_f",
-            f"age_bias_correction_{dummy_interface.args.covar_name}_m",
-            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
-            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
-            f"age_distribution_controls_{dummy_interface.args.covar_name}",
-            f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
+    figs = [
+        f"age_bias_correction_{dummy_interface.args.covar_name}_f",
+        f"age_bias_correction_{dummy_interface.args.covar_name}_m",
+        f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
+        f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
+        f"age_distribution_controls_{dummy_interface.args.covar_name}",
+        f"features_vs_age_controls_{dummy_interface.args.covar_name}",
+    ]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check for the existence of the output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+    csv_path = os.path.join(dummy_interface.dir_path, f"predicted_age_{dummy_interface.args.covar_name}.csv")
     assert os.path.exists(csv_path)
 
     # Check dimension of df_ages
-    assert dummy_interface.df_ages.shape == (features.shape[0], 4)  # always 4 columns in this case
+    assert dummy_interface.df_ages.shape == (
+        features.shape[0],
+        4,
+    )  # always 4 columns in this case
     # Check that the output CSV has the right columns
     df = pd.read_csv(csv_path, header=0, index_col=0)
     assert all([col in df.columns for col in ["age", "predicted age", "corrected age", "delta"]])
@@ -496,23 +998,24 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     dummy_interface.args.clinical = clinical_path
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = [f"age_bias_correction_{dummy_interface.args.covar_name}_f",
-            f"age_bias_correction_{dummy_interface.args.covar_name}_m",
-            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
-            f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
-            f"age_distribution_controls_{dummy_interface.args.covar_name}",
-            f"features_vs_age_controls_{dummy_interface.args.covar_name}"]
+    figs = [
+        f"age_bias_correction_{dummy_interface.args.covar_name}_f",
+        f"age_bias_correction_{dummy_interface.args.covar_name}_m",
+        f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_f",
+        f"chronological_vs_pred_age_{dummy_interface.args.covar_name}_m",
+        f"age_distribution_controls_{dummy_interface.args.covar_name}",
+        f"features_vs_age_controls_{dummy_interface.args.covar_name}",
+    ]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check for the existence of the output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}.csv")
+    csv_path = os.path.join(dummy_interface.dir_path, f"predicted_age_{dummy_interface.args.covar_name}.csv")
     assert os.path.exists(csv_path)
 
     # Check dimension of df_ages
@@ -531,10 +1034,10 @@ def test_run_age_systems(dummy_interface, systems, features):
     dummy_interface.args.systems = systems_path
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
-    
+
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
@@ -545,12 +1048,11 @@ def test_run_age_systems(dummy_interface, systems, features):
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check existence of output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            "predicted_age_multisystem.csv")
+    csv_path = os.path.join(dummy_interface.dir_path, "predicted_age_multisystem.csv")
     assert os.path.exists(csv_path)
-    
+
     # Check dimension of df_ages
     assert dummy_interface.df_ages.shape == (features.shape[0], 4 * len(system_names))
     # Check that the output CSV has the right columns
@@ -570,10 +1072,10 @@ def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
     dummy_interface.args.clinical = clinical_path
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
-    
+
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
@@ -584,12 +1086,11 @@ def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check existence of output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            "predicted_age_multisystem.csv")
+    csv_path = os.path.join(dummy_interface.dir_path, "predicted_age_multisystem.csv")
     assert os.path.exists(csv_path)
-    
+
     # Check dimension of df_ages
     assert dummy_interface.df_ages.shape == (clinical.shape[0], 4 * len(system_names))
     # Check that the output CSV has the right columns
@@ -611,10 +1112,10 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     dummy_interface.args.systems = systems_path
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
-    
+
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls_gender"]
@@ -627,12 +1128,14 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check existence of output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+    csv_path = os.path.join(
+        dummy_interface.dir_path,
+        f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv",
+    )
     assert os.path.exists(csv_path)
-    
+
     # Check dimension of df_ages
     assert dummy_interface.df_ages.shape == (features.shape[0], 4 * len(system_names))
     # Check that the output CSV has the right columns
@@ -657,10 +1160,10 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     dummy_interface.args.clinical = clinical_path
     # Run the modelling pipeline
     dummy_interface.run_age()
-    
+
     # Check for output dir
     assert os.path.exists(dummy_interface.dir_path)
-    
+
     # Systems names
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls_gender"]
@@ -673,12 +1176,14 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
-    
+
     # Check existence of output CSV
-    csv_path = os.path.join(dummy_interface.dir_path,
-                            f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv")
+    csv_path = os.path.join(
+        dummy_interface.dir_path,
+        f"predicted_age_{dummy_interface.args.covar_name}_multisystem.csv",
+    )
     assert os.path.exists(csv_path)
-    
+
     # Check dimension of df_ages
     assert dummy_interface.df_ages.shape == (clinical.shape[0], 4 * len(system_names))
     # Check that the output CSV has the right columns
@@ -699,9 +1204,7 @@ def test_run_factor_correlation(dummy_interface, ages, factors):
 
     # Check for the existence of the output figures
     figs = ["factors_vs_deltas"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -725,9 +1228,7 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
     figs = []
     for system in system_names:
         figs.append(f"factors_vs_deltas_system_{system}")
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -748,9 +1249,7 @@ def test_run_clinical(dummy_interface, ages, clinical):
 
     # Check for the existence of the output figures
     figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -774,9 +1273,7 @@ def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
     figs = ["age_distribution_clinical_groups"]
     for system in system_names:
         figs.append(f"clinical_groups_box_plot_{system}")
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -788,8 +1285,8 @@ def test_run_classification(dummy_interface, ages, clinical):
     # Run the classification pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
-    dummy_interface.args.group1 = 'cn'
-    dummy_interface.args.group2 = 'group1'
+    dummy_interface.args.group1 = "cn"
+    dummy_interface.args.group2 = "group1"
     dummy_interface.args.ages = ages_path
     dummy_interface.args.clinical = clinical_path
     dummy_interface.run_classification()
@@ -799,9 +1296,7 @@ def test_run_classification(dummy_interface, ages, clinical):
 
     # Check for the existence of the output figures
     figs = ["roc_curve_cn_vs_group1"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -813,8 +1308,8 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
     # Run the classification pipeline
     ages_path = create_csv(ages_multisystem, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
-    dummy_interface.args.group1 = 'cn'
-    dummy_interface.args.group2 = 'group1'
+    dummy_interface.args.group1 = "cn"
+    dummy_interface.args.group2 = "group1"
     dummy_interface.args.ages = ages_path
     dummy_interface.args.clinical = clinical_path
     dummy_interface.run_classification()
@@ -827,9 +1322,7 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
     figs = []
     for system in system_names:
         figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs
-    ]
+    svg_paths = [os.path.join(dummy_interface.dir_path, f"figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
     # Check for the existence of the log
@@ -838,7 +1331,6 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
 
 
 def test_classification_group_not_given(dummy_interface, ages, clinical):
-
     # Run create classification pipeline with no groups
     ages_path = create_csv(ages, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
@@ -858,14 +1350,14 @@ def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
     dummy_interface.args.clinical = clinical_path
-    dummy_interface.args.group1 = 'cn'
-    dummy_interface.args.group2 = 'group3'
-    
+    dummy_interface.args.group1 = "cn"
+    dummy_interface.args.group2 = "group3"
+
     # Run classification and capture error
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.run_classification()
     assert exc_info.type == ValueError
-    error_msg = "Classes must be one of the following: ['%s', '%s']" % ('cn', 'group1')
+    error_msg = "Classes must be one of the following: ['%s', '%s']" % ("cn", "group1")
     assert exc_info.value.args[0] == error_msg
 
 
@@ -905,9 +1397,7 @@ def test_force_command_CLI(dummy_cli, monkeypatch):
 
     # Test when no input is given and not required
     monkeypatch.setattr("builtins.input", lambda _: "")
-    error = dummy_cli.force_command(
-        dummy_cli.load_command, "--systems", required=False
-    )
+    error = dummy_cli.force_command(dummy_cli.load_command, "--systems", required=False)
     assert error is None
     assert dummy_cli.line == ["--systems", "None"]
 
@@ -981,14 +1471,32 @@ def test_classification_command_CLI(dummy_cli, ages, clinical, monkeypatch, caps
     clinical_path = create_csv(clinical, tempDir.name)
 
     # Test command
-    responses = ["classification", ages_path, clinical_path, "cn group1", "", "", "", "q"]
+    responses = [
+        "classification",
+        ages_path,
+        clinical_path,
+        "cn group1",
+        "",
+        "",
+        "",
+        "q",
+    ]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
-    assert captured[-1] == 'Finished classification.'
+    assert captured[-1] == "Finished classification."
 
     # Test command with invalid input like incorrect groups
-    responses = ["classification", ages_path, clinical_path, "cn group2", "", "", "", "q"]
+    responses = [
+        "classification",
+        ages_path,
+        clinical_path,
+        "cn group2",
+        "",
+        "",
+        "",
+        "q",
+    ]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1013,7 +1521,7 @@ def test_clinical_command_CLI(dummy_cli, ages, clinical, monkeypatch, capsys):
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
-    assert captured[-1] == 'Finished clinical analysis.'
+    assert captured[-1] == "Finished clinical analysis."
 
     # Test command with invalid input like incorrect file
     responses = ["clinical", ages_path, ages_path, "", "q"]
@@ -1106,7 +1614,7 @@ def test_factor_correlation_command_CLI(dummy_cli, ages, factors, monkeypatch, c
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
-    assert captured[-1] == 'Finished factor correlation analysis.'
+    assert captured[-1] == "Finished factor correlation analysis."
 
     # Test command with invalid input like incorrect file
     responses = ["factor_correlation", ages_path, empty_path, "", "", "q"]
@@ -1211,18 +1719,46 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
-    assert captured[-1] == 'Finished running age modelling.'
+    assert captured[-1] == "Finished running age modelling."
 
     # Test command with invalid input like incorrect model parameters
-    responses = ["model_age", features_path, "", "", "", "", "", "linear_reg fitIntercept=True", "", "", "", "", "q"]
+    responses = [
+        "model_age",
+        features_path,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "linear_reg fitIntercept=True",
+        "",
+        "",
+        "",
+        "",
+        "q",
+    ]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
     print(captured)
     assert "Model parameters are not valid for linear_reg model. Check them in the sklearn documentation." in captured
-    
+
     # Test command with hyperparameter optimization and feature_extension
-    responses = ["model_age", features_path, "", "", "", "", "", "linear_svr", "", "2", "3", "", "q"]
+    responses = [
+        "model_age",
+        features_path,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "linear_svr",
+        "",
+        "2",
+        "3",
+        "",
+        "q",
+    ]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1273,7 +1809,7 @@ def test_model_command_CLI(dummy_cli):
     assert error is None
     assert dummy_cli.args.model_type == "linear_reg"
     assert dummy_cli.args.model_params == {"fit_intercept": True}
-    
+
     # Test passing correctly formated, but invalid sklearn model params
     dummy_cli.line = "linear_reg my_super_fake_intercept=True"
     error = dummy_cli.model_command()
@@ -1353,12 +1889,12 @@ def test_scaler_command_CLI(dummy_cli):
     assert error is None
     assert dummy_cli.args.scaler_type == "standard"
     assert dummy_cli.args.scaler_params == {"with_mean": 0}
-    
+
     # Test passing correctly formated, but invalid sklearn scaler params
     dummy_cli.line = "standard my_super_fake_mean=0"
     error = dummy_cli.scaler_command()
     assert error == "Scaler parameters are not valid for standard scaler. Check them in the sklearn documentation."
-    
+
     # Test passing correctly formated, but invalid sklearn scaler params in another type of scaler
     dummy_cli.line = "minmax my_super_fake_mean=0"
     error = dummy_cli.scaler_command()
@@ -1368,18 +1904,18 @@ def test_scaler_command_CLI(dummy_cli):
 def test_hyperparameter_tuning_CLI(dummy_cli):
     dummy_cli.args.model_type = "linear_svr"
     dummy_cli.args.model_params = {"C": 1, "epsilon": 0.1}
-    
+
     # Test no hyperparameters
     dummy_cli.line = ""
     error = dummy_cli.hyperparameter_grid_command()
     assert error is None
     assert dummy_cli.args.hyperparameter_tuning == 0
-    
+
     # Test passing too many arguments
     dummy_cli.line = "1 2 3"
     error = dummy_cli.hyperparameter_grid_command()
     assert error == "Must provide only one integer, or none."
-    
+
     # Test passing non integer arguments
     dummy_cli.line = "1.5"
     error = dummy_cli.hyperparameter_grid_command()
@@ -1395,12 +1931,12 @@ def test_feature_extension_CLI(dummy_cli):
     error = dummy_cli.feature_extension_command()
     assert error is None
     assert dummy_cli.args.feature_extension == 0
-    
+
     # Test passing too many arguments
     dummy_cli.line = "1 2 3"
     error = dummy_cli.feature_extension_command()
     assert error == "Must provide only one integer, or none."
-    
+
     # Test passing non integer arguments
     dummy_cli.line = "1.5"
     error = dummy_cli.feature_extension_command()
@@ -1408,7 +1944,7 @@ def test_feature_extension_CLI(dummy_cli):
     dummy_cli.line = "mondong"
     error = dummy_cli.feature_extension_command()
     assert error == "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
-    
+
     # Test with a correct argument
     dummy_cli.line = "2"
     error = dummy_cli.feature_extension_command()

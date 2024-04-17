@@ -1,6 +1,5 @@
 import os
 import importlib.resources as pkg_resources
-from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 
@@ -10,9 +9,11 @@ from ageml import datasets
 datasets_path = str(pkg_resources.files(datasets))
 
 
-def generate_synthetic_features(file_name: str = "synthetic_features.csv",
-                                N: int = 100,
-                                datasets_path: str = datasets_path) -> None:  # pragma: no cover
+def generate_synthetic_features(
+    file_name: str = "synthetic_features.csv",
+    N: int = 100,
+    datasets_path: str = datasets_path,
+) -> None:  # pragma: no cover
     """Generate synthetic features file and save it to a CSV file. For testing purposes and playing around.
 
     Args:
@@ -23,7 +24,7 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     # FEATURES #
     # 100 samples, 3 variables (X1, X2, X3)
     N = 100
-    
+
     # Set random seed for the noise
     np.random.seed(1)
     # Generate the normally distributed random variables
@@ -39,13 +40,13 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     # Concatenate
     synth_data = np.concatenate([X.transpose(), Y.reshape([N, 1])], axis=1)
     # Save into dataframe
-    df_synth_features = pd.DataFrame(synth_data, columns=['X1', 'X2', 'X3', 'age'])
-    
+    df_synth_features = pd.DataFrame(synth_data, columns=["X1", "X2", "X3", "age"])
+
     # Set a some values to NaN
-    df_synth_features.loc[37, 'X1'] = np.NaN
-    df_synth_features.loc[53, 'X3'] = np.NaN
-    df_synth_features.loc[92, 'age'] = np.NaN
-    
+    df_synth_features.loc[37, "X1"] = np.NaN
+    df_synth_features.loc[53, "X3"] = np.NaN
+    df_synth_features.loc[92, "age"] = np.NaN
+
     # Sanity check in file_name
     if ".csv" not in file_name:
         file_name += ".csv"
@@ -56,9 +57,11 @@ def generate_synthetic_features(file_name: str = "synthetic_features.csv",
     df_synth_features.to_csv(save_path, index=True)
 
 
-def generate_synthetic_covariates(file_name: str = "synthetic_covariates.csv",
-                                  N: int = 100,
-                                  datasets_path: str = datasets_path) -> None:  # pragma: no cover
+def generate_synthetic_covariates(
+    file_name: str = "synthetic_covariates.csv",
+    N: int = 100,
+    datasets_path: str = datasets_path,
+) -> None:  # pragma: no cover
     """Generate synthetic covariates file and save it to a CSV file. For testing purposes and playing around.
 
     Args:
@@ -81,7 +84,7 @@ def generate_synthetic_covariates(file_name: str = "synthetic_covariates.csv",
     data = {
         "biological_gender": [gender_mapping[val] for val in biological_gender_values],
         "education_years": education_years_values,
-        "ethnicity": [ethnicity_mapping[val] for val in ethnicity_values]
+        "ethnicity": [ethnicity_mapping[val] for val in ethnicity_values],
     }
 
     df_covariates = pd.DataFrame(data)
@@ -91,9 +94,11 @@ def generate_synthetic_covariates(file_name: str = "synthetic_covariates.csv",
     df_covariates.to_csv(save_path, index=True)
 
 
-def generate_synthetic_factors(file_name: str = "synthetic_factors.csv",
-                               N: int = 100,
-                               datasets_path: str = datasets_path) -> None:  # pragma: no cover
+def generate_synthetic_factors(
+    file_name: str = "synthetic_factors.csv",
+    N: int = 100,
+    datasets_path: str = datasets_path,
+) -> None:  # pragma: no cover
     """Generate synthetic factors file and save it to a CSV file. For testing purposes and playing around.
 
     Args:
@@ -106,10 +111,11 @@ def generate_synthetic_factors(file_name: str = "synthetic_factors.csv",
 
 
 # TODO: Test this class
-class SyntheticData():
+class SyntheticData:
     """
     Class for storing the synthetic features that were generated in the generate_synthetic_data function. To be imported.
     """
+
     def __init__(self, type: str):
         """Initialization of the class. Loads the data from the CSV file.
 

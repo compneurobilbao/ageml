@@ -45,7 +45,7 @@ def covariate_correction(X, Z, beta=None):
         raise ValueError("NaN entrie(s) found in X.")
     elif beta is not None and any(np.isnan(beta.flatten())):
         raise ValueError("NaN entrie(s) found in Z.")
-    
+
     # Check shapes
     if X.shape[0] != Z.shape[0]:
         raise ValueError("X and Z must have the same number of rows.")
