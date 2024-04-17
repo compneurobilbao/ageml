@@ -6,7 +6,12 @@ import string
 import sys
 import tempfile
 
-from ageml.commands import model_age, factor_correlation, clinical_groups, clinical_classify
+from ageml.commands import (
+    model_age,
+    factor_correlation,
+    clinical_groups,
+    clinical_classify,
+)
 
 
 # Fake data for testing
@@ -14,14 +19,94 @@ from ageml.commands import model_age, factor_correlation, clinical_groups, clini
 def features():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57,
-                    53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
-            "feature1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.7,
-                         1.4, 2.2, 3.8, 4.5, 5.4, 6.2, 7.8, 8.2, 9.2, 2.6],
-            "feature2": [9.4, 8.2, 7.5, 6.4, 5.3, 4.1, 3.9, 2.2, 1.3, 9.4,
-                         9.3, 8.1, 7.9, 6.5, 5.0, 4.0, 3.7, 2.1, 1.4, 8.3],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "age": [
+                50,
+                55,
+                60,
+                65,
+                70,
+                75,
+                80,
+                85,
+                90,
+                57,
+                53,
+                57,
+                61,
+                65,
+                69,
+                73,
+                77,
+                81,
+                85,
+                89,
+            ],
+            "feature1": [
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                1.7,
+                1.4,
+                2.2,
+                3.8,
+                4.5,
+                5.4,
+                6.2,
+                7.8,
+                8.2,
+                9.2,
+                2.6,
+            ],
+            "feature2": [
+                9.4,
+                8.2,
+                7.5,
+                6.4,
+                5.3,
+                4.1,
+                3.9,
+                2.2,
+                1.3,
+                9.4,
+                9.3,
+                8.1,
+                7.9,
+                6.5,
+                5.0,
+                4.0,
+                3.7,
+                2.1,
+                1.4,
+                8.3,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -32,12 +117,72 @@ def features():
 def factors():
     df = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "factor1": [1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 1.3,
-                        1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4, 2.2],
-            "factor2": [0.1, 1.3, 2.2, 3.9, 4.1, 5.7, 6.4, 7.5, 8.2, 9.4,
-                        4.7, 3.7, 2.3, 1.2, 0.9, 0.3, 0.2, 0.1, 0.1, 0.1],
+            "id": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
+            "factor1": [
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                1.3,
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                2.2,
+            ],
+            "factor2": [
+                0.1,
+                1.3,
+                2.2,
+                3.9,
+                4.1,
+                5.7,
+                6.4,
+                7.5,
+                8.2,
+                9.4,
+                4.7,
+                3.7,
+                2.3,
+                1.2,
+                0.9,
+                0.3,
+                0.2,
+                0.1,
+                0.1,
+                0.1,
+            ],
         }
     )
     df.set_index("id", inplace=True)
@@ -102,13 +247,22 @@ def test_model_age(temp_dir, features):
     features_data_path = create_csv(features, temp_dir.name)
 
     # Create systems arguments
-    sys.argv = ["",
-                "-o", temp_dir.name,
-                "-f", features_data_path,
-                "-m", "linear_reg", "fit_intercept=True",
-                "-s", "standard",
-                "--cv", "5", "0"]
-    
+    sys.argv = [
+        "",
+        "-o",
+        temp_dir.name,
+        "-f",
+        features_data_path,
+        "-m",
+        "linear_reg",
+        "fit_intercept=True",
+        "-s",
+        "standard",
+        "--cv",
+        "5",
+        "0",
+    ]
+
     # Run function
     model_age()
 
@@ -121,11 +275,8 @@ def test_factor_correlation(temp_dir, ages, factors):
     factors_data_path = create_csv(factors, temp_dir.name)
 
     # Create systems arguments
-    sys.argv = ["",
-                "-o", temp_dir.name,
-                "-a", age_data_path,
-                "-f", factors_data_path]
-    
+    sys.argv = ["", "-o", temp_dir.name, "-a", age_data_path, "-f", factors_data_path]
+
     # Run function
     factor_correlation()
 
@@ -138,11 +289,16 @@ def test_clinical_groups(temp_dir, ages, clinical):
     clinical_data_path = create_csv(clinical, temp_dir.name)
 
     # Create systems arguments
-    sys.argv = ["",
-                "-o", temp_dir.name,
-                "-a", age_data_path,
-                "--clinical", clinical_data_path]
-    
+    sys.argv = [
+        "",
+        "-o",
+        temp_dir.name,
+        "-a",
+        age_data_path,
+        "--clinical",
+        clinical_data_path,
+    ]
+
     # Run function
     clinical_groups()
 
@@ -155,11 +311,18 @@ def test_clinical_classify(temp_dir, ages, clinical):
     clinical_data_path = create_csv(clinical, temp_dir.name)
 
     # Create systems arguments
-    sys.argv = ["",
-                "-o", temp_dir.name,
-                "-a", age_data_path,
-                "--clinical", clinical_data_path,
-                "--groups", "CN", "group1"]
-    
+    sys.argv = [
+        "",
+        "-o",
+        temp_dir.name,
+        "-a",
+        age_data_path,
+        "--clinical",
+        clinical_data_path,
+        "--groups",
+        "CN",
+        "group1",
+    ]
+
     # Run function
     clinical_classify()

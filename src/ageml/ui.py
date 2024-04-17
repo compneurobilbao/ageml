@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
-import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
@@ -227,7 +226,7 @@ class Interface:
             self.args.model_cv_split,
             self.args.model_seed,
             self.args.hyperparameter_tuning,
-            self.args.feature_extension
+            self.args.feature_extension,
         )
         return model
 
@@ -238,8 +237,9 @@ class Interface:
             self.args.classifier_cv_split,
             self.args.classifier_seed,
             self.args.classifier_thr,
-            self.args.classifier_ci)
-        
+            self.args.classifier_ci,
+        )
+
         return classifier
 
     def update_params(self):
@@ -653,8 +653,7 @@ class Interface:
                 for j in range(i + 1, len(labels)):
                     t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
                     if p_val < 0.05:
-                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (
-                            labels[i], labels[j], t_stat, p_val)
+                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (labels[i], labels[j], t_stat, p_val)
                         print(warn_message)
                         warnings.warn(warn_message, category=UserWarning)
 
@@ -681,20 +680,28 @@ class Interface:
             # Extract features
             X, y, feature_names = feature_extractor(df)
             # Covariate correction
-            if self.flags["covariates"] and not self.flags['covarname']:
+            if self.flags["covariates"] and not self.flags["covarname"]:
                 print("Covariate effects will be subtracted from features.")
                 X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(X, y)
             # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
             significant = significant_markers(reject_bon, reject_fdr)
             # Print results
             for idx, order_element in enumerate(order):
-                print("%d.%s %s %s: %.2f (%.2g)" % (idx + 1, label, significant[order_element],
-                                                    feature_names[order_element], corr[order_element],
-                                                    p_values[order_element]))
+                print(
+                    "%d.%s %s %s: %.2f (%.2g)"
+                    % (
+                        idx + 1,
+                        label,
+                        significant[order_element],
+                        feature_names[order_element],
+                        corr[order_element],
+                        p_values[order_element],
+                    )
+                )
             # Append all the values
             X_list.append(X), y_list.append(y), corr_list.append(corr), order_list.append(order), significance_list.append(significant)
 
@@ -724,7 +731,7 @@ class Interface:
             raise ValueError("Not enough controls for modelling for each CV split.")
 
         # Covariate correction
-        if self.flags["covariates"] and not self.flags['covarname']:
+        if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
             X, beta = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
         else:
@@ -774,7 +781,7 @@ class Interface:
         X, y, _ = feature_extractor(df)
 
         # Covariate correction
-        if self.flags["covariates"] and not self.flags['covarname']:
+        if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
             X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy(), beta)
 
@@ -868,8 +875,8 @@ class Interface:
             corrs.append(corr)
 
             # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
             significant = significant_markers(reject_bon, reject_fdr)
             significants.append(significant)
 
@@ -882,7 +889,7 @@ class Interface:
 
     def deltas_by_group(self, dfs, tag, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
-        
+
         Parameters
         ----------
         df: list of dataframes with delta information; shape=(n,m)
@@ -925,10 +932,10 @@ class Interface:
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
                 p_vals_matrix[i, j] = p_val
-        
+
         # Reject null hypothesis of no correlation
-        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
-        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='fdr_bh')
+        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method="bonferroni")
+        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method="fdr_bh")
         reject_bon = reject_bon.reshape((len(deltas), len(deltas)))
         reject_fdr = reject_fdr.reshape((len(deltas), len(deltas)))
 
@@ -938,7 +945,10 @@ class Interface:
             significant = significant_markers(reject_bon[i], reject_fdr[i])
             for j in range(i + 1, len(deltas)):
                 pval_message = "p-value between %s and %s: %.2g" % (
-                    labels[i], labels[j], p_vals_matrix[i, j])
+                    labels[i],
+                    labels[j],
+                    p_vals_matrix[i, j],
+                )
                 if significant[j] != "":
                     pval_message = significant[j] + " " + pval_message
                 print(pval_message)
@@ -994,7 +1004,12 @@ class Interface:
 
         # Apply covariate correction
         if self.flags["covariates"]:
-            Z = np.concatenate((self.df_covariates.loc[df1.index].to_numpy(), self.df_covariates.loc[df2.index].to_numpy()))
+            Z = np.concatenate(
+                (
+                    self.df_covariates.loc[df1.index].to_numpy(),
+                    self.df_covariates.loc[df2.index].to_numpy(),
+                )
+            )
             X, _ = covariate_correction(X, Z, beta)
 
         # Calculate classification
@@ -1243,7 +1258,7 @@ class CLI(Interface):
         """Reset arguments to None except output directory."""
 
         for attr_name in vars(self.args):
-            if attr_name != 'output':
+            if attr_name != "output":
                 setattr(self.args, attr_name, None)
 
     def command_interface(self):
@@ -1291,13 +1306,13 @@ class CLI(Interface):
         if len(self.line) == 0:
             error = "Must provide two arguments or None."
             return error
-        
+
         # Set defaults
-        if len(self.line) == 1 and self.line[0] == 'None':
+        if len(self.line) == 1 and self.line[0] == "None":
             self.args.classifier_thr = 0.5
             self.args.classifier_ci = 0.95
             return error
-        
+
         # Check wether items are floats
         for item in self.line:
             try:
@@ -1305,7 +1320,7 @@ class CLI(Interface):
             except ValueError:
                 error = "Parameters must be floats."
                 return error
-            
+
         # Set parameters
         if len(self.line) == 2:
             self.args.classifier_thr = float(self.line[0])
@@ -1314,9 +1329,9 @@ class CLI(Interface):
             error = "Too many values to unpack."
         elif len(self.line) == 1:
             error = "Must provide two arguments or None."
-        
+
         return error
-            
+
     def classification_command(self):
         """Run classification."""
 
@@ -1338,7 +1353,7 @@ class CLI(Interface):
 
         # Ask for CV parameters adn classifier parameters
         print("CV parameters (Default: nº splits=5 and seed=0):")
-        self.force_command(self.cv_command, 'classifier')
+        self.force_command(self.cv_command, "classifier")
         print("Classifier parameters (Default: thr=0.5 and ci=0.95):")
         self.force_command(self.classifier_command)
 
@@ -1349,7 +1364,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running classification."
-        
+
         return error
 
     def clinical_command(self):
@@ -1374,7 +1389,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running clinical analysis."
-        
+
         return error
 
     def covar_command(self):
@@ -1410,18 +1425,18 @@ class CLI(Interface):
             return error
 
         # Check that first argument is model or classifier
-        if self.line[0] not in ['model', 'classifier']:
+        if self.line[0] not in ["model", "classifier"]:
             error = "Must provide either model or classifier flag."
             return error
-        elif self.line[0] == 'model':
-            arg_type = 'model'
-        elif self.line[0] == 'classifier':
-            arg_type = 'classifier'
+        elif self.line[0] == "model":
+            arg_type = "model"
+        elif self.line[0] == "classifier":
+            arg_type = "classifier"
 
         # Set default values
-        if len(self.line) == 2 and self.line[1] == 'None':
-            setattr(self.args, arg_type + '_cv_split', 5)
-            setattr(self.args, arg_type + '_seed', 0)
+        if len(self.line) == 2 and self.line[1] == "None":
+            setattr(self.args, arg_type + "_cv_split", 5)
+            setattr(self.args, arg_type + "_seed", 0)
             return error
 
         # Check wether items are integers
@@ -1432,11 +1447,11 @@ class CLI(Interface):
 
         # Set CV parameters
         if len(self.line) == 2:
-            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
-            setattr(self.args, arg_type + '_seed', 0)
+            setattr(self.args, arg_type + "_cv_split", int(self.line[1]))
+            setattr(self.args, arg_type + "_seed", 0)
         elif len(self.line) == 3:
-            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
-            setattr(self.args, arg_type + '_seed', int(self.line[2]))
+            setattr(self.args, arg_type + "_cv_split", int(self.line[1]))
+            setattr(self.args, arg_type + "_seed", int(self.line[2]))
         else:
             error = "Too many values to unpack."
 
@@ -1464,7 +1479,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running factor correlation analysis."
-        
+
         return error
 
     def group_command(self):
@@ -1558,7 +1573,7 @@ class CLI(Interface):
         """Run age modelling."""
 
         error = None
-        
+
         # Ask for input files
         print("Input features file path (Required):")
         self.force_command(self.load_command, "--features", required=True)
@@ -1582,7 +1597,7 @@ class CLI(Interface):
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
         print("Example: 10 0")
-        self.force_command(self.cv_command, 'model')
+        self.force_command(self.cv_command, "model")
         print("Polynomial feature extension degree. Leave blank if not desired (Default: 0, max. 3)")
         print("Example: 3")
         self.force_command(self.feature_extension_command)
@@ -1597,7 +1612,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running age modelling."
-        
+
         return error
 
     def model_command(self):
@@ -1733,7 +1748,7 @@ class CLI(Interface):
         if len(self.line) == 0 or self.line[0] == "None":
             self.args.feature_extension = 0
             return error
-        
+
         # Check whether items are integers
         if not self.line[0].isdigit():
             error = "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
@@ -1759,7 +1774,7 @@ class CLI(Interface):
         if len(self.line) == 0 or self.line[0] == "None":
             self.args.hyperparameter_tuning = 0
             return error
-        
+
         # Check whether items are integers
         if not self.line[0].isdigit():
             error = "The number of points in the hyperparameter grid must be a positive, nonzero integer."

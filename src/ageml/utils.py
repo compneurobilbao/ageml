@@ -11,7 +11,7 @@ def insert_newlines(text, nwords):
         raise ValueError("Cannot insert newlines every 0 words.")
 
     words = text.split()
-    new_lines = [words[i: i + nwords] for i in range(0, len(words), nwords)]
+    new_lines = [words[i : i + nwords] for i in range(0, len(words), nwords)]
     return "\n".join([" ".join(line) for line in new_lines])
 
 
@@ -57,7 +57,7 @@ def significant_markers(bon, fdr):
     ----------
     bon: 1D-Array with boolean values for Bonferroni correction; shape=m
     fdr: 1D-Array with boolean values for FDR correction; shape=m"""
-    
+
     markers = []
     for i in range(len(bon)):
         if bon[i]:
