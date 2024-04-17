@@ -4,7 +4,7 @@
 
 [![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.10255549)
 [![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
-[![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=task_5_basic_tests)](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml)
+[![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=main)](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml)
 
 ## Background
 
