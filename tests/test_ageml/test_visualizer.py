@@ -7,7 +7,7 @@ from statsmodels.stats.multitest import multipletests
 import ageml.modelling as modelling
 import ageml.ui as ui
 import ageml.utils as utils
-from ageml.utils import significant_markers
+from ageml.utils import significant_markers, NameTag
 import ageml.visualizer as viz
 from ageml.datasets import SyntheticData
 from .test_modelling import AgeMLTest
@@ -61,11 +61,11 @@ def test_features_vs_age(dummy_viz, np_test_data):
     reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
     reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
     significant = significant_markers(reject_bon, reject_fdr)
-    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"],
+    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"], tag=NameTag(),
                               labels=["all"])
     
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age.png")
+    svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age_controls.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
@@ -77,7 +77,7 @@ def test_true_vs_pred_age(dummy_viz, np_test_data, dummy_ml):
     Y = np_test_data[:, -1]
     # Fit Age
     Y_pred, _ = dummy_ml.fit_age(X, Y)
-    dummy_viz.true_vs_pred_age(Y, Y_pred)
+    dummy_viz.true_vs_pred_age(Y, Y_pred, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/chronological_vs_pred_age.png")
     assert os.path.exists(svg_path)
@@ -91,7 +91,7 @@ def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
     Y = np_test_data[:, -1]
     # Fit Age
     Y_pred, Y_corrected = dummy_ml.fit_age(X, Y)
-    dummy_viz.age_bias_correction(Y, Y_pred, Y_corrected)
+    dummy_viz.age_bias_correction(Y, Y_pred, Y_corrected, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/age_bias_correction.png")
     assert os.path.exists(svg_path)
@@ -106,7 +106,7 @@ def test_factors_vs_deltas(dummy_viz):
     labels = ["factor1", "factor2", "factor3", "factor4", "factor5"]
     markers = [['', '*', '', '*', '**']]
     # Plot
-    dummy_viz.factors_vs_deltas(corrs, groups, labels, markers)
+    dummy_viz.factors_vs_deltas(corrs, groups, labels, markers, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas.png")
     assert os.path.exists(svg_path)
@@ -125,7 +125,7 @@ def test_deltas_by_groups(dummy_viz, np_test_data, dummy_ml):
     # Create dummy labels
     labels = ["Group 1"]
     # Plot
-    dummy_viz.deltas_by_groups([deltas], labels)
+    dummy_viz.deltas_by_groups([deltas], labels, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/clinical_groups_box_plot.png")
     assert os.path.exists(svg_path)
@@ -139,7 +139,7 @@ def test_classification_auc(dummy_viz):
     y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.6, 0.8, 0.9, 0.99]
     groups = ["group1", "group2"]
     # Plot
-    dummy_viz.classification_auc(y, y_pred, groups)
+    dummy_viz.classification_auc(y, y_pred, groups, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/roc_curve_%s_vs_%s.png" % (groups[0], groups[1]))
     assert os.path.exists(svg_path)

@@ -16,7 +16,7 @@ import os
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import roc_curve, roc_auc_score
 
-from .utils import insert_newlines, create_directory
+from .utils import insert_newlines, create_directory, NameTag
 
 plt.rcParams.update({'font.size': 12})
 
@@ -77,17 +77,20 @@ class Visualizer:
 
         # Plot age distribution
         for Y in Ys:
-            plt.hist(Y, bins=20, alpha=1 / len(Ys))
+            plt.hist(Y, bins=20, alpha=1 / len(Ys), density=True)
         if labels is not None:
             plt.legend(labels)
         plt.xlabel("Age (years)")
         plt.ylabel("Count")
         plt.title("Age distribution")
-        plt.savefig(os.path.join(self.path_for_fig, "age_distribution_%s.png" % name))
+
+        # Save fig
+        filename = "age_distribution_" + name.lower().replace(" ", "_") + ".png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers,
-                        feature_names, labels: list = None, name: str = ""):
+                        feature_names, tag: NameTag = None, labels: list = None):
         """Plot correlation between features and age.
 
         Parameters
@@ -133,17 +136,15 @@ class Visualizer:
                 title += "\n$\\rho_{%s}$: %s%.3f" % (label, markers[n][o], corr[n][o])
             ax.set_title(title)
             ax.legend(labels)
-            plt.suptitle(f"Features vs. Age\n{name}", y=0.99)
+            plt.suptitle(f"Features vs. Age\n{tag.system}", y=0.99)
         plt.tight_layout()
 
-        if name == "":
-            filename = "features_vs_age.png"
-        else:
-            filename = f"features_vs_age_{name}.png"
+        # Save file
+        filename = f"features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def true_vs_pred_age(self, y_true, y_pred, name: str = ""):
+    def true_vs_pred_age(self, y_true, y_pred, tag: NameTag):
         """Plot true age vs predicted age.
 
         Parameters
@@ -157,17 +158,18 @@ class Visualizer:
         # Plot true vs predicted age
         plt.scatter(y_true, y_pred)
         plt.plot(age_range, age_range, color="k", linestyle="dashed")
-        plt.title(f"Chronological vs Predicted Age \n{name}")
+        plt.title(f"Chronological vs Predicted Age \n [Covariate: {tag.covar}, System: {tag.system}]")
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
-        if name == "":
-            filename = "chronological_vs_pred_age.png"
-        else:
-            filename = f"chronological_vs_pred_age_{name}.png"
+        
+        # Save file
+        filename = (f"chronological_vs_pred_age"
+                    f"{'_' + tag.covar if tag.covar != '' else ''}"
+                    f"{'_' + tag.system if tag.system != '' else ''}.png")
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def age_bias_correction(self, y_true, y_pred, y_corrected, name: str = ""):
+    def age_bias_correction(self, y_true, y_pred, y_corrected, tag: NameTag):
         """Plot before and after age bias correction procedure.
 
         Parameters
@@ -203,15 +205,16 @@ class Visualizer:
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
         plt.tight_layout()
-        if name == "":
-            filename = "age_bias_correction.png"
-        else:
-            filename = f"age_bias_correction_{name}.png"
-            plt.suptitle(f"{name}\n", y=1.00)
+        
+        # Save file
+        filename = (f"age_bias_correction"
+                    f"{'_' + tag.covar if tag.covar != '' else ''}"
+                    f"{'_' + tag.system if tag.system != '' else ''}.png")
+        plt.suptitle(f"[Covariate: {tag.covar}, System: {tag.system}]\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def factors_vs_deltas(self, corrs, groups, labels, markers, system: str = None):
+    def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.
         
         Parameters
@@ -254,18 +257,13 @@ class Visualizer:
 
         # Save figure
         fig.set_size_inches(10, 5 * len(corrs))
-        if system is not None:
-            fig.suptitle(f"Correlation of factors with age deltas. System: {system}", y=0.99)
-            filename = f"factors_vs_deltas_system_{system}.png"
-        else:
-            fig.suptitle("Correlation of factors with age deltas.", y=0.99)
-            filename = "factors_vs_deltas.png"
-
+        fig.suptitle(f"Correlation of factors with age deltas of {tag.group}", y=0.99)
+        filename = f"factors_vs_deltas{'_' + tag.group if tag.group != '' else ''}.png"
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def deltas_by_groups(self, deltas, labels, system: str = None):
+    def deltas_by_groups(self, deltas, labels, tag: NameTag):
         """Plot box plot for deltas in each group.
 
         Parameters
@@ -288,17 +286,14 @@ class Visualizer:
             plt.scatter(x, vals, color=self.cmap(clevel))
         plt.xlabel("Gruop")
         plt.ylabel("Delta")
-        if system is None:
-            filename = "clinical_groups_box_plot.png"
-            plt.suptitle("Age Delta by clinical group.")
-        else:
-            filename = f"clinical_groups_box_plot_{system}.png"
-            plt.suptitle(f"Age Delta by clinical group. System: {system}", y=0.99)
 
+        # Save file
+        filename = f"clinical_groups_box_plot{'_' + tag.system if tag.system != '' else ''}.png"
+        plt.suptitle(f"Age Delta by clinical group. System: {tag.system}", y=0.99)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def classification_auc(self, y, y_pred, groups, system: str = None):
+    def classification_auc(self, y, y_pred, groups, tag: NameTag):
         """Plot ROC curve.
 
         Parameters
@@ -318,10 +313,9 @@ class Visualizer:
         plt.ylabel('True Positive Rate')
         plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
         plt.legend(loc="lower right")
-        if system is not None:
-            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}_{system}.png"
-            plt.suptitle(f"System: {system}")
-        else:
-            filename = f"roc_curve_{groups[0]}_vs_{groups[1]}.png"
+        
+        # Save file
+        filename = f"roc_curve_{groups[0]}_vs_{groups[1]}{'_' + tag.system if tag.system != '' else ''}.png"
+        plt.suptitle(f"System: {tag.system}")
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()

@@ -204,8 +204,6 @@ class AgeML:
                 elif hyperparam_types[hyperparam_name] == 'float':
                     param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0], bounds[1],
                                                                           int(self.hyperparameter_tuning))
-        else:
-            print("No hyperparameter grid was built for the selected model. No hyperparameters available.")
         self.hyperparameter_grid = param_grid
 
     def set_scaler(self, norm, **kwargs):
@@ -352,6 +350,8 @@ class AgeML:
             print(f"Hyperoptimization best parameters: {opt_pipeline.best_params_}")
             # Set best parameters in pipeline
             self.pipeline.set_params(**opt_pipeline.best_params_)
+        else:
+            print("No hyperparameter optimization was performed.")
 
         # Apply cross-validation
         kf = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
