@@ -109,6 +109,6 @@ class NameTag:
     """Class to create unique names for objects."""
 
     def __init__(self, group="", covar="", system=""):
-        self.group = group
-        self.covar = covar
-        self.system = system
+        self.group = str(group)
+        self.covar = str(covar)
+        self.system = str(system)
