@@ -62,6 +62,9 @@ ageml
 
 ## Developer Setup
 
+This section explains how to set up a local development environment for contributing to the project.
+
+Another section will be added in the future explaining how to setup a Docker container for development.
 ### 1. Prepare and set up the package
 
 Poetry is our environment manager and build system. To install the required packages for creating the environment with poetry.

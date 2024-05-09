@@ -35,7 +35,20 @@ Note that `ageml` is under active development, but still not continuously deploy
 Then `cd` into the `ageml` folder, and install with pip:
 `pip install .`
 
-A Docker image version will be released in the short term.
+#### Docker
+There are two Dockerfiles available for `ageml`.
+- One that installs `ageml` from pip -> ./Dockerfile
+- Another one for the latest version of `ageml`, which installs it from the GitHub repo `main` branch.
+
+To build the pip image, run:
+`docker build -t ageml:pip -f Dockerfile <path_to_directory_containing_Dockerfile>`
+To build the latest image, run:
+`docker build -t ageml:latest -f Dockerfile <path_to_directory_containing_Dockerfile>`
+
+To run the container, run:
+`docker run -it ageml:<tag_of_your_image>`
+
+A developer Dockerfile will be available in the future for contributing to the project in a containerized fashion.
 
 #### Developer installation
 
