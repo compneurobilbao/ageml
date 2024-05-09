@@ -2,9 +2,7 @@
 
 `ageml` is a Python package for Age Modelling with Machine Learning made easy.
 
-[![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.10255549)
-[![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml)
-![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=main)
+[![Zenodo doi badge](https://img.shields.io/badge/DOI-10.5281/zenodo.10255549-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.10255549) [![PyPI version](https://badge.fury.io/py/ageml.svg)](https://badge.fury.io/py/ageml) ![Lint Test Coverage](https://github.com/compneurobilbao/AgeModelling/actions/workflows/lint_test_coverage.yml/badge.svg?branch=main)
 
 ## Background
 
@@ -14,6 +12,7 @@ Age Modelling consists of trying to predict the chronological age of an organism
 
 ![pipelines_figure](./resources/figs/pipeline.png)
 `ageml` allows age modelling with a set of simple-to-use CLIs that produce comprehensive figures of the modelling steps and detailed logs for exploring the effectiveness of the trained models.
+
 There are 4 main CLIs:
 
 - __model_age__: It takes a features file (in CSV format) from a set of subjects, which includes their chronological age, and it trains a model for predicting it. Categorical Covariates can be included to train models per category, using a CSV file. Systems, feature groups that correspond to a congruent physiological system (cardiac, muskuloskeletal, gastric, etc.) can also be included to train models per system using a simple .txt file. A CSV file is returned with the predicted ages, and the corresponding _age delta_. Also, a simple correlation analysis is performed to check how the input features correlate with the chronological age. The age distribution of the cohort is plotted too.
@@ -25,15 +24,14 @@ There are 4 main CLIs:
 
 #### Using `pip` (recommended)
 
-From your terminal, for basic installation, run:
-`pip install ageml`
+From your terminal, for basic installation, run: `pip install ageml`
 
 #### Cloning from Github
 
-Note that `ageml` is under active development, but still not continuously deployed, so the latest version might not be available in PyPI. If you want to use the latest version, you can clone the repository and install it locally. From your terminal, run:
-`git clone https://github.com/compneurobilbao/ageml.git`
-Then `cd` into the `ageml` folder, and install with pip:
-`pip install .`
+Note that `ageml` is under active development, but still not continuously deployed, so the latest version might not be available in PyPI. If you want to use the latest version, you can clone the repository and install it locally. 
+
+From your terminal, run: `git clone https://github.com/compneurobilbao/ageml.git` 
+Then `cd` into the `ageml` folder, and install with pip:`pip install .`
 
 A Docker image version will be released in the short term.
 
@@ -43,7 +41,21 @@ The developer installation is described in the [contribution guidelines](./docs/
 
 ## How to cite
 
-If you use `ageml` in your work, please cite the all-time [Zenodo DOI](https://zenodo.org/doi/10.5281/zenodo.10255549) 10.5281/zenodo.10255549
+If you use `ageml` in your work, please cite the all-time:
+
+J. Garcia Condado, I. Tellaetxe Elorriaga, J. M. Cortes, and A. Erramuzpe, ‘AgeML: Age modelling with Machine Learning’. BioRxiv. May 05, 2024. doi: 10.1101/2024.05.02.592130.
+
+```
+
+@article{ageml_2024,
+    title = {AgeML: Age modelling with Machine Learning},
+    author = {Garcia Condado, Jorge and Tellaetxe Elorriaga, Iñigo  and Cortes, Jesus M. and Erramuzpe, Asier},
+    url = {http://biorxiv.org/lookup/doi/10.1101/2024.05.02.592130},
+    doi = {10.1101/2024.05.02.592130},
+    month = may,
+    year = {2024},
+}
+```
 
 ## How to Contribute to the project
 
