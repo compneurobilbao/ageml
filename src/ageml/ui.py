@@ -314,6 +314,11 @@ class Interface:
         if "age" not in df:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
 
+        # Check that columns are dtypes float or int
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                raise TypeError("Columns must be float or int type: %s" % (col))
+
         # Set features flag
         self.flags['features'] = True
 
