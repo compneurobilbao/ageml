@@ -343,6 +343,12 @@ class Interface:
             raise ValueError("Covariates file must be provided.")
         elif df is None:
             return df
+
+
+        # Chek that columns are dtypes float or int
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                raise TypeError("Columns must be float or int type: %s" % (col))
         
         # Set covariate flag
         self.flags['covariates'] = True
@@ -416,6 +422,11 @@ class Interface:
         elif df is None:
             return df
         
+        # Check that columns are dtypes float or int
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                raise TypeError("Columns must be float or int type: %s" % (col))
+
         return df
 
     def load_ages(self, required=False):
@@ -437,6 +448,11 @@ class Interface:
             raise ValueError("Ages file must be provided.")
         elif df is None:
             return df
+        
+        # Check that columns are dtypes float or int
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                raise TypeError("Columns must be float or int type: %s" % (col))
 
         # Required columns
         self.flags['ages'] = True
