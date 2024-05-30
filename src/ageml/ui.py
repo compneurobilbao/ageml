@@ -344,7 +344,6 @@ class Interface:
         elif df is None:
             return df
 
-
         # Chek that columns are dtypes float or int
         for col in df.columns:
             if df[col].dtype not in [float, int]:
@@ -390,8 +389,8 @@ class Interface:
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
-            if df[col].sum() == 0:
-                raise ValueError("Clinical column %s has no subjects." % col)
+            if df[col].sum() < 2:
+                raise ValueError("Clinical column %s has less than two subjects." % col)
 
         # Find rows with all False
         if not df.any(axis=1).all():
