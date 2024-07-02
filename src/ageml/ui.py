@@ -343,11 +343,6 @@ class Interface:
             raise ValueError("Covariates file must be provided.")
         elif df is None:
             return df
-
-        # Chek that columns are dtypes float or int
-        for col in df.columns:
-            if df[col].dtype not in [float, int]:
-                raise TypeError("Columns must be float or int type: %s" % (col))
         
         # Set covariate flag
         self.flags['covariates'] = True
@@ -358,7 +353,7 @@ class Interface:
             self.args.covar_name = self.args.covar_name.lower()
             if self.args.covar_name not in df:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-        
+     
         return df
 
     def load_clinical(self, required=False):

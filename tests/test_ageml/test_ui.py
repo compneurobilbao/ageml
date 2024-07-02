@@ -261,6 +261,34 @@ def test_load_data_age_not_column(dummy_interface, features):
     assert exc_info.value.args[0] == error_message
 
 
+def test_load_data_not_float(dummy_interface, features):
+    # Change item to string
+    features.loc[2, "feature1"] = "asdf"
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = 'Columns must be float or int type: feature1'
+    assert exc_info.value.args[0] == error_message
+
+
+def test_load_factors_not_float(dummy_interface, factors):
+    # Change item to string
+    factors.loc[2, "factor1"] = "asdf"
+    factors_path = create_csv(factors, dummy_interface.dir_path)
+    dummy_interface.args.factors = factors_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = 'Columns must be float or int type: factor1'
+    assert exc_info.value.args[0] == error_message
+
+
 def test_load_data_cn_not_column(dummy_interface, clinical):
     # Test no CN column in clinical
     clinical.drop("CN", axis=1, inplace=True)
@@ -338,7 +366,7 @@ def test_load_data_clinical_empty_column(dummy_interface, clinical):
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == ValueError
-    assert exc_info.value.args[0] == "Clinical column cn has no subjects."
+    assert exc_info.value.args[0] == "Clinical column cn has less than two subjects."
 
 
 def test_load_data_clinical_empty_row(dummy_interface, clinical):
