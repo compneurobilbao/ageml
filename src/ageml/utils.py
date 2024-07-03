@@ -1,6 +1,5 @@
 """Utility functions for the AgeML package."""
 
-import io
 import os
 import sys
 

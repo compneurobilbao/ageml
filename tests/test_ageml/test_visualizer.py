@@ -3,9 +3,6 @@ import os
 import shutil
 from statsmodels.stats.multitest import multipletests
 
-import ageml.modelling as modelling
-import ageml.ui as ui
-import ageml.utils as utils
 from ageml.utils import significant_markers, NameTag
 import ageml.visualizer as viz
 from ageml.datasets import SyntheticData
@@ -60,9 +57,8 @@ def test_features_vs_age(dummy_viz, np_test_data):
     reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method="bonferroni")
     reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method="fdr_bh")
     significant = significant_markers(reject_bon, reject_fdr)
-    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"], tag=NameTag(),
-                              labels=["all"])
-    
+    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"], tag=NameTag(), labels=["all"])
+
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age_controls.png")
     assert os.path.exists(svg_path)
