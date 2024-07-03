@@ -46,7 +46,7 @@ flake8-bugbear = "*"
 flake8-broken-line = "*"
 flake8-comprehensions = "*"
 # Formatting
-black = {version = "^24.3.0", allow-prereleases = true}
+ruff = "^0.3.0"
 
 [tool.poetry.scripts]
 ageml = "ageml.__main__:main"
@@ -57,3 +57,18 @@ clinical_classify = "ageml.commands:clinical_classify"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.0"
 
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.lint]
+ignore = ["F403",# Imported but unused
+"F403",# Unable to detect undefined names
+"B028",# No explicit stacklevel keyword argument found
+"W293",# blank line contains whitespace (I don't like this rule, interferes with good function indentation)
+"C419",# Unnecessary list comprehension passed to all() prevents short-circuiting - rewrite as a generator
+"E702",# Multiple statements on one line (semicolon)
+"B023",# Function definition does not bind loop variable 'some_var_name'.
+]
+
+[tool.coverage.run]
+plugins = ["coverage_conditional_plugin"]
