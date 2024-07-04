@@ -97,10 +97,10 @@ def clinical():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "CN": [True, False, True, False, True, False, True, False, True, False,
-                   True, False, True, False, True, False, True, False, True, False],
-            "group1": [False, True, False, True, False, True, False, True, False, True,
-                       False, True, False, True, False, True, False, True, False, True],
+            "CN": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+                   1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+            "group1": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+                       0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
         }
     )
     df.set_index("id", inplace=True)
@@ -350,15 +350,15 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     dummy_interface.args.clinical = clinical_path
 
     # Test error risen
-    with pytest.raises(TypeError) as exc_info:
+    with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
-    assert exc_info.value.args[0] == "Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'."
+    assert exc_info.type == ValueError
+    assert exc_info.value.args[0] == "Columns: ['cn', 'group1'] contains values other than 0 and 1."
 
 
 def test_load_data_clinical_empty_column(dummy_interface, clinical):
     # Make a column all False
-    clinical.loc[:, "CN"] = False
+    clinical.loc[:, "CN"] = 0
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -372,7 +372,7 @@ def test_load_data_clinical_empty_column(dummy_interface, clinical):
 def test_load_data_clinical_empty_row(dummy_interface, clinical):
 
     # Make a row all False
-    clinical.loc[2, :] = False
+    clinical.loc[2, :] = 0
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 

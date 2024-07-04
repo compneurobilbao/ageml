@@ -379,8 +379,20 @@ class Interface:
         # Check that CN in columns and boolean type
         if "cn" not in df:
             raise KeyError("Clinical file must contain a column name 'CN' or any other case-insensitive variation.")
-        elif [df[col].dtype == bool for col in df.columns].count(False) != 0:
-            raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
+
+        # Iterate over each column in the DataFrame
+        error_cols = []
+        for column in df.columns:
+            # Check if all values in the column are either 0 or 1
+            if df[column].isin([0, 1]).all():
+                # Convert the column to boolean type
+                df[column] = df[column].astype(bool)
+            else:
+                error_cols.append(column)
+
+        # Raise an error if the column contains values other than 0 or 1
+        if error_cols != []:
+            raise ValueError(f"Columns: {error_cols} contains values other than 0 and 1.")
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
