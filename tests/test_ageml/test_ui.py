@@ -78,8 +78,8 @@ def covariates():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "gender": ['f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f',
-                       'f', 'f', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f'],
+            "sex": [0, 1, 1, 1, 0, 0, 0, 1, 1, 0,
+                    0, 0, 1, 1, 0, 0, 0, 1, 1, 0],
         }
     )
     df.set_index("id", inplace=True)
@@ -291,6 +291,20 @@ def test_load_factors_not_float(dummy_interface, factors):
     assert exc_info.value.args[0] == error_message
 
 
+def test_load_data_covariates_not_float(dummy_interface, covariates):
+    # Change item to string
+    covariates.loc[2, 'sex'] = 'asdf'
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Columns must be float or int type: ['sex']"
+    assert exc_info.value.args[0] == error_message
+
+
 def test_load_data_ages_not_float(dummy_interface, ages):
     # Change item to string
     ages.loc[2, "predicted_age_all"] = "asdf"
@@ -368,9 +382,9 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     dummy_interface.args.clinical = clinical_path
 
     # Test error risen
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == ValueError
+    assert exc_info.type == TypeError
     assert exc_info.value.args[0] == "Columns: ['cn', 'group1'] contains values other than 0 and 1."
 
 
@@ -531,7 +545,7 @@ def test_run_age_cov(dummy_interface, features, covariates):
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Run the modelling pipeline
     dummy_interface.run_age()
     
@@ -539,10 +553,10 @@ def test_run_age_cov(dummy_interface, features, covariates):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_0_all",
+            "age_bias_correction_1_all",
+            "chronological_vs_pred_age_1_all",
+            "chronological_vs_pred_age_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     # Print files in path
@@ -567,7 +581,7 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Clinical file
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
@@ -578,10 +592,10 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_0_all",
+            "age_bias_correction_1_all",
+            "chronological_vs_pred_age_0_all",
+            "chronological_vs_pred_age_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -676,7 +690,7 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Systems
     systems_path = create_txt(systems, dummy_interface.dir_path)
     dummy_interface.args.systems = systems_path
@@ -690,10 +704,10 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_0_{system_name}")
+        figs.append(f"age_bias_correction_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -717,7 +731,7 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Systems
     systems_path = create_txt(systems, dummy_interface.dir_path)
     dummy_interface.args.systems = systems_path
@@ -734,10 +748,10 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_0_{system_name}")
+        figs.append(f"age_bias_correction_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]

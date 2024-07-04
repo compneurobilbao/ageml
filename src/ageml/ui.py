@@ -350,6 +350,14 @@ class Interface:
         # Set covariate flag
         self.flags['covariates'] = True
 
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Columns must be float or int type: %s" % (error_cols))
+
         # Set covariate for analysis
         if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
             self.flags['covarname'] = True
@@ -395,7 +403,7 @@ class Interface:
 
         # Raise an error if the column contains values other than 0 or 1
         if error_cols != []:
-            raise ValueError(f"Columns: {error_cols} contains values other than 0 and 1.")
+            raise TypeError(f"Columns: {error_cols} contains values other than 0 and 1.")
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
