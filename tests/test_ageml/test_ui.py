@@ -264,6 +264,7 @@ def test_load_data_age_not_column(dummy_interface, features):
 def test_load_data_not_float(dummy_interface, features):
     # Change item to string
     features.loc[2, "feature1"] = "asdf"
+    features.loc[3, "feature2"] = "asdf"
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
 
@@ -271,13 +272,14 @@ def test_load_data_not_float(dummy_interface, features):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = 'Columns must be float or int type: feature1'
+    error_message = "Columns must be float or int type: ['feature1', 'feature2']"
     assert exc_info.value.args[0] == error_message
 
 
 def test_load_factors_not_float(dummy_interface, factors):
     # Change item to string
     factors.loc[2, "factor1"] = "asdf"
+    factors.loc[3, "factor2"] = "asdf"
     factors_path = create_csv(factors, dummy_interface.dir_path)
     dummy_interface.args.factors = factors_path
 
@@ -285,7 +287,23 @@ def test_load_factors_not_float(dummy_interface, factors):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = 'Columns must be float or int type: factor1'
+    error_message = "Columns must be float or int type: ['factor1', 'factor2']"
+    assert exc_info.value.args[0] == error_message
+
+
+def test_load_data_ages_not_float(dummy_interface, ages):
+    # Change item to string
+    ages.loc[2, "predicted_age_all"] = "asdf"
+    ages.loc[3, "corrected_age_all"] = "asdf"
+    ages.loc[4, "delta_all"] = "asdf"
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Columns must be float or int type: ['predicted_age_all', 'corrected_age_all', 'delta_all']"
     assert exc_info.value.args[0] == error_message
 
 

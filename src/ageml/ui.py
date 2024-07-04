@@ -315,9 +315,12 @@ class Interface:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
 
         # Check that columns are dtypes float or int
+        error_cols = []
         for col in df.columns:
             if df[col].dtype not in [float, int]:
-                raise TypeError("Columns must be float or int type: %s" % (col))
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Columns must be float or int type: %s" % (error_cols))
 
         # Set features flag
         self.flags['features'] = True
@@ -429,9 +432,12 @@ class Interface:
             return df
         
         # Check that columns are dtypes float or int
+        error_cols = []
         for col in df.columns:
             if df[col].dtype not in [float, int]:
-                raise TypeError("Columns must be float or int type: %s" % (col))
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Columns must be float or int type: %s" % (error_cols))
 
         return df
 
@@ -456,9 +462,12 @@ class Interface:
             return df
         
         # Check that columns are dtypes float or int
+        error_cols = []
         for col in df.columns:
             if df[col].dtype not in [float, int]:
-                raise TypeError("Columns must be float or int type: %s" % (col))
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Columns must be float or int type: %s" % (error_cols))
 
         # Required columns
         self.flags['ages'] = True
