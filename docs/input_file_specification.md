@@ -30,17 +30,16 @@ Specified with the `--covariates` flag. Contains the __categorical__ covariates 
 
 - __Extension__: CSV. Comma (`,`) separated.
 - __Header__: It must contain the covariate names. The first column is row index.
-- __Variables__: All variables must be __categoric__. Categories must be __strings__ (e.g.: `yes`, `no` or `male`, `female`).
-NOTE: Support for numeric covariates for covariate correction is on its way.
+- __Variables__: All variables must be __int__ for categorical variables or __floats__ for continous variables. 
 
 Example:
 
 ```csv
-,biological_gender,smoker
-0,female,yes
-1,male,yes
-2,male,no
-3,male,no
+,site,biological_gender,smoker,educ_years
+0,1,0,1,10.0
+1,2,1,1,16.0
+2,3,0,0,12.0
+3,2,0,10.0
 ```
 
 ## Clinical file
@@ -49,16 +48,16 @@ Specified with the `--clinical` flag. Contains the clinical groups to which ever
 
 - __Extension__: CSV. Comma (`,`) separated.
 - __Header__: It must contain the clinical group names. The first column is the row index. The rest of the columns contain the clinical group names.
-- __Variables__: All values must be `True` or `False`.
+- __Variables__: All values must be 0 or 1.
 
 Example (in the context of Alzheimer's disease):
 
 ```csv
-,CN,MCI,AD,sMCI,pMCI
-0,True,False,False,False,False
-1,True,False,False,False,False
-2,True,False,False,False,False
-3,False,False,True,False,False
+,CN,MCI,AD
+0,1,0,0
+1,1,0,0
+2,0,1,0
+3,0,0,1
 ```
 
 ## Factors File
