@@ -795,7 +795,8 @@ class Interface:
         # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
-                tag = NameTag(covar=covar, system=system)
+                covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
                 ageml_model = self.generate_model()
                 self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
@@ -844,7 +845,8 @@ class Interface:
                 continue
             for covar in self.covars:
                 for system in self.systems:
-                    tag = NameTag(group=subject_type, covar=covar, system=system)
+                    covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                    tag = NameTag(group=subject_type, covar=covar_tag, system=system)
                     df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
                                                tag, self.betas[covar][system])
                     df_pred = df_pred.drop(columns=['age'])
@@ -1435,7 +1437,7 @@ class CLI(Interface):
 
         # Set covariate name
         if self.line[0] == "None":
-            pass
+            self.args.covar_name = None
         else:
             self.args.covar_name = self.line[0]
 

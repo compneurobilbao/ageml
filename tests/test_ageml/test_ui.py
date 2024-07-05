@@ -553,10 +553,10 @@ def test_run_age_cov(dummy_interface, features, covariates):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_0_all",
-            "age_bias_correction_1_all",
-            "chronological_vs_pred_age_1_all",
-            "chronological_vs_pred_age_1_all",
+    figs = ["age_bias_correction_sex_0_all",
+            "age_bias_correction_sex_1_all",
+            "chronological_vs_pred_age_sex_0_all",
+            "chronological_vs_pred_age_sex_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     # Print files in path
@@ -592,10 +592,10 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_0_all",
-            "age_bias_correction_1_all",
-            "chronological_vs_pred_age_0_all",
-            "chronological_vs_pred_age_1_all",
+    figs = ["age_bias_correction_sex_0_all",
+            "age_bias_correction_sex_1_all",
+            "chronological_vs_pred_age_sex_0_all",
+            "chronological_vs_pred_age_sex_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -704,10 +704,10 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_0_{system_name}")
-        figs.append(f"age_bias_correction_1_{system_name}")
-        figs.append(f"chronological_vs_pred_age_0_{system_name}")
-        figs.append(f"chronological_vs_pred_age_1_{system_name}")
+        figs.append(f"age_bias_correction_sex_0_{system_name}")
+        figs.append(f"age_bias_correction_sex_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -748,10 +748,10 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_0_{system_name}")
-        figs.append(f"age_bias_correction_1_{system_name}")
-        figs.append(f"chronological_vs_pred_age_0_{system_name}")
-        figs.append(f"chronological_vs_pred_age_1_{system_name}")
+        figs.append(f"age_bias_correction_sex_0_{system_name}")
+        figs.append(f"age_bias_correction_sex_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -1150,6 +1150,12 @@ def test_covar_command_CLI(dummy_cli):
     error = dummy_cli.covar_command()
     assert error is None
     assert dummy_cli.args.covar_name == "covar1"
+
+    # Test passing None
+    dummy_cli.line = "None"
+    error = dummy_cli.covar_command()
+    assert error is None
+    assert dummy_cli.args.covar_name is None
 
 
 def test_cv_command_CLI(dummy_cli):
