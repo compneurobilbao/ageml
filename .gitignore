@@ -1,5 +1,7 @@
 # Data folder (for devs)
 /data
+# Notebook folder (for devs)
+/bin/notebooks
 # Posible AgeML runs
 /ageml
 

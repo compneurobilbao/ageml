@@ -54,6 +54,8 @@ model_age = "ageml.commands:model_age"
 factor_correlation = "ageml.commands:factor_correlation"
 clinical_groups = "ageml.commands:clinical_groups"
 clinical_classify = "ageml.commands:clinical_classify"
+generate_ageml_data = "ageml.datasets.generate_synthetic_data:main"
+
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.0"
 
