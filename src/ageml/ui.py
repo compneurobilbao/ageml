@@ -853,7 +853,7 @@ class Interface:
         factors = df_factors.to_numpy()
         factor_names = df_factors.columns.to_list()
 
-        # Applyc covariate correction
+        # Apply covariate correction
         if self.flags["covariates"]:
             factors, _ = covariate_correction(factors, covars, beta)
 
@@ -885,7 +885,8 @@ class Interface:
         
         Parameters
         ----------
-        df: list of dataframes with delta information; shape=(n,m)
+        dfs: list of dataframes with delta information; shape=(n,m)
+        # TODO: Update docstring for the current input arguments
         labels: list of labels for each dataframe; shape=(n,)
         system: name of the system from which the variables come from"""
 
@@ -893,22 +894,46 @@ class Interface:
         print("-----------------------------------")
         print("Delta distribution for System:%s" % tag.system)
 
-        # Apply covariate correction
+        # Compute covariate correction coefficients
         if self.flags["covariates"]:
-            df_cn = dfs['cn']
-            cn_idx = df_cn.index
-            covars = self.df_covariates.loc[cn_idx].to_numpy()
-            deltas = df_cn["delta_%s" % tag.system].to_numpy()
-            _, beta = covariate_correction(deltas, covars)
+            beta = {}
+            # When "cn" -> Only use cn group for computing beta
+            if self.flags["covcorr_mode"] == "cn":
+                df_group = dfs["cn"]
+                group_idx = df_group.index
+                covars = self.df_covariates.loc[group_idx].to_numpy()
+                deltas = df_group[f"delta_{tag.system}"].to_numpy()
+                _, beta["cn"] = covariate_correction(deltas, covars)
+            # When "all" -> Use whole dataset for computing beta
+            elif self.flags["covcorr_mode"] == "all":
+                # Concatenate all groups to get the whole dataset
+                df_group = pd.concat(dfs, axis=0)
+                group_idx = df_group.index
+                covars = self.df_covariates.loc[group_idx].to_numpy()
+                deltas = df_group[f"delta_{tag.system}"].to_numpy()
+                _, beta["all"] = covariate_correction(deltas, covars)
+            # When "each" -> Use each group for computing betas
+            elif self.flags["covcorr_mode"] == "each":
+                for group, df_group in dfs.items():
+                    group_idx = df_group.index
+                    covars = self.df_covariates.loc[group_idx].to_numpy()
+                    deltas = df_group[f"delta_{tag.system}"].to_numpy()
+                    _, beta[group] = covariate_correction(deltas, covars)
 
         # Obtain deltas means and stds
         deltas = []
-        for group, df in dfs.items():
-            vals = df["delta_%s" % tag.system].to_numpy()
-            # Apply covariate correction
+        for group, df_group in dfs.items():
+            vals = df_group[f"delta_{tag.system}"].to_numpy()
+            # Apply covariate correction coefficients
             if self.flags["covariates"]:
-                covars = self.df_covariates.loc[df.index].to_numpy()
-                vals, _ = covariate_correction(vals, covars, beta)
+                covars = self.df_covariates.loc[df_group.index].to_numpy()
+                # When "cn" or "all" -> Use the same beta for all groups
+                if self.flags["covcorr_mode"] in ["cn", "all"]:
+                    vals, _ = covariate_correction(vals, covars,
+                                                   beta[self.flags["covcorr_mode"]])
+                # When "each" -> Use the specific beta for each group
+                elif self.flags["covcorr_mode"] == "each":
+                    vals, _ = covariate_correction(vals, covars, beta[group])
             deltas.append(vals)
             print(f"[Group: {group}]")
             print("Mean delta: %.2f" % np.mean(vals))
