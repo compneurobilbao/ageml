@@ -175,8 +175,6 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
     # Generate a sex covariate completely randomly, with no correlation with Y
     covar_data = pd.DataFrame(columns=["Sex", "YoE"])
     covar_data["Sex"] = rng.integers(0, 2, all_synthetic_data.shape[0])
-    # Substitute 0: Female and 1: Male
-    covar_data["Sex"] = covar_data["Sex"].replace({0: "Female", 1: "Male"})
 
     # YoE has to be correlated with age
     mean_yoe = 10
