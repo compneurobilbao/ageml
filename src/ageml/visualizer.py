@@ -284,7 +284,7 @@ class Visualizer:
         for i, (vals, clevel) in enumerate(zip(deltas, clevels)):
             x = np.random.normal(i + 1, 0.04, size=len(vals))
             plt.scatter(x, vals, color=self.cmap(clevel))
-        plt.xlabel("Gruop")
+        plt.xlabel("Group")
         plt.ylabel("Delta")
 
         # Save file

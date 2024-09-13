@@ -73,6 +73,14 @@ clinical_long_description = (
     "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#clinical-file"
 )
 
+covcorr_mode_long_description = (
+    "Mode for covariate correlation.\n"
+    "Must be one of 'cn', 'each', or 'all'."
+    "cn: Covariate correction is done using only the control group subjects.\n"
+    "all: Covariate correction is done using the whole dataset, all subjects.\n"
+    "each: Covariate correction is done for each clinical group subjects separately.\n"
+)
+
 systems_long_description = (
     "Path to input .txt file containing the features to use to model each system. \n"
     "Each new line corresponds to a different system. The parser follows a formatting \n"

@@ -78,8 +78,8 @@ def covariates():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "gender": ['f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f',
-                       'f', 'f', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f'],
+            "gender": ['0', '1', '1', '1', '0', '0', '0', '1', '1', '0',
+                       '0', '0', '1', '1', '0', '0', '0', '1', '1', '0'],
         }
     )
     df.set_index("id", inplace=True)
@@ -493,10 +493,10 @@ def test_run_age_cov(dummy_interface, features, covariates):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_0_all",
+            "age_bias_correction_1_all",
+            "chronological_vs_pred_age_0_all",
+            "chronological_vs_pred_age_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     # Print files in path
@@ -532,10 +532,10 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_0_all",
+            "age_bias_correction_1_all",
+            "chronological_vs_pred_age_0_all",
+            "chronological_vs_pred_age_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -644,10 +644,10 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_0_{system_name}")
+        figs.append(f"age_bias_correction_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -688,10 +688,10 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_0_{system_name}")
+        figs.append(f"age_bias_correction_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -707,27 +707,32 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
-def test_run_factor_correlation(dummy_interface, ages, factors):
+def test_run_factor_correlation(dummy_interface, ages, factors, covariates):
     # Run the lifestyle pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     factors_path = create_csv(factors, dummy_interface.dir_path)
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
+    dummy_interface.args.covariates = covariates_path
     dummy_interface.args.factors = factors_path
-    dummy_interface.run_factor_correlation()
 
-    # Check for the existence of the output directory
-    assert os.path.exists(dummy_interface.dir_path)
+    for covcorr_mode in ["cn", "all", "each"]:
+        dummy_interface.args.covcorr_mode = covcorr_mode
+        dummy_interface.run_factor_correlation()
 
-    # Check for the existence of the output figures
-    figs = ["factors_vs_deltas_cn"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs
-    ]
-    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+        # Check for the existence of the output directory
+        assert os.path.exists(dummy_interface.dir_path)
 
-    # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "factor_correlation/log.txt")
-    assert os.path.exists(log_path)
+        # Check for the existence of the output figures
+        figs = ["factors_vs_deltas_cn"]
+        svg_paths = [
+            os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs
+        ]
+        assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+
+        # Check for the existence of the log
+        log_path = os.path.join(dummy_interface.dir_path, "factor_correlation/log.txt")
+        assert os.path.exists(log_path)
 
 
 def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, factors):
@@ -767,27 +772,31 @@ def test_run_age_few_subjects(dummy_interface, features):
     assert exc_info.value.args[0] == "Not enough controls for modelling for each CV split."
 
 
-def test_run_clinical(dummy_interface, ages, clinical):
+def test_run_clinical(dummy_interface, ages, clinical, covariates):
     # Run the clinical pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
+    dummy_interface.args.covariates = covariates_path
     dummy_interface.args.clinical = clinical_path
-    dummy_interface.run_clinical()
 
-    # Check for the existence of the output directory
-    assert os.path.exists(dummy_interface.dir_path)
+    for covcorr_mode in ["cn", "all", "each"]:
+        dummy_interface.args.covcorr_mode = covcorr_mode
+        dummy_interface.run_clinical()
+        # Check for the existence of the output directory
+        assert os.path.exists(dummy_interface.dir_path)
 
-    # Check for the existence of the output figures
-    figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot_all"]
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"clinical_groups/figures/{fig}.png") for fig in figs
-    ]
-    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+        # Check for the existence of the output figures
+        figs = ["age_distribution_clinical_groups", "clinical_groups_box_plot_all"]
+        svg_paths = [
+            os.path.join(dummy_interface.dir_path, f"clinical_groups/figures/{fig}.png") for fig in figs
+        ]
+        assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
-    # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "clinical_groups/log.txt")
-    assert os.path.exists(log_path)
+        # Check for the existence of the log
+        log_path = os.path.join(dummy_interface.dir_path, "clinical_groups/log.txt")
+        assert os.path.exists(log_path)
 
 
 def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
@@ -849,24 +858,26 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
     dummy_interface.args.group2 = 'group1'
     dummy_interface.args.ages = ages_path
     dummy_interface.args.clinical = clinical_path
-    dummy_interface.run_classification()
 
-    # Check for the existence of the output directory
-    assert os.path.exists(dummy_interface.dir_path)
+    for covcorr_mode in ["cn", "all", "each"]:
+        dummy_interface.args.covcorr_mode = covcorr_mode
+        dummy_interface.run_classification()
+        # Check for the existence of the output directory
+        assert os.path.exists(dummy_interface.dir_path)
 
-    # Check for the existence of the output figures
-    system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
-    figs = []
-    for system in system_names:
-        figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
-    svg_paths = [
-        os.path.join(dummy_interface.dir_path, f"clinical_classify/figures/{fig}.png") for fig in figs
-    ]
-    assert all([os.path.exists(svg_path) for svg_path in svg_paths])
+        # Check for the existence of the output figures
+        system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+        figs = []
+        for system in system_names:
+            figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
+        svg_paths = [
+            os.path.join(dummy_interface.dir_path, f"clinical_classify/figures/{fig}.png") for fig in figs
+        ]
+        assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
-    # Check for the existence of the log
-    log_path = os.path.join(dummy_interface.dir_path, "clinical_classify/log.txt")
-    assert os.path.exists(log_path)
+        # Check for the existence of the log
+        log_path = os.path.join(dummy_interface.dir_path, "clinical_classify/log.txt")
+        assert os.path.exists(log_path)
 
 
 def test_classification_group_not_given(dummy_interface, ages, clinical):

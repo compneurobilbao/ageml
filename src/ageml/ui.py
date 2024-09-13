@@ -179,7 +179,8 @@ class Interface:
         """Set flags."""
 
         self.flags = {"clinical": False, "covariates": False, "covarname": False,
-                      "systems": False, "ages": False, "features": False}
+                      "systems": False, "ages": False, "features": False,
+                      "covcorr_mode": "cn"}
 
     def set_visualizer(self, dir):
         """Set visualizer with output directory."""
@@ -348,7 +349,10 @@ class Interface:
             self.args.covar_name = self.args.covar_name.lower()
             if self.args.covar_name not in df:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-        
+        # Check if covariate correction mode and set the flag
+        if hasattr(self.args, "covcorr_mode") and self.args.covcorr_mode is not None:
+            self.flags['covcorr_mode'] = self.args.covcorr_mode
+
         return df
 
     def load_clinical(self, required=False):
@@ -837,6 +841,7 @@ class Interface:
 
         Parameters
         ----------
+        # TODO: Update docstring for the current input arguments
         dict_ages: dictionary for each system with deltas; shape=(n,m)
         df_factors: dataframe with factor information; shape=(n,m)
         significance: significance level for correlation"""
@@ -849,7 +854,7 @@ class Interface:
         # Iterate over systems
         corrs, significants = [], []
 
-        # Facotr information
+        # Factor information
         factors = df_factors.to_numpy()
         factor_names = df_factors.columns.to_list()
 
@@ -885,20 +890,21 @@ class Interface:
         
         Parameters
         ----------
-        dfs: list of dataframes with delta information; shape=(n,m)
         # TODO: Update docstring for the current input arguments
+        dfs: list of dataframes with delta information; shape=(n,m)
         labels: list of labels for each dataframe; shape=(n,)
         system: name of the system from which the variables come from"""
 
         # Select age information
         print("-----------------------------------")
-        print("Delta distribution for System:%s" % tag.system)
+        print(f"Delta distribution for System: {tag.system}")
 
         # Compute covariate correction coefficients
         if self.flags["covariates"]:
             beta = {}
             # When "cn" -> Only use cn group for computing beta
             if self.flags["covcorr_mode"] == "cn":
+                print("Correcting for covariates using CN group as reference.")
                 df_group = dfs["cn"]
                 group_idx = df_group.index
                 covars = self.df_covariates.loc[group_idx].to_numpy()
@@ -906,14 +912,17 @@ class Interface:
                 _, beta["cn"] = covariate_correction(deltas, covars)
             # When "all" -> Use whole dataset for computing beta
             elif self.flags["covcorr_mode"] == "all":
+                print("Correcting for covariates using whole population as reference.")
                 # Concatenate all groups to get the whole dataset
                 df_group = pd.concat(dfs, axis=0)
-                group_idx = df_group.index
-                covars = self.df_covariates.loc[group_idx].to_numpy()
+                # Because all indices are used, get them from the covariates dataframe
+                group_idx = self.df_covariates.index
+                covars = self.df_covariates.to_numpy()
                 deltas = df_group[f"delta_{tag.system}"].to_numpy()
                 _, beta["all"] = covariate_correction(deltas, covars)
             # When "each" -> Use each group for computing betas
             elif self.flags["covcorr_mode"] == "each":
+                print("Correcting for covariates of each group separately.")
                 for group, df_group in dfs.items():
                     group_idx = df_group.index
                     covars = self.df_covariates.loc[group_idx].to_numpy()
@@ -993,14 +1002,40 @@ class Interface:
 
         # Covariate correction
         if self.flags["covariates"]:
-            df_cn = self.df_ages[self.df_clinical['cn']]
-            covars = self.df_covariates.loc[df_cn.index].to_numpy()
-            deltas_cn = df_cn[delta_cols].to_numpy()
-            _, beta = covariate_correction(deltas_cn, covars)
+            beta = {}
+            if self.flags["covcorr_mode"] == "cn":
+                print("Applying covariate correction for deltas using CN group as reference.")
+                group_index = self.df_clinical["cn"]
+                df_cn = self.df_ages[group_index]
+                covars = self.df_covariates.loc[group_index].to_numpy()
+                deltas = df_cn[delta_cols].to_numpy()
+                _, beta["cn"] = covariate_correction(deltas, covars)
+            elif self.flags["covcorr_mode"] == "all":
+                print("Applying covariate correction for deltas using whole population as reference.")
+                covars = self.df_covariates.to_numpy()
+                deltas = self.df_ages[delta_cols].to_numpy()
+                _, beta["all"] = covariate_correction(deltas, covars)
+            elif self.flags["covcorr_mode"] == "each":
+                print("Applying covariate correction for deltas using each clinical group as reference.")
+                for group in self.subject_types:
+                    group_index = self.df_clinical[group]
+                    deltas = self.df_ages[group_index][delta_cols].to_numpy()
+                    covars = self.df_covariates.loc[group_index].to_numpy()
+                    _, beta[group] = covariate_correction(deltas, covars)
+
             covars1 = self.df_covariates.loc[df1.index].to_numpy()
             covars2 = self.df_covariates.loc[df2.index].to_numpy()
-            deltas1, _ = covariate_correction(deltas1, covars1, beta)
-            deltas2, _ = covariate_correction(deltas2, covars2, beta)
+
+            if self.flags["covcorr_mode"] in ["cn", "all"]:
+                deltas1, _ = covariate_correction(deltas1, covars1,
+                                                  beta[self.flags["covcorr_mode"]])
+                deltas2, _ = covariate_correction(deltas2, covars2,
+                                                  beta[self.flags["covcorr_mode"]])
+            elif self.flags["covcorr_mode"] == "each":
+                deltas1, _ = covariate_correction(deltas1, covars1,
+                                                  beta[groups[0]])
+                deltas2, _ = covariate_correction(deltas2, covars2,
+                                                  beta[groups[1]])
 
         # Create X and y for classification
         if len(delta_cols) == 1:
@@ -1018,9 +1053,11 @@ class Interface:
         self.classifier = self.generate_classifier()
 
         # Apply covariate correction
-        if self.flags["covariates"]:
-            Z = np.concatenate((self.df_covariates.loc[df1.index].to_numpy(), self.df_covariates.loc[df2.index].to_numpy()))
-            X, _ = covariate_correction(X, Z, beta)
+        # TODO: AGAIN? Commented for now.
+        # if self.flags["covariates"]:
+        #     Z = np.concatenate((self.df_covariates.loc[df1.index].to_numpy(),
+        #                         self.df_covariates.loc[df2.index].to_numpy()))
+        #     X, _ = covariate_correction(X, Z, beta)
 
         # Calculate classification
         y_pred = self.classifier.fit_model(X, y)
@@ -1090,10 +1127,26 @@ class Interface:
 
         # Calculate covariate correction for factors
         if self.flags["covariates"]:
-            print("Applying covariate correction for factors...")
-            factors = self.df_factors.loc[self.df_clinical['cn']].to_numpy()
-            covars = self.df_covariates.loc[self.df_clinical['cn']].to_numpy()
-            _, beta = covariate_correction(factors, covars)
+            beta = {}
+            if self.flags["covcorr_mode"] == "cn":
+                print("Applying covariate correction for factors using CN group as reference.")
+                group_index = self.df_clinical['cn']
+                factors = self.df_factors.loc[group_index].to_numpy()
+                covars = self.df_covariates.loc[group_index].to_numpy()
+                _, beta["cn"] = covariate_correction(factors, covars)
+            elif self.flags["covcorr_mode"] == "all":
+                print("Applying covariate correction for factors using whole population as reference.")
+                # We take all subjects for covariate correction
+                factors = self.df_factors.to_numpy()
+                covars = self.df_covariates.to_numpy()
+                _, beta["all"] = covariate_correction(factors, covars)
+            elif self.flags["covcorr_mode"] == "each":
+                print("Applying covariate correction for factors using each group as reference.")
+                for group in self.subject_types:
+                    group_index = self.df_clinical[group]
+                    factors = self.df_factors.loc[group_index].to_numpy()
+                    covars = self.df_covariates.loc[group_index].to_numpy()
+                    _, beta[group] = covariate_correction(factors, covars)
 
         # For each subject type and system run correlation analysis
         for subject_type in self.subject_types:
@@ -1106,7 +1159,10 @@ class Interface:
                 dfs_systems[system] = df_sys
             if self.flags["covariates"]:
                 covars = self.df_covariates.loc[df_sub.index].to_numpy()
-                self.factors_vs_deltas(dfs_systems, df_factors, tag, covars, beta)
+                if self.flags["covcorr_mode"] in ["cn", "all"]:
+                    self.factors_vs_deltas(dfs_systems, df_factors, tag, covars, beta[self.flags["covcorr_mode"]])
+                elif self.flags["covcorr_mode"] == "each":
+                    self.factors_vs_deltas(dfs_systems, df_factors, tag, covars, beta[subject_type])
             else:
                 self.factors_vs_deltas(dfs_systems, df_factors, tag)
 
