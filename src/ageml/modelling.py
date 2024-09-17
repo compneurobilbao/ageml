@@ -191,11 +191,10 @@ class AgeML:
             dict: dictionary with the hyperparameter grid
         """
         param_grid = {}
-        if (
-            self.model_type in AgeML.model_dict.keys() and 
-            self.hyperparameter_tuning > 0 and 
-            not self.model_type == "hyperopt"
-        ):
+        conditions = [self.model_type in AgeML.model_dict.keys(),
+                      self.hyperparameter_tuning > 0,
+                      not self.model_type == "hyperopt"]
+        if all(conditions):
             hyperparam_ranges = AgeML.model_hyperparameter_ranges[self.model_type]
             hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
             # Initialize output grid
@@ -206,7 +205,7 @@ class AgeML:
                                                                           bounds[1],
                                                                           int(self.hyperparameter_tuning))
                 elif hyperparam_types[hyperparam_name] == 'int':
-                    param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0],bounds[1],
+                    param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0], bounds[1],
                                                                       int(self.hyperparameter_tuning))).astype(int)
                 elif hyperparam_types[hyperparam_name] == 'float':
                     param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0],
@@ -248,6 +247,8 @@ class AgeML:
                                            )
         else:
             self.model = self.model_dict[model_type](**kwargs)
+
+        self.model_type = model_type
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
@@ -383,7 +384,7 @@ class AgeML:
                 print(f"\n---Hyperoptimization CV fold {i+1}/{self.CV_split}---\n")
                 X_train, X_val = X[train_index], X[test_index]
                 y_train, y_val = y[train_index], y[test_index]
-                # Fit 
+                # Fit
                 self.model.fit(X_train, y_train)
                 best_model = self.model.best_model()['learner']
                 best_preprocessing = self.model.best_model()['preprocs']
@@ -406,8 +407,8 @@ class AgeML:
             self.pipeline = pipeline.Pipeline(pipe)
             
             print("Hyperoptimization best parameters:\n"
-                f"\t- Best preprocessing:\n\t\t{best_preprocessing}\n"
-                f"\t- Best model:\n\t\t{best_model}")
+                  f"\t- Best preprocessing:\n\t\t{best_preprocessing}\n"
+                  f"\t- Best model:\n\t\t{best_model}")
         else:
             print("No hyperparameter optimization was performed.")
 
