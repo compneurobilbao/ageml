@@ -412,7 +412,9 @@ class Interface:
 
         # Find rows with all False
         if not df.any(axis=1).all():
-            raise ValueError("Clinical file contains rows with all False values. Please check the file.")
+            # Show which rows have all False
+            rows = df[~df.any(axis=1)].index.to_list()
+            raise ValueError("Clinical file contains rows with all False values. Please check the file. Rows: %s" % rows)
 
         # Set clinical flag
         self.flags['clinical'] = True

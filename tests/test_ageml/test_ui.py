@@ -412,7 +412,7 @@ def test_load_data_clinical_empty_row(dummy_interface, clinical):
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == ValueError
-    assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file."
+    assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file. Rows: [2]"
 
 
 def test_load_data_nan_values_warning(dummy_interface, features):
