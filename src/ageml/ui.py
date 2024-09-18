@@ -15,15 +15,16 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
-import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
+from ageml.utils import (create_directory, feature_extractor,
+                         significant_markers, convert, log, NameTag, cohen_d)
 from ageml.modelling import AgeML, Classifier
 from ageml.processing import find_correlations, covariate_correction
 
@@ -965,14 +966,30 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
+        header = ("p-val (group1 vs. group2)            "
+                  "Cohen\'s d              "
+                  "CI (95%):   [low, upp]          "
+                  "Delta difference(mean1 - mean2)")
+        print(len(str(header)) * "=")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
+        print(str(header))
+        print(len(str(header)) * "-")
 
         # Calculate p-values
         p_vals_matrix = np.zeros((len(deltas), len(deltas)))
+        effect_size_matrix = np.zeros((len(deltas), len(deltas)))
+        conf_intervals = np.zeros((len(deltas), len(deltas), 2))  # Lower & upper bounds
+        
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
                 p_vals_matrix[i, j] = p_val
+                effect_size_matrix[i, j] = cohen_d(deltas[i], deltas[j])
+                # Compute confidene interval for the mean difference
+                cm = CompareMeans(DescrStatsW(deltas[i]), DescrStatsW(deltas[j]))
+                # We use unequal variance, Welch's test and Satterthwaite's dofs
+                ci_low, ci_upp = cm.tconfint_diff(alpha=significance, usevar='unequal')
+                conf_intervals[i, j] = [ci_low, ci_upp]
         
         # Reject null hypothesis of no correlation
         reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
@@ -985,10 +1002,16 @@ class Interface:
         for i in range(len(deltas)):
             significant = significant_markers(reject_bon[i], reject_fdr[i])
             for j in range(i + 1, len(deltas)):
-                pval_message = "p-value between %s and %s: %.2g" % (
+                pval_message = "p-val (%s vs. %s): %.2g" % (
                     labels[i], labels[j], p_vals_matrix[i, j])
                 if significant[j] != "":
                     pval_message = significant[j] + " " + pval_message
+                cohen_d_value = effect_size_matrix[i, j]
+                delta_difference = np.mean(deltas[i]) - np.mean(deltas[j])
+                ci_low, ci_upp = conf_intervals[i, j]
+                ci_p = 100 * (1 - significance)  # Confidence interval percentage
+                pval_message = f"{pval_message:<35}  Cohen's d: {cohen_d_value:<10.2f}  CI ({ci_p}%): [{ci_low:<6.2f}, {ci_upp:<6.2f}]"
+                pval_message += f"    Delta difference: {delta_difference:<15.2f}"
                 print(pval_message)
 
         # Use visualizer
