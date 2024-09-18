@@ -78,8 +78,8 @@ def covariates():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "gender": ['f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f',
-                       'f', 'f', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'f'],
+            "sex": [0, 1, 1, 1, 0, 0, 0, 1, 1, 0,
+                    0, 0, 1, 1, 0, 0, 0, 1, 1, 0],
         }
     )
     df.set_index("id", inplace=True)
@@ -97,10 +97,10 @@ def clinical():
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "CN": [True, False, True, False, True, False, True, False, True, False,
-                   True, False, True, False, True, False, True, False, True, False],
-            "group1": [False, True, False, True, False, True, False, True, False, True,
-                       False, True, False, True, False, True, False, True, False, True],
+            "CN": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+                   1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+            "group1": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+                       0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
         }
     )
     df.set_index("id", inplace=True)
@@ -261,6 +261,66 @@ def test_load_data_age_not_column(dummy_interface, features):
     assert exc_info.value.args[0] == error_message
 
 
+def test_load_data_not_float(dummy_interface, features):
+    # Change item to string
+    features.loc[2, "feature1"] = "test"
+    features.loc[3, "feature2"] = "test"
+    features_path = create_csv(features, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Features file columns must be float or int type: ['feature1', 'feature2']"
+    assert exc_info.value.args[0] == error_message
+
+
+def test_load_factors_not_float(dummy_interface, factors):
+    # Change item to string
+    factors.loc[2, "factor1"] = "asdf"
+    factors.loc[3, "factor2"] = "asdf"
+    factors_path = create_csv(factors, dummy_interface.dir_path)
+    dummy_interface.args.factors = factors_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Factors file columns must be float or int type: ['factor1', 'factor2']"
+    assert exc_info.value.args[0] == error_message
+
+
+def test_load_data_covariates_not_float(dummy_interface, covariates):
+    # Change item to string
+    covariates.loc[2, 'sex'] = 'asdf'
+    covariates_path = create_csv(covariates, dummy_interface.dir_path)
+    dummy_interface.args.covariates = covariates_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Covariates file columns must be float or int type: ['sex']"
+    assert exc_info.value.args[0] == error_message
+
+
+def test_load_data_ages_not_float(dummy_interface, ages):
+    # Change item to string
+    ages.loc[2, "predicted_age_all"] = "asdf"
+    ages.loc[3, "corrected_age_all"] = "asdf"
+    ages.loc[4, "delta_all"] = "asdf"
+    ages_path = create_csv(ages, dummy_interface.dir_path)
+    dummy_interface.args.ages = ages_path
+
+    # Test error risen
+    with pytest.raises(TypeError) as exc_info:
+        dummy_interface.load_data()
+    assert exc_info.type == TypeError
+    error_message = "Ages file columns must be float or int type: ['predicted_age_all', 'corrected_age_all', 'delta_all']"
+    assert exc_info.value.args[0] == error_message
+
+
 def test_load_data_cn_not_column(dummy_interface, clinical):
     # Test no CN column in clinical
     clinical.drop("CN", axis=1, inplace=True)
@@ -325,12 +385,12 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    assert exc_info.value.args[0] == "Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'."
+    assert exc_info.value.args[0] == "Clinical file columns: ['cn', 'group1'] contains values other than 0 and 1."
 
 
 def test_load_data_clinical_empty_column(dummy_interface, clinical):
     # Make a column all False
-    clinical.loc[:, "CN"] = False
+    clinical.loc[:, "CN"] = 0
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -338,13 +398,13 @@ def test_load_data_clinical_empty_column(dummy_interface, clinical):
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == ValueError
-    assert exc_info.value.args[0] == "Clinical column cn has no subjects."
+    assert exc_info.value.args[0] == "Clinical column cn has less than two subjects."
 
 
 def test_load_data_clinical_empty_row(dummy_interface, clinical):
 
     # Make a row all False
-    clinical.loc[2, :] = False
+    clinical.loc[2, :] = 0
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -352,7 +412,7 @@ def test_load_data_clinical_empty_row(dummy_interface, clinical):
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == ValueError
-    assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file."
+    assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file. Rows: [2]"
 
 
 def test_load_data_nan_values_warning(dummy_interface, features):
@@ -485,7 +545,7 @@ def test_run_age_cov(dummy_interface, features, covariates):
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Run the modelling pipeline
     dummy_interface.run_age()
     
@@ -493,10 +553,10 @@ def test_run_age_cov(dummy_interface, features, covariates):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_sex_0_all",
+            "age_bias_correction_sex_1_all",
+            "chronological_vs_pred_age_sex_0_all",
+            "chronological_vs_pred_age_sex_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     # Print files in path
@@ -521,7 +581,7 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Clinical file
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
@@ -532,10 +592,10 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for output figs
-    figs = ["age_bias_correction_f_all",
-            "age_bias_correction_m_all",
-            "chronological_vs_pred_age_f_all",
-            "chronological_vs_pred_age_m_all",
+    figs = ["age_bias_correction_sex_0_all",
+            "age_bias_correction_sex_1_all",
+            "chronological_vs_pred_age_sex_0_all",
+            "chronological_vs_pred_age_sex_1_all",
             "age_distribution_controls",
             "features_vs_age_controls_all"]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -630,7 +690,7 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Systems
     systems_path = create_txt(systems, dummy_interface.dir_path)
     dummy_interface.args.systems = systems_path
@@ -644,10 +704,10 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_sex_0_{system_name}")
+        figs.append(f"age_bias_correction_sex_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -671,7 +731,7 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
     # Covariate name
-    dummy_interface.args.covar_name = "gender"
+    dummy_interface.args.covar_name = "sex"
     # Systems
     systems_path = create_txt(systems, dummy_interface.dir_path)
     dummy_interface.args.systems = systems_path
@@ -688,10 +748,10 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     system_names = list(dummy_interface.dict_systems.keys())
     figs = ["age_distribution_controls"]
     for system_name in system_names:
-        figs.append(f"age_bias_correction_f_{system_name}")
-        figs.append(f"age_bias_correction_m_{system_name}")
-        figs.append(f"chronological_vs_pred_age_f_{system_name}")
-        figs.append(f"chronological_vs_pred_age_m_{system_name}")
+        figs.append(f"age_bias_correction_sex_0_{system_name}")
+        figs.append(f"age_bias_correction_sex_1_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_0_{system_name}")
+        figs.append(f"chronological_vs_pred_age_sex_1_{system_name}")
         figs.append(f"features_vs_age_controls_{system_name}")
     # Check existance of figures
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -1090,6 +1150,12 @@ def test_covar_command_CLI(dummy_cli):
     error = dummy_cli.covar_command()
     assert error is None
     assert dummy_cli.args.covar_name == "covar1"
+
+    # Test passing None
+    dummy_cli.line = "None"
+    error = dummy_cli.covar_command()
+    assert error is None
+    assert dummy_cli.args.covar_name is None
 
 
 def test_cv_command_CLI(dummy_cli):

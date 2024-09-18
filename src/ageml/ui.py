@@ -314,6 +314,14 @@ class Interface:
         if "age" not in df:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
 
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Features file columns must be float or int type: %s" % (error_cols))
+
         # Set features flag
         self.flags['features'] = True
 
@@ -342,13 +350,21 @@ class Interface:
         # Set covariate flag
         self.flags['covariates'] = True
 
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Covariates file columns must be float or int type: %s" % (error_cols))
+
         # Set covariate for analysis
         if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
             self.flags['covarname'] = True
             self.args.covar_name = self.args.covar_name.lower()
             if self.args.covar_name not in df:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
-        
+     
         return df
 
     def load_clinical(self, required=False):
@@ -374,17 +390,31 @@ class Interface:
         # Check that CN in columns and boolean type
         if "cn" not in df:
             raise KeyError("Clinical file must contain a column name 'CN' or any other case-insensitive variation.")
-        elif [df[col].dtype == bool for col in df.columns].count(False) != 0:
-            raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
+
+        # Iterate over each column in the DataFrame
+        error_cols = []
+        for column in df.columns:
+            # Check if all values in the column are either 0 or 1
+            if df[column].isin([0, 1]).all():
+                # Convert the column to boolean type
+                df[column] = df[column].astype(bool)
+            else:
+                error_cols.append(column)
+
+        # Raise an error if the column contains values other than 0 or 1
+        if error_cols != []:
+            raise TypeError(f"Clinical file columns: {error_cols} contains values other than 0 and 1.")
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
-            if df[col].sum() == 0:
-                raise ValueError("Clinical column %s has no subjects." % col)
+            if df[col].sum() < 2:
+                raise ValueError("Clinical column %s has less than two subjects." % col)
 
         # Find rows with all False
         if not df.any(axis=1).all():
-            raise ValueError("Clinical file contains rows with all False values. Please check the file.")
+            # Show which rows have all False
+            rows = df[~df.any(axis=1)].index.to_list()
+            raise ValueError("Clinical file contains rows with all False values. Please check the file. Rows: %s" % rows)
 
         # Set clinical flag
         self.flags['clinical'] = True
@@ -411,6 +441,14 @@ class Interface:
         elif df is None:
             return df
         
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Factors file columns must be float or int type: %s" % (error_cols))
+
         return df
 
     def load_ages(self, required=False):
@@ -432,6 +470,14 @@ class Interface:
             raise ValueError("Ages file must be provided.")
         elif df is None:
             return df
+        
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Ages file columns must be float or int type: %s" % (error_cols))
 
         # Required columns
         self.flags['ages'] = True
@@ -751,7 +797,8 @@ class Interface:
         # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
-                tag = NameTag(covar=covar, system=system)
+                covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
                 ageml_model = self.generate_model()
                 self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
@@ -800,7 +847,8 @@ class Interface:
                 continue
             for covar in self.covars:
                 for system in self.systems:
-                    tag = NameTag(group=subject_type, covar=covar, system=system)
+                    covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                    tag = NameTag(group=subject_type, covar=covar_tag, system=system)
                     df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
                                                tag, self.betas[covar][system])
                     df_pred = df_pred.drop(columns=['age'])
@@ -1391,7 +1439,7 @@ class CLI(Interface):
 
         # Set covariate name
         if self.line[0] == "None":
-            pass
+            self.args.covar_name = None
         else:
             self.args.covar_name = self.line[0]
 
