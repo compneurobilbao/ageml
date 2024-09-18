@@ -6,8 +6,8 @@ to run the modelling with desired inputs.
 Classes:
 --------
 Interface - reads, parses and executes user commands.
-CLI - reads and parsers user commands via command line.
-InteractiveCLI - reads and parsers user commands via command line via an interactive interface.
+CLI - reads and parses user commands via command line.
+InteractiveCLI - reads and parses user commands via command line via an interactive interface.
 """
 
 import argparse
@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
-import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
