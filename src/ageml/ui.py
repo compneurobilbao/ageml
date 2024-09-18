@@ -320,7 +320,7 @@ class Interface:
             if df[col].dtype not in [float, int]:
                 error_cols.append(col)
         if error_cols != []:
-            raise TypeError("Columns must be float or int type: %s" % (error_cols))
+            raise TypeError("Features file columns must be float or int type: %s" % (error_cols))
 
         # Set features flag
         self.flags['features'] = True
@@ -356,7 +356,7 @@ class Interface:
             if df[col].dtype not in [float, int]:
                 error_cols.append(col)
         if error_cols != []:
-            raise TypeError("Columns must be float or int type: %s" % (error_cols))
+            raise TypeError("Covariates file columns must be float or int type: %s" % (error_cols))
 
         # Set covariate for analysis
         if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
@@ -403,7 +403,7 @@ class Interface:
 
         # Raise an error if the column contains values other than 0 or 1
         if error_cols != []:
-            raise TypeError(f"Columns: {error_cols} contains values other than 0 and 1.")
+            raise TypeError(f"Clinical file columns: {error_cols} contains values other than 0 and 1.")
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
@@ -447,7 +447,7 @@ class Interface:
             if df[col].dtype not in [float, int]:
                 error_cols.append(col)
         if error_cols != []:
-            raise TypeError("Columns must be float or int type: %s" % (error_cols))
+            raise TypeError("Factors file columns must be float or int type: %s" % (error_cols))
 
         return df
 
@@ -477,7 +477,7 @@ class Interface:
             if df[col].dtype not in [float, int]:
                 error_cols.append(col)
         if error_cols != []:
-            raise TypeError("Columns must be float or int type: %s" % (error_cols))
+            raise TypeError("Ages file columns must be float or int type: %s" % (error_cols))
 
         # Required columns
         self.flags['ages'] = True

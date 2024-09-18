@@ -263,8 +263,8 @@ def test_load_data_age_not_column(dummy_interface, features):
 
 def test_load_data_not_float(dummy_interface, features):
     # Change item to string
-    features.loc[2, "feature1"] = "asdf"
-    features.loc[3, "feature2"] = "asdf"
+    features.loc[2, "feature1"] = "test"
+    features.loc[3, "feature2"] = "test"
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
 
@@ -272,7 +272,7 @@ def test_load_data_not_float(dummy_interface, features):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = "Columns must be float or int type: ['feature1', 'feature2']"
+    error_message = "Features file columns must be float or int type: ['feature1', 'feature2']"
     assert exc_info.value.args[0] == error_message
 
 
@@ -287,7 +287,7 @@ def test_load_factors_not_float(dummy_interface, factors):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = "Columns must be float or int type: ['factor1', 'factor2']"
+    error_message = "Factors file columns must be float or int type: ['factor1', 'factor2']"
     assert exc_info.value.args[0] == error_message
 
 
@@ -301,7 +301,7 @@ def test_load_data_covariates_not_float(dummy_interface, covariates):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = "Columns must be float or int type: ['sex']"
+    error_message = "Covariates file columns must be float or int type: ['sex']"
     assert exc_info.value.args[0] == error_message
 
 
@@ -317,7 +317,7 @@ def test_load_data_ages_not_float(dummy_interface, ages):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    error_message = "Columns must be float or int type: ['predicted_age_all', 'corrected_age_all', 'delta_all']"
+    error_message = "Ages file columns must be float or int type: ['predicted_age_all', 'corrected_age_all', 'delta_all']"
     assert exc_info.value.args[0] == error_message
 
 
@@ -385,7 +385,7 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
     assert exc_info.type == TypeError
-    assert exc_info.value.args[0] == "Columns: ['cn', 'group1'] contains values other than 0 and 1."
+    assert exc_info.value.args[0] == "Clinical file columns: ['cn', 'group1'] contains values other than 0 and 1."
 
 
 def test_load_data_clinical_empty_column(dummy_interface, clinical):
