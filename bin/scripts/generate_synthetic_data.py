@@ -1,9 +1,5 @@
-import ageml.datasets.synthetic_test_data as data_generator
+import ageml.datasets.synthetic_data as data_generator
 
 if __name__ == "__main__":
-    # Generate synthetic features
-    data_generator.generate_synthetic_features()
-    # Generate synthetic covariates
-    data_generator.generate_synthetic_covariates()
-    # Generate synthetic factors
-    data_generator.generate_synthetic_factors()
+    # Generate synthetic data and save it to the data directory
+    data_generator.generate_synthetic_data(save=True)

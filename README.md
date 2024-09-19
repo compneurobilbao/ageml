@@ -79,6 +79,7 @@ The contribution guidelines can be found [here](./docs/CONTRIBUTING.md).
 ## How to use `ageml`
 
 A comprehensive, step by step tutorial of the tool can be found [here](./docs/TUTORIAL.md).
+You can also tinker around with our [getting started Colab notebook](https://colab.research.google.com/drive/1FtHbIghXLswG8IcOgFZBHJ07wKnLuzbG?authuser=3) if you want a more interactive experience.
 
 ## Motivation
 

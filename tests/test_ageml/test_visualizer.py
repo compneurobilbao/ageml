@@ -22,7 +22,7 @@ def dummy_viz():
 @pytest.fixture
 def np_test_data():
     # We make sure the data has no NaNs because the ui module is supposed to give it clean to the Visualizer.
-    return SyntheticData("features").get_data().dropna().to_numpy()
+    return SyntheticData().features.dropna().to_numpy()
 
 
 @pytest.fixture
