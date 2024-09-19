@@ -58,3 +58,21 @@ def covariate_correction(X, Z, beta=None):
     X_residual = X - Z @ beta
 
     return X_residual, beta
+
+
+def cohen_d(group1, group2):
+    # Calculate the size of each group
+    n1, n2 = len(group1), len(group2)
+    
+    # Calculate the mean of each group
+    mean1, mean2 = np.mean(group1), np.mean(group2)
+    
+    # Calculate the variance of each group
+    var1, var2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
+    
+    # Calculate the pooled standard deviation
+    pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
+    
+    # Calculate Cohen's d
+    d = (mean1 - mean2) / pooled_std
+    return d

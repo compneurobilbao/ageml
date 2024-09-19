@@ -24,9 +24,9 @@ import scipy.stats as stats
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import (create_directory, feature_extractor,
-                         significant_markers, convert, log, NameTag, cohen_d)
+                         significant_markers, convert, log, NameTag)
 from ageml.modelling import AgeML, Classifier
-from ageml.processing import find_correlations, covariate_correction
+from ageml.processing import find_correlations, covariate_correction, cohen_d
 
 
 class Interface:
