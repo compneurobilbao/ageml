@@ -4,6 +4,8 @@ import io
 import os
 import sys
 
+import numpy as np
+
 
 def insert_newlines(text, nwords):
     """Function to insert a new line every n words."""

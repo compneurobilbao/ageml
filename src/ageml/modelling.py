@@ -30,6 +30,8 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
+from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
+from hyperopt import tpe
 
 
 class AgeML:
@@ -99,6 +101,7 @@ class AgeML:
         "linear_svr": svm.SVR,
         "xgboost": XGBRegressor,  # XGBoost
         "rf": RandomForestRegressor,
+        "hyperopt": HyperoptEstimator,
     }
     model_hyperparameter_ranges = {'ridge': {'alpha': [-3, 3]},
                                    
@@ -144,7 +147,6 @@ class AgeML:
                                               'colsample_bytree': 'float',
                                               'colsample_bylevel': 'float',
                                               'colsample_bynode': 'float',
-                                              'colsample_bytree': 'float',
                                               'lambda': 'log',
                                               'alpha': 'log'},
                                   
@@ -183,26 +185,31 @@ class AgeML:
         self.age_biasFit = False
 
     def set_hyperparameter_grid(self):
-        """Builds the hyperparameter grid of the selected model upon AgeML object initialization
+        """Build the hyperparameter grid of the selected model upon AgeML object initialization
 
         Returns:
             dict: dictionary with the hyperparameter grid
         """
         param_grid = {}
-        if self.model_type in AgeML.model_dict.keys() and self.hyperparameter_tuning > 0:
+        conditions = [self.model_type in AgeML.model_dict.keys(),
+                      self.hyperparameter_tuning > 0,
+                      not self.model_type == "hyperopt"]
+        if all(conditions):
             hyperparam_ranges = AgeML.model_hyperparameter_ranges[self.model_type]
             hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
             # Initialize output grid
             for hyperparam_name in list(hyperparam_types.keys()):
                 bounds = hyperparam_ranges[hyperparam_name]
                 if hyperparam_types[hyperparam_name] == 'log':
-                    param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0], bounds[1],
+                    param_grid[f"model__{hyperparam_name}"] = np.logspace(bounds[0],
+                                                                          bounds[1],
                                                                           int(self.hyperparameter_tuning))
                 elif hyperparam_types[hyperparam_name] == 'int':
                     param_grid[f"model__{hyperparam_name}"] = np.rint(np.linspace(bounds[0], bounds[1],
                                                                       int(self.hyperparameter_tuning))).astype(int)
                 elif hyperparam_types[hyperparam_name] == 'float':
-                    param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0], bounds[1],
+                    param_grid[f"model__{hyperparam_name}"] = np.linspace(bounds[0],
+                                                                          bounds[1],
                                                                           int(self.hyperparameter_tuning))
         self.hyperparameter_grid = param_grid
 
@@ -215,7 +222,7 @@ class AgeML:
         **kwargs: to input to sklearn scaler object"""
 
         # Mean centered and unit variance
-        if norm in ["no", "None"]:
+        if norm in ["no", "None"] or self.model_type == "hyperopt":
             self.scaler = None
         elif norm not in self.scaler_dict.keys():
             raise ValueError(f"Must select an available scaler type. Available: {list(self.scaler_dict.keys())}")
@@ -233,8 +240,15 @@ class AgeML:
         # Linear Regression
         if model_type not in self.model_dict.keys():
             raise ValueError(f"Must select an available model type. Available: {list(self.model_dict.keys())}")
+        elif model_type == "hyperopt":
+            self.model = HyperoptEstimator(regressor=any_regressor('age_regressor'),
+                                           preprocessing=any_preprocessing('age_preprocessing'),
+                                           algo=tpe.suggest,
+                                           )
         else:
             self.model = self.model_dict[model_type](**kwargs)
+
+        self.model_type = model_type
 
     def set_pipeline(self):
         """Sets the model to use in the pipeline."""
@@ -244,14 +258,17 @@ class AgeML:
             raise ValueError("Must set a valid model before setting pipeline.")
         
         # Scaler and whether it has to be optimized
-        if self.scaler is not None:
+        if self.scaler is not None and self.model_type != "hyperopt":
             pipe.append(("scaler", self.scaler))
         # Feature extension
-        if self.feature_extension != 0:
+        if self.feature_extension != 0 and self.model_type != "hyperopt":
             pipe.append(("feature_extension", preprocessing.PolynomialFeatures(degree=self.feature_extension)))
         # Model
-        pipe.append(("model", self.model))
-        self.pipeline = pipeline.Pipeline(pipe)
+        if self.model_type != "hyperopt":
+            pipe.append(("model", self.model))
+            self.pipeline = pipeline.Pipeline(pipe)
+        else:
+            self.pipeline = None
 
     def set_CV_params(self, CV_split, seed=None):
         """Set the parameters of the Cross Validation Scheme.
@@ -275,7 +292,7 @@ class AgeML:
         MAE = metrics.mean_absolute_error(y_true, y_pred)
         rmse = metrics.mean_squared_error(y_true, y_pred, squared=False)
         r2 = metrics.r2_score(y_true, y_pred)
-        p, pval = stats.pearsonr(y_true, y_pred)
+        p, _ = stats.pearsonr(y_true, y_pred)
         return MAE, rmse, r2, p
 
     def summary_metrics(self, array):
@@ -332,7 +349,7 @@ class AgeML:
         y: 1D-Array with age; shape=n"""
 
         # Check that pipeline has been properly constructed
-        if self.pipeline is None:
+        if self.pipeline is None and self.model_type != "hyperopt":
             raise TypeError("Must set a valid pipeline before running fit.")
 
         # Variables of interes
@@ -344,12 +361,54 @@ class AgeML:
         # Optimize hyperparameters if required
         if self.hyperparameter_grid != {}:
             print("Running Hyperparameter optimization...")
-            opt_pipeline = model_selection.GridSearchCV(self.pipeline, self.hyperparameter_grid, cv=self.CV_split,
+            opt_pipeline = model_selection.GridSearchCV(self.pipeline,
+                                                        self.hyperparameter_grid,
+                                                        cv=self.CV_split,
                                                         scoring="neg_mean_absolute_error")
             opt_pipeline.fit(X, y)
             print(f"Hyperoptimization best parameters: {opt_pipeline.best_params_}")
             # Set best parameters in pipeline
             self.pipeline.set_params(**opt_pipeline.best_params_)
+
+        elif self.model_type == "hyperopt":
+            print("Running Hyperparameter optimization with 'hyperopt' model option...")
+            # Manual KFold
+            kf = model_selection.KFold(n_splits=self.CV_split,
+                                       random_state=self.seed,
+                                       shuffle=True)
+            best_models = []
+            best_preprocs = []
+            scores = []
+            
+            for i, (train_index, test_index) in enumerate(kf.split(X)):
+                print(f"\n---Hyperoptimization CV fold {i+1}/{self.CV_split}---\n")
+                X_train, X_val = X[train_index], X[test_index]
+                y_train, y_val = y[train_index], y[test_index]
+                # Fit
+                self.model.fit(X_train, y_train)
+                best_model = self.model.best_model()['learner']
+                best_preprocessing = self.model.best_model()['preprocs']
+                # Evaluate on validation set
+                pipe = [(f"preproc_{i}", preproc) for i, preproc in enumerate(best_preprocessing)]
+                pipe.append(("model", best_model))
+                temp_pipeline = pipeline.Pipeline(pipe)
+                score = temp_pipeline.score(X_val, y_val)
+                # Store best model, preproc, and score
+                best_models.append(best_model)
+                best_preprocs.append(best_preprocessing)
+                scores.append(score)
+            # Select the best model based on validation scores
+            best_index = np.argmax(scores)
+            best_model = best_models[best_index]
+            best_preprocessing = best_preprocs[best_index]
+            # Set the best model and preprocessing in the pipeline
+            pipe = [(f"preproc_{i}", preproc) for i, preproc in enumerate(best_preprocessing)]
+            pipe.append(("model", best_model))
+            self.pipeline = pipeline.Pipeline(pipe)
+            
+            print("Hyperoptimization best parameters:\n"
+                  f"\t- Best preprocessing:\n\t\t{best_preprocessing}\n"
+                  f"\t- Best model:\n\t\t{best_model}")
         else:
             print("No hyperparameter optimization was performed.")
 
@@ -547,10 +606,10 @@ class Classifier:
             spes.append(specificity)
 
         # Compute confidence intervals
-        ci_accs = st.t.interval(alpha=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
-        ci_aucs = st.t.interval(alpha=self.ci_val, df=len(aucs) - 1, loc=np.mean(aucs), scale=st.sem(aucs))
-        ci_sens = st.t.interval(alpha=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
-        ci_spes = st.t.interval(alpha=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
+        ci_accs = st.t.interval(confidence=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
+        ci_aucs = st.t.interval(confidence=self.ci_val, df=len(aucs) - 1, loc=np.mean(aucs), scale=st.sem(aucs))
+        ci_sens = st.t.interval(confidence=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
+        ci_spes = st.t.interval(confidence=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
 
         # Print results
         print('Summary metrics over all CV splits (%s CI)' % (self.ci_val))

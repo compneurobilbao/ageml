@@ -76,6 +76,11 @@ def test_set_pipeline_none_model():
     # Check that the pipeline only has one step now
     assert len(age_ml_dummy.pipeline.steps) == 1
 
+    # Set the model to 'hyperopt' to check that the pipeline is none
+    age_ml_dummy.set_model("hyperopt")
+    age_ml_dummy.set_pipeline()
+    assert age_ml_dummy.pipeline is None
+
 
 # TODO: test: metrics, summary_metrics, fit_age_bias, predict_age_bias, fit_age, predict_age
 # TODO: check all errors raised

@@ -23,16 +23,17 @@ classifiers = ["Topic :: Software Development :: Libraries :: Python Modules"]
 packages = [{include = "ageml", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
-numpy = "1.24"
-pandas = "2.0"
-scipy = "1.10"
+python = ">=3.9,<3.12"
+numpy = ">=1.24, <2.0.0"
+pandas = ">=2.0.2"
+scipy = ">=1.10"
 statsmodels = "0.14.0"
 matplotlib = "3.5"
 scikit-learn = "1.3"
 coverage-conditional-plugin = "^0.7.0"
 xgboost = "^2.0.3"
 pillow = "^10.3.0"
+hpsklearn = {git = "https://github.com/hyperopt/hyperopt-sklearn", rev = "4bc286479677a0bfd2178dac4546ea268b3f3b77"}
 
 [tool.poetry.dev-dependencies]
 nox-poetry = "*"
@@ -54,6 +55,8 @@ model_age = "ageml.commands:model_age"
 factor_correlation = "ageml.commands:factor_correlation"
 clinical_groups = "ageml.commands:clinical_groups"
 clinical_classify = "ageml.commands:clinical_classify"
+generate_ageml_data = "ageml.datasets.generate_synthetic_data:main"
+
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.0"
 

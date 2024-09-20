@@ -6,8 +6,8 @@ to run the modelling with desired inputs.
 Classes:
 --------
 Interface - reads, parses and executes user commands.
-CLI - reads and parsers user commands via command line.
-InteractiveCLI - reads and parsers user commands via command line via an interactive interface.
+CLI - reads and parses user commands via command line.
+InteractiveCLI - reads and parses user commands via command line via an interactive interface.
 """
 
 import argparse
@@ -15,17 +15,18 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
-import copy
 
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
+from ageml.utils import (create_directory, feature_extractor,
+                         significant_markers, convert, log, NameTag)
 from ageml.modelling import AgeML, Classifier
-from ageml.processing import find_correlations, covariate_correction
+from ageml.processing import find_correlations, covariate_correction, cohen_d
 
 
 class Interface:
@@ -315,6 +316,14 @@ class Interface:
         if "age" not in df:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
 
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Features file columns must be float or int type: %s" % (error_cols))
+
         # Set features flag
         self.flags['features'] = True
 
@@ -343,12 +352,21 @@ class Interface:
         # Set covariate flag
         self.flags['covariates'] = True
 
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Covariates file columns must be float or int type: %s" % (error_cols))
+
         # Set covariate for analysis
         if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
             self.flags['covarname'] = True
             self.args.covar_name = self.args.covar_name.lower()
             if self.args.covar_name not in df:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
+
         # Check if covariate correction mode and set the flag
         if hasattr(self.args, "covcorr_mode") and self.args.covcorr_mode is not None:
             self.flags['covcorr_mode'] = self.args.covcorr_mode
@@ -378,17 +396,31 @@ class Interface:
         # Check that CN in columns and boolean type
         if "cn" not in df:
             raise KeyError("Clinical file must contain a column name 'CN' or any other case-insensitive variation.")
-        elif [df[col].dtype == bool for col in df.columns].count(False) != 0:
-            raise TypeError("Clinical columns must be boolean type. Check that all values are encoded as 'True' or 'False'.")
+
+        # Iterate over each column in the DataFrame
+        error_cols = []
+        for column in df.columns:
+            # Check if all values in the column are either 0 or 1
+            if df[column].isin([0, 1]).all():
+                # Convert the column to boolean type
+                df[column] = df[column].astype(bool)
+            else:
+                error_cols.append(column)
+
+        # Raise an error if the column contains values other than 0 or 1
+        if error_cols != []:
+            raise TypeError(f"Clinical file columns: {error_cols} contains values other than 0 and 1.")
         
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
-            if df[col].sum() == 0:
-                raise ValueError("Clinical column %s has no subjects." % col)
+            if df[col].sum() < 2:
+                raise ValueError("Clinical column %s has less than two subjects." % col)
 
         # Find rows with all False
         if not df.any(axis=1).all():
-            raise ValueError("Clinical file contains rows with all False values. Please check the file.")
+            # Show which rows have all False
+            rows = df[~df.any(axis=1)].index.to_list()
+            raise ValueError("Clinical file contains rows with all False values. Please check the file. Rows: %s" % rows)
 
         # Set clinical flag
         self.flags['clinical'] = True
@@ -415,6 +447,14 @@ class Interface:
         elif df is None:
             return df
         
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Factors file columns must be float or int type: %s" % (error_cols))
+
         return df
 
     def load_ages(self, required=False):
@@ -436,6 +476,14 @@ class Interface:
             raise ValueError("Ages file must be provided.")
         elif df is None:
             return df
+        
+        # Check that columns are dtypes float or int
+        error_cols = []
+        for col in df.columns:
+            if df[col].dtype not in [float, int]:
+                error_cols.append(col)
+        if error_cols != []:
+            raise TypeError("Ages file columns must be float or int type: %s" % (error_cols))
 
         # Required columns
         self.flags['ages'] = True
@@ -755,7 +803,8 @@ class Interface:
         # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
-                tag = NameTag(covar=covar, system=system)
+                covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
                 ageml_model = self.generate_model()
                 self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
@@ -804,7 +853,8 @@ class Interface:
                 continue
             for covar in self.covars:
                 for system in self.systems:
-                    tag = NameTag(group=subject_type, covar=covar, system=system)
+                    covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                    tag = NameTag(group=subject_type, covar=covar_tag, system=system)
                     df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
                                                tag, self.betas[covar][system])
                     df_pred = df_pred.drop(columns=['age'])
@@ -951,14 +1001,30 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
+        header = ("p-val (group1 vs. group2)            "
+                  "Cohen\'s d              "
+                  "CI (95%):   [low, upp]          "
+                  "Delta difference(mean1 - mean2)")
+        print(len(str(header)) * "=")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
+        print(str(header))
+        print(len(str(header)) * "-")
 
         # Calculate p-values
         p_vals_matrix = np.zeros((len(deltas), len(deltas)))
+        effect_size_matrix = np.zeros((len(deltas), len(deltas)))
+        conf_intervals = np.zeros((len(deltas), len(deltas), 2))  # Lower & upper bounds
+        
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
                 p_vals_matrix[i, j] = p_val
+                effect_size_matrix[i, j] = cohen_d(deltas[i], deltas[j])
+                # Compute confidene interval for the mean difference
+                cm = CompareMeans(DescrStatsW(deltas[i]), DescrStatsW(deltas[j]))
+                # We use unequal variance, Welch's test and Satterthwaite's dofs
+                ci_low, ci_upp = cm.tconfint_diff(alpha=significance, usevar='unequal')
+                conf_intervals[i, j] = [ci_low, ci_upp]
         
         # Reject null hypothesis of no correlation
         reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
@@ -971,10 +1037,16 @@ class Interface:
         for i in range(len(deltas)):
             significant = significant_markers(reject_bon[i], reject_fdr[i])
             for j in range(i + 1, len(deltas)):
-                pval_message = "p-value between %s and %s: %.2g" % (
+                pval_message = "p-val (%s vs. %s): %.2g" % (
                     labels[i], labels[j], p_vals_matrix[i, j])
                 if significant[j] != "":
                     pval_message = significant[j] + " " + pval_message
+                cohen_d_value = effect_size_matrix[i, j]
+                delta_difference = np.mean(deltas[i]) - np.mean(deltas[j])
+                ci_low, ci_upp = conf_intervals[i, j]
+                ci_p = 100 * (1 - significance)  # Confidence interval percentage
+                pval_message = f"{pval_message:<35}  Cohen's d: {cohen_d_value:<10.2f}  CI ({ci_p}%): [{ci_low:<6.2f}, {ci_upp:<6.2f}]"
+                pval_message += f"    Delta difference: {delta_difference:<15.2f}"
                 print(pval_message)
 
         # Use visualizer
@@ -1472,7 +1544,7 @@ class CLI(Interface):
 
         # Set covariate name
         if self.line[0] == "None":
-            pass
+            self.args.covar_name = None
         else:
             self.args.covar_name = self.line[0]
 
