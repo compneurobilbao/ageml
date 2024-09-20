@@ -7,7 +7,9 @@ Classes:
 Visualizer - manages the visualization of data and results.
 """
 
-import matplotlib; matplotlib.use('Agg')
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import math
 import numpy as np
@@ -18,11 +20,10 @@ from sklearn.metrics import roc_curve, roc_auc_score
 
 from .utils import insert_newlines, create_directory, NameTag
 
-plt.rcParams.update({'font.size': 12})
+plt.rcParams.update({"font.size": 12})
 
 
 class Visualizer:
-
     """Manages the visualization of data and results.
 
     This class uses matplotlib to plot results.
@@ -89,8 +90,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers,
-                        feature_names, tag: NameTag = None, labels: list = None):
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers, feature_names, tag: NameTag = None, labels: list = None):
         """Plot correlation between features and age.
 
         Parameters
@@ -121,13 +121,12 @@ class Visualizer:
         # Show results
         nplots = len(feature_names)
         plt.figure(figsize=(14, 3 * math.ceil(nplots / 4)))
-        
+
         for i, o in enumerate(order[0]):  # Default to order[0] because each covar may have different order
             plt.subplot(math.ceil(nplots / 4), 4, i + 1)
             ax = plt.gca()  # Get current axis
             for i in range(len(color_set)):
-                ax.scatter(Y[i][:], X[i][:, o],
-                           s=15, c=color_list[i], label=labels[i], alpha=1 / len(labels))
+                ax.scatter(Y[i][:], X[i][:, o], s=15, c=color_list[i], label=labels[i], alpha=1 / len(labels))
             # Set axis labels, title, and legend
             ax.set_ylabel(insert_newlines(feature_names[o], 4))
             ax.set_xlabel("age (years)")
@@ -161,11 +160,13 @@ class Visualizer:
         plt.title(f"Chronological vs Predicted Age \n [Covariate: {tag.covar}, System: {tag.system}]")
         plt.xlabel("Chronological Age")
         plt.ylabel("Predicted Age")
-        
+
         # Save file
-        filename = (f"chronological_vs_pred_age"
-                    f"{'_' + tag.covar if tag.covar != '' else ''}"
-                    f"{'_' + tag.system if tag.system != '' else ''}.png")
+        filename = (
+            f"chronological_vs_pred_age"
+            f"{'_' + tag.covar if tag.covar != '' else ''}"
+            f"{'_' + tag.system if tag.system != '' else ''}.png"
+        )
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
@@ -180,9 +181,7 @@ class Visualizer:
         name: name of the figure"""
 
         # Find min and max age range to fit in graph
-        age_range = np.arange(
-            np.min([y_true, y_pred, y_corrected]), np.max([y_true, y_pred, y_corrected])
-        )
+        age_range = np.arange(np.min([y_true, y_pred, y_corrected]), np.max([y_true, y_pred, y_corrected]))
 
         # Before age-bias correction
         LR_age_bias = LinearRegression(fit_intercept=True)
@@ -205,18 +204,18 @@ class Visualizer:
         plt.ylabel("Predicted Age")
         plt.xlabel("Chronological Age")
         plt.tight_layout()
-        
+
         # Save file
-        filename = (f"age_bias_correction"
-                    f"{'_' + tag.covar if tag.covar != '' else ''}"
-                    f"{'_' + tag.system if tag.system != '' else ''}.png")
+        filename = (
+            f"age_bias_correction" f"{'_' + tag.covar if tag.covar != '' else ''}" f"{'_' + tag.system if tag.system != '' else ''}.png"
+        )
         plt.suptitle(f"[Covariate: {tag.covar}, System: {tag.system}]\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
     def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.
-        
+
         Parameters
         ----------
         corr: 2D-Array with correlation coefficients; shape=(n, m)
@@ -237,17 +236,17 @@ class Visualizer:
                 bar = bars[j]
                 height = bar.get_height()
                 if height > 0:
-                    position = 'center'
+                    position = "center"
                 else:
-                    position = 'top'
-                ax.text(bar.get_x() + bar.get_width() / 2, height, m, ha='center', va=position, color='red', fontsize=12)
+                    position = "top"
+                ax.text(bar.get_x() + bar.get_width() / 2, height, m, ha="center", va=position, color="red", fontsize=12)
             # Add labels
             ax.set_xlabel("Factor")
             ax.set_ylabel("Correlation with delta")
             ax.set_title("%s" % group)
 
             return ax
-        
+
         # Plot each group
         if len(corrs) == 1:
             ax = bargraph(axs, labels, corrs[0], markers[0], groups[0])
@@ -284,7 +283,7 @@ class Visualizer:
         for i, (vals, clevel) in enumerate(zip(deltas, clevels)):
             x = np.random.normal(i + 1, 0.04, size=len(vals))
             plt.scatter(x, vals, color=self.cmap(clevel))
-        plt.xlabel("Gruop")
+        plt.xlabel("Group")
         plt.ylabel("Delta")
 
         # Save file
@@ -307,13 +306,13 @@ class Visualizer:
         auc = roc_auc_score(y, y_pred)
 
         # Plot ROC curve
-        plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % auc)
-        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('ROC curve %s vs %s' % (groups[0], groups[1]))
+        plt.plot(fpr, tpr, color="darkorange", lw=2, label="ROC curve (area = %0.2f)" % auc)
+        plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("ROC curve %s vs %s" % (groups[0], groups[1]))
         plt.legend(loc="lower right")
-        
+
         # Save file
         filename = f"roc_curve_{groups[0]}_vs_{groups[1]}{'_' + tag.system if tag.system != '' else ''}.png"
         plt.suptitle(f"System: {tag.system}")
