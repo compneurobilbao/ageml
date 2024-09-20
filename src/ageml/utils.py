@@ -28,7 +28,11 @@ def convert(value):
         converted_value = False
     else:
         try:
-            converted_value = float(value)
+            # If there is . treat as float if not as int
+            if "." in value:
+                converted_value = float(value)
+            else:
+                converted_value = int(value)
         except ValueError:
             # If the value cannot be converted to a float, keep it as a string
             converted_value = value
