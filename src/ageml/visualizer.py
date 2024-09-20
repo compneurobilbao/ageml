@@ -9,7 +9,6 @@ Visualizer - manages the visualization of data and results.
 
 import matplotlib
 
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import math
 import numpy as np
@@ -20,6 +19,7 @@ from sklearn.metrics import roc_curve, roc_auc_score
 
 from .utils import insert_newlines, create_directory, NameTag
 
+matplotlib.use("Agg")
 plt.rcParams.update({"font.size": 12})
 
 
