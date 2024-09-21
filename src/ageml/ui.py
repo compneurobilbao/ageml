@@ -23,14 +23,12 @@ import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import (create_directory, feature_extractor,
-                         significant_markers, convert, log, NameTag)
+from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
 from ageml.modelling import AgeML, Classifier
 from ageml.processing import find_correlations, covariate_correction, cohen_d
 
 
 class Interface:
-
     """Reads, parses and executes user commands.
 
     This class allows the user to enter certain commands.
@@ -132,8 +130,7 @@ class Interface:
         # Create directory
         self.dir_path = os.path.join(self.args.output, "ageml")
         if os.path.exists(self.dir_path):
-            warnings.warn("Directory %s already exists files may be overwritten." % self.dir_path,
-                          category=UserWarning)
+            warnings.warn("Directory %s already exists files may be overwritten." % self.dir_path, category=UserWarning)
         else:
             create_directory(self.dir_path)
 
@@ -145,7 +142,7 @@ class Interface:
 
     def command_setup(self, dir_path):
         """Create required directories and files to store results for command.
-        
+
         Parameters
         ----------
         dir_path: directory path to create"""
@@ -153,8 +150,7 @@ class Interface:
         # Create directory
         self.command_dir = os.path.join(self.dir_path, dir_path)
         if os.path.exists(self.command_dir):
-            warnings.warn("Directory %s already exists files may be overwritten." % self.command_dir,
-                          category=UserWarning)
+            warnings.warn("Directory %s already exists files may be overwritten." % self.command_dir, category=UserWarning)
         else:
             create_directory(self.command_dir)
 
@@ -163,7 +159,7 @@ class Interface:
         with open(self.log_path, "a") as f:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(current_time + "\n")
-        
+
         # Set visualizer as command directory
         self.set_visualizer(self.command_dir)
 
@@ -172,16 +168,22 @@ class Interface:
 
         # Set initial parameters for model to defaults
         self.naming = ""
-        self.subject_types = ['cn']
-        self.covars = ['all']
-        self.systems = ['all']
+        self.subject_types = ["cn"]
+        self.covars = ["all"]
+        self.systems = ["all"]
 
     def set_flags(self):
         """Set flags."""
 
-        self.flags = {"clinical": False, "covariates": False, "covarname": False,
-                      "systems": False, "ages": False, "features": False,
-                      "covcorr_mode": "cn"}
+        self.flags = {
+            "clinical": False,
+            "covariates": False,
+            "covarname": False,
+            "systems": False,
+            "ages": False,
+            "features": False,
+            "covcorr_mode": "cn",
+        }
 
     def set_visualizer(self, dir):
         """Set visualizer with output directory."""
@@ -191,10 +193,12 @@ class Interface:
     def set_dict(self):
         """Initialise dictionaries for data storage."""
 
-        self.dfs = {subject_type: {covar: {system: {} for system in self.systems}
-                    for covar in self.covars} for subject_type in self.subject_types}
-        self.preds = {subject_type: {covar: {system: {} for system in self.systems}
-                      for covar in self.covars} for subject_type in self.subject_types}
+        self.dfs = {
+            subject_type: {covar: {system: {} for system in self.systems} for covar in self.covars} for subject_type in self.subject_types
+        }
+        self.preds = {
+            subject_type: {covar: {system: {} for system in self.systems} for covar in self.covars} for subject_type in self.subject_types
+        }
         self.models = {covar: {system: {} for system in self.systems} for covar in self.covars}
         self.betas = {covar: {system: {} for system in self.systems} for covar in self.covars}
 
@@ -207,14 +211,14 @@ class Interface:
             df_sub = self.df_features[self.df_clinical[subject_type]]
             for covar in self.covars:
                 # Keep subjects with the specified covariate
-                if self.flags['covarname']:
+                if self.flags["covarname"]:
                     covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
                     df_cov = df_sub[df_sub.index.isin(covar_index)]
                 else:
                     df_cov = df_sub
                 for system in self.systems:
                     # Keep only the features of the system
-                    df_sys = df_cov[['age'] + self.dict_systems[system]]
+                    df_sys = df_cov[["age"] + self.dict_systems[system]]
                     # Save the dataframe
                     self.dfs[subject_type][covar][system] = df_sys
 
@@ -229,36 +233,32 @@ class Interface:
             self.args.model_cv_split,
             self.args.model_seed,
             self.args.hyperparameter_tuning,
-            self.args.feature_extension
+            self.args.feature_extension,
         )
         return model
 
     def generate_classifier(self):
         """Set classifier with parameters."""
 
-        classifier = Classifier(
-            self.args.classifier_cv_split,
-            self.args.classifier_seed,
-            self.args.classifier_thr,
-            self.args.classifier_ci)
-        
+        classifier = Classifier(self.args.classifier_cv_split, self.args.classifier_seed, self.args.classifier_thr, self.args.classifier_ci)
+
         return classifier
 
     def update_params(self):
         """Update initial parameters after load."""
 
         # Check possible flags of interest
-        if self.flags['clinical']:
+        if self.flags["clinical"]:
             self.subject_types = self.df_clinical.columns.to_list()
-        if self.flags['covarname']:
+        if self.flags["covarname"]:
             self.covars = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
             self.naming += f"_{self.args.covar_name}"
-        if self.flags['systems']:
+        if self.flags["systems"]:
             self.systems = list(self.dict_systems.keys())
             self.naming += "_multisystem"
-        elif self.flags['features']:
-            self.dict_systems['all'] = self.df_features.columns.drop('age').to_list()
-        if self.flags['ages']:
+        elif self.flags["features"]:
+            self.dict_systems["all"] = self.df_features.columns.drop("age").to_list()
+        if self.flags["ages"]:
             self.systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
 
     def check_file(self, file):
@@ -298,20 +298,20 @@ class Interface:
         Parameters
         ----------
         required: boolean to check if file is required
-        
+
         Returns
         -------
         df: dataframe with features"""
 
         # Load data
-        df = self.load_csv('features')
+        df = self.load_csv("features")
 
         # Check that file
         if required and df is None:
             raise ValueError("Features file must be provided.")
         elif df is None:
             return df
-        
+
         # Check that age column is present
         if "age" not in df:
             raise KeyError("Features file must contain a column name 'age', or any other case-insensitive variation.")
@@ -325,7 +325,7 @@ class Interface:
             raise TypeError("Features file columns must be float or int type: %s" % (error_cols))
 
         # Set features flag
-        self.flags['features'] = True
+        self.flags["features"] = True
 
         return df
 
@@ -335,22 +335,22 @@ class Interface:
         Parameters
         ----------
         required: boolean to check if file is required
-        
+
         Returns
         -------
         df: dataframe with covariates"""
 
         # Load data
-        df = self.load_csv('covariates')
+        df = self.load_csv("covariates")
 
         # Check required
         if required and df is None:
             raise ValueError("Covariates file must be provided.")
         elif df is None:
             return df
-        
+
         # Set covariate flag
-        self.flags['covariates'] = True
+        self.flags["covariates"] = True
 
         # Check that columns are dtypes float or int
         error_cols = []
@@ -361,15 +361,15 @@ class Interface:
             raise TypeError("Covariates file columns must be float or int type: %s" % (error_cols))
 
         # Set covariate for analysis
-        if hasattr(self.args, 'covar_name') and self.args.covar_name is not None:
-            self.flags['covarname'] = True
+        if hasattr(self.args, "covar_name") and self.args.covar_name is not None:
+            self.flags["covarname"] = True
             self.args.covar_name = self.args.covar_name.lower()
             if self.args.covar_name not in df:
                 raise KeyError("Covariate column %s not found in covariates file." % self.args.covar_name)
 
-        # Check if covariate correction mode and set the flag
+        # Check if covariate correction mode was specified in the arguments and set the flag accordingly
         if hasattr(self.args, "covcorr_mode") and self.args.covcorr_mode is not None:
-            self.flags['covcorr_mode'] = self.args.covcorr_mode
+            self.flags["covcorr_mode"] = self.args.covcorr_mode
 
         return df
 
@@ -379,13 +379,13 @@ class Interface:
         Parameters
         ----------
         required: boolean to check if file is required
-        
+
         Returns
         -------
         df: dataframe with clinical information"""
 
         # Load data
-        df = self.load_csv('clinical')
+        df = self.load_csv("clinical")
 
         # Check required
         if required and df is None:
@@ -410,7 +410,7 @@ class Interface:
         # Raise an error if the column contains values other than 0 or 1
         if error_cols != []:
             raise TypeError(f"Clinical file columns: {error_cols} contains values other than 0 and 1.")
-        
+
         # Check that all columns have at least two subjects and show which column
         for col in df.columns:
             if df[col].sum() < 2:
@@ -423,7 +423,7 @@ class Interface:
             raise ValueError("Clinical file contains rows with all False values. Please check the file. Rows: %s" % rows)
 
         # Set clinical flag
-        self.flags['clinical'] = True
+        self.flags["clinical"] = True
 
         return df
 
@@ -437,16 +437,16 @@ class Interface:
         Returns
         -------
         df: dataframe with factors"""
-        
+
         # Load data
-        df = self.load_csv('factors')
+        df = self.load_csv("factors")
 
         # Check required
         if required and df is None:
             raise ValueError("Factors file must be provided.")
         elif df is None:
             return df
-        
+
         # Check that columns are dtypes float or int
         error_cols = []
         for col in df.columns:
@@ -469,14 +469,14 @@ class Interface:
         df: dataframe with ages"""
 
         # Load data
-        df = self.load_csv('ages')
+        df = self.load_csv("ages")
 
         # Check required
         if required and df is None:
             raise ValueError("Ages file must be provided.")
         elif df is None:
             return df
-        
+
         # Check that columns are dtypes float or int
         error_cols = []
         for col in df.columns:
@@ -486,7 +486,7 @@ class Interface:
             raise TypeError("Ages file columns must be float or int type: %s" % (error_cols))
 
         # Required columns
-        self.flags['ages'] = True
+        self.flags["ages"] = True
         req_cols = ["age", "predicted_age", "corrected_age", "delta"]
         cols = [col.lower() for col in df.columns.to_list()]
 
@@ -520,17 +520,17 @@ class Interface:
         features = {f.lower() for f in self.df_features.columns.to_list()}
 
         # Parse file
-        for line in open(file, 'r'):
+        for line in open(file, "r"):
             line = line.split("\n")[0]  # Remove newline character
-            line = line.split(':')  # Split by the separator
+            line = line.split(":")  # Split by the separator
 
             # Must have at exactly two elements (system, features)
             if len(line) != 2:
                 raise ValueError("Systems file must be in the format 'system_name_1:feature1,feature2,...'")
-            
+
             # Obtain system features ignoring trailing white spaces
             system = line[0].strip()
-            systems_features = [f.lower().strip() for f in line[1].split(',')]
+            systems_features = [f.lower().strip() for f in line[1].split(",")]
 
             # Check features exist and not repeated
             for f in systems_features:
@@ -538,7 +538,7 @@ class Interface:
                     raise ValueError("Feature '%s' not found in features file." % f)
                 elif systems_features.count(f) > 1:
                     raise ValueError("Feature '%s' is repeated in the system: %s." % (f, system))
-            
+
             # Save the system name and its features
             systems[system] = systems_features
 
@@ -546,7 +546,7 @@ class Interface:
 
     def load_systems(self, required=False):
         """Load systems file.
-        
+
         .txt expected. Format: system_name:feature1,feature2,...
 
         Parameters
@@ -570,9 +570,9 @@ class Interface:
                 return systems
         else:
             return systems
-        
+
         # Set flag
-        self.flags['systems'] = True
+        self.flags["systems"] = True
 
         # Parse file
         systems = self.system_parser(self.args.systems)
@@ -580,15 +580,20 @@ class Interface:
         # Check that the dictionary has at least one entry
         if len(systems) == 0:
             raise ValueError("Systems file is probably incorrectly formatted. Check it please.")
-        
+
         return systems
 
     def remove_missing_data(self):
         """Remove subjects with missing values."""
 
         # Dataframes
-        dfs = {'features': self.df_features, 'covariates': self.df_covariates,
-               'factors': self.df_factors, 'clinical': self.df_clinical, 'ages': self.df_ages}
+        dfs = {
+            "features": self.df_features,
+            "covariates": self.df_covariates,
+            "factors": self.df_factors,
+            "clinical": self.df_clinical,
+            "ages": self.df_ages,
+        }
         dfs = {label: df for label, df in dfs.items() if df is not None}
 
         # Subjects before removing missing data
@@ -597,7 +602,7 @@ class Interface:
             print("Number of subjects in dataframe %s: %d" % (label, init_count[label]))
 
         # Check for missing data
-        print('Removing subjects with missing data...')
+        print("Removing subjects with missing data...")
         for label, df in dfs.items():
             missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
             if missing_subjects.__len__() != 0:
@@ -607,23 +612,21 @@ class Interface:
                 dfs[label] = df.drop(missing_subjects)
 
         # Check that all dataframes have the same subjects
-        print('Removing subjects not shared among dataframes...')
+        print("Removing subjects not shared among dataframes...")
         for l1, df1 in dfs.items():
             for l2, df2 in dfs.items():
                 if l1 != l2:
                     non_shared_idx = df1.index[~df1.index.isin(set(df2.index.to_list()))]
                     if non_shared_idx.__len__() != 0:
-                        warn_message = ("Subjects in dataframe %s not in dataframe %s: %s"
-                                        % (l1, l2, non_shared_idx.to_list()))
+                        warn_message = "Subjects in dataframe %s not in dataframe %s: %s" % (l1, l2, non_shared_idx.to_list())
                         print(warn_message)
                         warnings.warn(warn_message, category=UserWarning)
                         dfs[l1] = df1.drop(non_shared_idx)
 
         # Set dataframes
         for label, df in dfs.items():
-            print("Final number of subjects in dataframe %s: %d (%.2f %% of initial)" %
-                  (label, len(df), len(df) / init_count[label] * 100))
-            setattr(self, f'df_{label}', df)
+            print("Final number of subjects in dataframe %s: %d (%.2f %% of initial)" % (label, len(df), len(df) / init_count[label] * 100))
+            setattr(self, f"df_{label}", df)
 
     def load_data(self, required=None):
         """Load data from csv files.
@@ -650,7 +653,7 @@ class Interface:
         self.df_clinical = self.load_clinical(required="clinical" in required)
 
         # Load factors
-        self.df_factors = self.load_factors(required='factors' in required)
+        self.df_factors = self.load_factors(required="factors" in required)
 
         # Load ages
         self.df_ages = self.load_ages(required="ages" in required)
@@ -662,7 +665,7 @@ class Interface:
         self.remove_missing_data()
 
         # Show number of subjects per clinical category
-        if self.flags['clinical']:
+        if self.flags["clinical"]:
             for col in self.df_clinical.columns:
                 print("Number of %s subjects: %d" % (col, self.df_clinical[col].sum()))
         else:
@@ -671,7 +674,7 @@ class Interface:
                 index = self.df_features.index
             elif self.df_ages is not None:
                 index = self.df_ages.index
-            self.df_clinical = pd.DataFrame(index=index, columns=['cn'], data=True)
+            self.df_clinical = pd.DataFrame(index=index, columns=["cn"], data=True)
 
         # Update initial parameters after load
         self.update_params()
@@ -705,15 +708,19 @@ class Interface:
                 for j in range(i + 1, len(labels)):
                     t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
                     if p_val < 0.05:
-                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (
-                            labels[i], labels[j], t_stat, p_val)
+                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (labels[i], labels[j], t_stat, p_val)
                         print(warn_message)
                         warnings.warn(warn_message, category=UserWarning)
 
         # Use visualiser
         self.visualizer.age_distribution(ages, labels, name)
 
-    def features_vs_age(self, features_dict: dict, tag, significance: float = 0.05, ):
+    def features_vs_age(
+        self,
+        features_dict: dict,
+        tag,
+        significance: float = 0.05,
+    ):
         """Use visualizer to explore relationship between features and age.
 
         Parameters
@@ -729,30 +736,39 @@ class Interface:
         # Make lists to store covariate info for each dataframe
         X_list, y_list, corr_list, order_list, significance_list = [], [], [], [], []
         for label, df in features_dict.items():
-            print('Covariate %s' % label)
+            print("Covariate %s" % label)
             # Extract features
             X, y, feature_names = feature_extractor(df)
             # Covariate correction
-            if self.flags["covariates"] and not self.flags['covarname']:
+            if self.flags["covariates"] and not self.flags["covarname"]:
                 print("Covariate effects will be subtracted from features.")
                 X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(X, y)
             # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
             significant = significant_markers(reject_bon, reject_fdr)
             # Print results
             for idx, order_element in enumerate(order):
-                print("%d.%s %s %s: %.2f (%.2g)" % (idx + 1, label, significant[order_element],
-                                                    feature_names[order_element], corr[order_element],
-                                                    p_values[order_element]))
+                print(
+                    "%d.%s %s %s: %.2f (%.2g)"
+                    % (
+                        idx + 1,
+                        label,
+                        significant[order_element],
+                        feature_names[order_element],
+                        corr[order_element],
+                        p_values[order_element],
+                    )
+                )
             # Append all the values
             X_list.append(X), y_list.append(y), corr_list.append(corr), order_list.append(order), significance_list.append(significant)
 
         # Use visualizer to show results
-        self.visualizer.features_vs_age(X_list, y_list, corr_list, order_list,
-                                        significance_list, feature_names, tag, list(features_dict.keys()))
+        self.visualizer.features_vs_age(
+            X_list, y_list, corr_list, order_list, significance_list, feature_names, tag, list(features_dict.keys())
+        )
 
     def model_age(self, df, model, tag):
         """Use AgeML to fit age model with data.
@@ -776,7 +792,7 @@ class Interface:
             raise ValueError("Not enough controls for modelling for each CV split.")
 
         # Covariate correction
-        if self.flags["covariates"] and not self.flags['covarname']:
+        if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
             X, beta = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
         else:
@@ -803,18 +819,25 @@ class Interface:
         # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
-                covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                covar_tag = self.args.covar_name + "_" + str(covar) if self.flags["covarname"] else covar
                 tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
                 ageml_model = self.generate_model()
-                self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(self.dfs['cn'][covar][system],
-                                                                                                ageml_model, tag=tag)
+                self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(
+                    self.dfs["cn"][covar][system], ageml_model, tag=tag
+                )
                 # Save predictions
-                df_pred = df_pred.drop(columns=['age'])
+                df_pred = df_pred.drop(columns=["age"])
                 df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
-                self.preds['cn'][covar][system] = df_pred
+                self.preds["cn"][covar][system] = df_pred
 
-    def predict_age(self, df, model, tag: NameTag, beta: np.ndarray = None,):
+    def predict_age(
+        self,
+        df,
+        model,
+        tag: NameTag,
+        beta: np.ndarray = None,
+    ):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
@@ -827,7 +850,7 @@ class Interface:
         X, y, _ = feature_extractor(df)
 
         # Covariate correction
-        if self.flags["covariates"] and not self.flags['covarname']:
+        if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
             X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy(), beta)
 
@@ -849,15 +872,16 @@ class Interface:
 
         for subject_type in self.subject_types:
             # Do not apply to controls
-            if subject_type == 'cn':
+            if subject_type == "cn":
                 continue
             for covar in self.covars:
                 for system in self.systems:
-                    covar_tag = self.args.covar_name + '_' + str(covar) if self.flags['covarname'] else covar
+                    covar_tag = self.args.covar_name + "_" + str(covar) if self.flags["covarname"] else covar
                     tag = NameTag(group=subject_type, covar=covar_tag, system=system)
-                    df_pred = self.predict_age(self.dfs[subject_type][covar][system], self.models[covar][system],
-                                               tag, self.betas[covar][system])
-                    df_pred = df_pred.drop(columns=['age'])
+                    df_pred = self.predict_age(
+                        self.dfs[subject_type][covar][system], self.models[covar][system], tag, self.betas[covar][system]
+                    )
+                    df_pred = df_pred.drop(columns=["age"])
                     df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                     self.preds[subject_type][covar][system] = df_pred
 
@@ -873,10 +897,10 @@ class Interface:
         df_ages = pd.concat(stack, axis=0)
 
         # Drop duplicates keep first (some subjects may be in more than one subejct type)
-        df_ages = df_ages[~df_ages.index.duplicated(keep='first')]
+        df_ages = df_ages[~df_ages.index.duplicated(keep="first")]
 
         # Add age information
-        df_ages = pd.concat([self.df_features['age'], df_ages], axis=1)
+        df_ages = pd.concat([self.df_features["age"], df_ages], axis=1)
 
         # Handle NaNs
         df_ages = df_ages.fillna("")
@@ -885,8 +909,7 @@ class Interface:
         filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.command_dir, filename))
 
-    def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None,
-                          significance=0.05):
+    def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.
 
         Parameters
@@ -916,15 +939,15 @@ class Interface:
             print(f"System: {system}")
 
             # Select data to visualize
-            deltas = df['delta_%s' % system].to_numpy()
+            deltas = df["delta_%s" % system].to_numpy()
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
             corrs.append(corr)
 
             # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method='bonferroni')
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method='fdr_bh')
+            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
             significant = significant_markers(reject_bon, reject_fdr)
             significants.append(significant)
 
@@ -937,7 +960,7 @@ class Interface:
 
     def deltas_by_group(self, dfs, tag, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
-        
+
         Parameters
         ----------
         # TODO: Update docstring for the current input arguments
@@ -988,8 +1011,7 @@ class Interface:
                 covars = self.df_covariates.loc[df_group.index].to_numpy()
                 # When "cn" or "all" -> Use the same beta for all groups
                 if self.flags["covcorr_mode"] in ["cn", "all"]:
-                    vals, _ = covariate_correction(vals, covars,
-                                                   beta[self.flags["covcorr_mode"]])
+                    vals, _ = covariate_correction(vals, covars, beta[self.flags["covcorr_mode"]])
                 # When "each" -> Use the specific beta for each group
                 elif self.flags["covcorr_mode"] == "each":
                     vals, _ = covariate_correction(vals, covars, beta[group])
@@ -1001,10 +1023,12 @@ class Interface:
 
         # Obtain statistically significant difference between deltas
         print("Checking for statistically significant differences between deltas...")
-        header = ("p-val (group1 vs. group2)            "
-                  "Cohen\'s d              "
-                  "CI (95%):   [low, upp]          "
-                  "Delta difference(mean1 - mean2)")
+        header = (
+            "p-val (group1 vs. group2)            "
+            "Cohen's d              "
+            "CI (95%):   [low, upp]          "
+            "Delta difference(mean1 - mean2)"
+        )
         print(len(str(header)) * "=")
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
         print(str(header))
@@ -1014,7 +1038,7 @@ class Interface:
         p_vals_matrix = np.zeros((len(deltas), len(deltas)))
         effect_size_matrix = np.zeros((len(deltas), len(deltas)))
         conf_intervals = np.zeros((len(deltas), len(deltas), 2))  # Lower & upper bounds
-        
+
         for i in range(len(deltas)):
             for j in range(i + 1, len(deltas)):
                 _, p_val = stats.ttest_ind(deltas[i], deltas[j])
@@ -1023,12 +1047,12 @@ class Interface:
                 # Compute confidene interval for the mean difference
                 cm = CompareMeans(DescrStatsW(deltas[i]), DescrStatsW(deltas[j]))
                 # We use unequal variance, Welch's test and Satterthwaite's dofs
-                ci_low, ci_upp = cm.tconfint_diff(alpha=significance, usevar='unequal')
+                ci_low, ci_upp = cm.tconfint_diff(alpha=significance, usevar="unequal")
                 conf_intervals[i, j] = [ci_low, ci_upp]
-        
+
         # Reject null hypothesis of no correlation
-        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='bonferroni')
-        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method='fdr_bh')
+        reject_bon, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method="bonferroni")
+        reject_fdr, _, _, _ = multipletests(p_vals_matrix.flatten(), alpha=significance, method="fdr_bh")
         reject_bon = reject_bon.reshape((len(deltas), len(deltas)))
         reject_fdr = reject_fdr.reshape((len(deltas), len(deltas)))
 
@@ -1037,8 +1061,7 @@ class Interface:
         for i in range(len(deltas)):
             significant = significant_markers(reject_bon[i], reject_fdr[i])
             for j in range(i + 1, len(deltas)):
-                pval_message = "p-val (%s vs. %s): %.2g" % (
-                    labels[i], labels[j], p_vals_matrix[i, j])
+                pval_message = "p-val (%s vs. %s): %.2g" % (labels[i], labels[j], p_vals_matrix[i, j])
                 if significant[j] != "":
                     pval_message = significant[j] + " " + pval_message
                 cohen_d_value = effect_size_matrix[i, j]
@@ -1099,15 +1122,11 @@ class Interface:
             covars2 = self.df_covariates.loc[df2.index].to_numpy()
 
             if self.flags["covcorr_mode"] in ["cn", "all"]:
-                deltas1, _ = covariate_correction(deltas1, covars1,
-                                                  beta[self.flags["covcorr_mode"]])
-                deltas2, _ = covariate_correction(deltas2, covars2,
-                                                  beta[self.flags["covcorr_mode"]])
+                deltas1, _ = covariate_correction(deltas1, covars1, beta[self.flags["covcorr_mode"]])
+                deltas2, _ = covariate_correction(deltas2, covars2, beta[self.flags["covcorr_mode"]])
             elif self.flags["covcorr_mode"] == "each":
-                deltas1, _ = covariate_correction(deltas1, covars1,
-                                                  beta[groups[0]])
-                deltas2, _ = covariate_correction(deltas2, covars2,
-                                                  beta[groups[1]])
+                deltas1, _ = covariate_correction(deltas1, covars1, beta[groups[0]])
+                deltas2, _ = covariate_correction(deltas2, covars2, beta[groups[1]])
 
         # Create X and y for classification
         if len(delta_cols) == 1:
@@ -1157,7 +1176,7 @@ class Interface:
         print("Running age modelling...")
 
         # Set up directory
-        self.command_setup('model_age')
+        self.command_setup("model_age")
 
         # Load data
         self.load_data(required=["features"])
@@ -1169,12 +1188,12 @@ class Interface:
         self.set_features_dataframes()
 
         # Use visualizer to show age distribution of controls per covariate (all systems share the age distribution)
-        cn_ages = {covar: self.dfs['cn'][covar][self.systems[0]]['age'].to_list() for covar in self.covars}
+        cn_ages = {covar: self.dfs["cn"][covar][self.systems[0]]["age"].to_list() for covar in self.covars}
         self.age_distribution(cn_ages, name="Controls")
 
         # Show features vs age for controls for each system
         for system in self.systems:
-            cn_features = {covar: self.dfs['cn'][covar][system] for covar in self.covars}
+            cn_features = {covar: self.dfs["cn"][covar][system] for covar in self.covars}
             self.features_vs_age(cn_features, tag=NameTag(system=system))
 
         # Model age for each system on controls
@@ -1192,7 +1211,7 @@ class Interface:
         print("Running factors correlation analysis...")
 
         # Set up
-        self.command_setup('factor_correlation')
+        self.command_setup("factor_correlation")
 
         # Load data
         self.load_data(required=["ages", "factors"])
@@ -1202,7 +1221,7 @@ class Interface:
             beta = {}
             if self.flags["covcorr_mode"] == "cn":
                 print("Applying covariate correction for factors using CN group as reference.")
-                group_index = self.df_clinical['cn']
+                group_index = self.df_clinical["cn"]
                 factors = self.df_factors.loc[group_index].to_numpy()
                 covars = self.df_covariates.loc[group_index].to_numpy()
                 _, beta["cn"] = covariate_correction(factors, covars)
@@ -1244,14 +1263,14 @@ class Interface:
         print("Running clinical outcomes...")
 
         # Set up
-        self.command_setup('clinical_groups')
+        self.command_setup("clinical_groups")
 
         # Load data
         self.load_data(required=["ages", "clinical"])
 
         # Obtain dataframes for each group
         dfs = {g: self.df_ages.loc[self.df_clinical[g]] for g in self.subject_types}
-    
+
         # Use visualizer to show age distribution per clinical group
         ages = {g: dfs[g].iloc[:, 0].to_list() for g in self.subject_types}
         self.age_distribution(ages, name="Clinical Groups")
@@ -1267,7 +1286,7 @@ class Interface:
         print("Running classification...")
 
         # Set up
-        self.command_setup('clinical_classify')
+        self.command_setup("clinical_classify")
 
         # Load data
         self.load_data(required=["ages", "clinical"])
@@ -1286,14 +1305,13 @@ class Interface:
             df_group1_system = df_group1[[col for col in df_group1.columns if system in col]]
             df_group2_system = df_group2[[col for col in df_group2.columns if system in col]]
             self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], tag=NameTag(system=system))
-        
+
         # Create a classifier for all systems
         if len(self.systems) > 1:
             self.classify(df_group1, df_group2, [self.args.group1, self.args.group2], tag=NameTag(system="all"))
 
 
 class CLI(Interface):
-
     """Read and parses user commands via command line via an interactive interface
 
     Public methods:
@@ -1396,7 +1414,7 @@ class CLI(Interface):
         """Reset arguments to None except output directory."""
 
         for attr_name in vars(self.args):
-            if attr_name != 'output':
+            if attr_name != "output":
                 setattr(self.args, attr_name, None)
 
     def command_interface(self):
@@ -1444,13 +1462,13 @@ class CLI(Interface):
         if len(self.line) == 0:
             error = "Must provide two arguments or None."
             return error
-        
+
         # Set defaults
-        if len(self.line) == 1 and self.line[0] == 'None':
+        if len(self.line) == 1 and self.line[0] == "None":
             self.args.classifier_thr = 0.5
             self.args.classifier_ci = 0.95
             return error
-        
+
         # Check wether items are floats
         for item in self.line:
             try:
@@ -1458,7 +1476,7 @@ class CLI(Interface):
             except ValueError:
                 error = "Parameters must be floats."
                 return error
-            
+
         # Set parameters
         if len(self.line) == 2:
             self.args.classifier_thr = float(self.line[0])
@@ -1467,9 +1485,9 @@ class CLI(Interface):
             error = "Too many values to unpack."
         elif len(self.line) == 1:
             error = "Must provide two arguments or None."
-        
+
         return error
-            
+
     def classification_command(self):
         """Run classification."""
 
@@ -1491,7 +1509,7 @@ class CLI(Interface):
 
         # Ask for CV parameters adn classifier parameters
         print("CV parameters (Default: nº splits=5 and seed=0):")
-        self.force_command(self.cv_command, 'classifier')
+        self.force_command(self.cv_command, "classifier")
         print("Classifier parameters (Default: thr=0.5 and ci=0.95):")
         self.force_command(self.classifier_command)
 
@@ -1502,7 +1520,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running classification."
-        
+
         return error
 
     def clinical_command(self):
@@ -1527,7 +1545,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running clinical analysis."
-        
+
         return error
 
     def covar_command(self):
@@ -1563,18 +1581,18 @@ class CLI(Interface):
             return error
 
         # Check that first argument is model or classifier
-        if self.line[0] not in ['model', 'classifier']:
+        if self.line[0] not in ["model", "classifier"]:
             error = "Must provide either model or classifier flag."
             return error
-        elif self.line[0] == 'model':
-            arg_type = 'model'
-        elif self.line[0] == 'classifier':
-            arg_type = 'classifier'
+        elif self.line[0] == "model":
+            arg_type = "model"
+        elif self.line[0] == "classifier":
+            arg_type = "classifier"
 
         # Set default values
-        if len(self.line) == 2 and self.line[1] == 'None':
-            setattr(self.args, arg_type + '_cv_split', 5)
-            setattr(self.args, arg_type + '_seed', 0)
+        if len(self.line) == 2 and self.line[1] == "None":
+            setattr(self.args, arg_type + "_cv_split", 5)
+            setattr(self.args, arg_type + "_seed", 0)
             return error
 
         # Check wether items are integers
@@ -1585,11 +1603,11 @@ class CLI(Interface):
 
         # Set CV parameters
         if len(self.line) == 2:
-            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
-            setattr(self.args, arg_type + '_seed', 0)
+            setattr(self.args, arg_type + "_cv_split", int(self.line[1]))
+            setattr(self.args, arg_type + "_seed", 0)
         elif len(self.line) == 3:
-            setattr(self.args, arg_type + '_cv_split', int(self.line[1]))
-            setattr(self.args, arg_type + '_seed', int(self.line[2]))
+            setattr(self.args, arg_type + "_cv_split", int(self.line[1]))
+            setattr(self.args, arg_type + "_seed", int(self.line[2]))
         else:
             error = "Too many values to unpack."
 
@@ -1617,7 +1635,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running factor correlation analysis."
-        
+
         return error
 
     def group_command(self):
@@ -1711,7 +1729,7 @@ class CLI(Interface):
         """Run age modelling."""
 
         error = None
-        
+
         # Ask for input files
         print("Input features file path (Required):")
         self.force_command(self.load_command, "--features", required=True)
@@ -1735,7 +1753,7 @@ class CLI(Interface):
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
         print("Example: 10 0")
-        self.force_command(self.cv_command, 'model')
+        self.force_command(self.cv_command, "model")
         print("Polynomial feature extension degree. Leave blank if not desired (Default: 0, max. 3)")
         print("Example: 3")
         self.force_command(self.feature_extension_command)
@@ -1750,7 +1768,7 @@ class CLI(Interface):
         except Exception as e:
             print(e)
             error = "Error running age modelling."
-        
+
         return error
 
     def model_command(self):
@@ -1886,7 +1904,7 @@ class CLI(Interface):
         if len(self.line) == 0 or self.line[0] == "None":
             self.args.feature_extension = 0
             return error
-        
+
         # Check whether items are integers
         if not self.line[0].isdigit():
             error = "The polynomial feature extension degree must be an integer (0, 1, 2, or 3)"
@@ -1912,7 +1930,7 @@ class CLI(Interface):
         if len(self.line) == 0 or self.line[0] == "None":
             self.args.hyperparameter_tuning = 0
             return error
-        
+
         # Check whether items are integers
         if not self.line[0].isdigit():
             error = "The number of points in the hyperparameter grid must be a positive, nonzero integer."
