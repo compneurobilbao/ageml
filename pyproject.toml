@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "ageml"
-version = "0.1.0"
+version = "0.2.0"
 description = "AgeML is a Python package for Age Modelling with Machine Learning made easy."
 authors = [ "Computational Neuroimaging Lab Bilbao, IIS Biobizkaia",
             "jorge.garcia.condado <jorgegarciacondado@gmail.com>",
