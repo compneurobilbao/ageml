@@ -227,9 +227,13 @@ class FactorCorrelation(Interface):
             help=messages.factors_long_description,
         )
 
-        # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE", help=messages.covar_long_description)
-        self.parser.add_argument("--clinical", metavar="FILE", help=messages.clinical_long_description)
+        self.parser.add_argument("--covariates", metavar="FILE", required=False,
+                                 help=messages.covar_long_description)
+        self.parser.add_argument("--clinical", metavar="FILE", required=False,
+                                 help=messages.clinical_long_description)
+        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
+                                 choices=["cn", "each", "all"],
+                                 help=messages.covcorr_mode_long_description)
 
 
 class ClinicalGroups(Interface):
@@ -280,7 +284,11 @@ class ClinicalGroups(Interface):
         )
 
         # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE", help=messages.covar_long_description)
+        self.parser.add_argument("--covariates", metavar="FILE", required=False,
+                                 help=messages.covar_long_description)
+        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
+                                 choices=["cn", "each", "all"],
+                                 help=messages.covcorr_mode_long_description)
 
 
 class ClinicalClassification(Interface):
@@ -364,8 +372,12 @@ class ClinicalClassification(Interface):
         )
 
         # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE", help=messages.covar_long_description)
-
+        self.parser.add_argument("--covariates", metavar="FILE", required=False,
+                                 help=messages.covar_long_description)
+        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
+                                 choices=["cn", "each", "all"],
+                                 help=messages.covcorr_mode_long_description)
+        
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 
