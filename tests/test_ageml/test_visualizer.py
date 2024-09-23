@@ -1,12 +1,8 @@
 import pytest
 import os
 import shutil
-import pandas as pd
 from statsmodels.stats.multitest import multipletests
 
-import ageml.modelling as modelling
-import ageml.ui as ui
-import ageml.utils as utils
 from ageml.utils import significant_markers, NameTag
 import ageml.visualizer as viz
 from ageml.datasets import SyntheticData
@@ -58,12 +54,11 @@ def test_features_vs_age(dummy_viz, np_test_data):
     X, Y = np_test_data[:, :3], np_test_data[:, -1]
     corr, order, p_values = find_correlations(X, Y)
     # Reject null hypothesis of no correlation
-    reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
-    reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
+    reject_bon, _, _, _ = multipletests(p_values, alpha=0.05, method="bonferroni")
+    reject_fdr, _, _, _ = multipletests(p_values, alpha=0.05, method="fdr_bh")
     significant = significant_markers(reject_bon, reject_fdr)
-    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"], tag=NameTag(),
-                              labels=["all"])
-    
+    dummy_viz.features_vs_age([X], [Y], [corr], [order], [significant], ["X1", "X2", "X3"], tag=NameTag(), labels=["all"])
+
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/features_vs_age_controls.png")
     assert os.path.exists(svg_path)
@@ -104,7 +99,7 @@ def test_factors_vs_deltas(dummy_viz):
     corrs = [[0.5, 0.6, 0.7, 0.8, 0.9]]
     groups = ["Group 1"]
     labels = ["factor1", "factor2", "factor3", "factor4", "factor5"]
-    markers = [['', '*', '', '*', '**']]
+    markers = [["", "*", "", "*", "**"]]
     # Plot
     dummy_viz.factors_vs_deltas(corrs, groups, labels, markers, tag=NameTag())
     # Check file existence

@@ -73,7 +73,7 @@ class AgeML:
 
     predict_age(self, X): Predict age with fitted model.
     """
-    
+
     # Scaler dictionary
     scaler_dict = {
         "maxabs": MaxAbsScaler,
@@ -84,15 +84,19 @@ class AgeML:
         "robust": RobustScaler,
         "standard": StandardScaler,
     }
-    scaler_hyperparameters = {'maxabs': {},
-                              'minmax': {},
-                              'normalizer': {},
-                              'power': {'method': ['yeo-johnson', 'box-cox']},
-                              'quantile': {'n_quantiles': [10, 1000],
-                                           'output_distribution': ['normal', 'uniform']},
-                              'robust': {},
-                              'standard': {}}
-    
+    scaler_hyperparameters = {
+        "maxabs": {},
+        "minmax": {},
+        "normalizer": {},
+        "power": {"method": ["yeo-johnson", "box-cox"]},
+        "quantile": {
+            "n_quantiles": [10, 1000],
+            "output_distribution": ["normal", "uniform"],
+        },
+        "robust": {},
+        "standard": {},
+    }
+
     # Model dictionary
     model_dict = {
         "linear_reg": linear_model.LinearRegression,
@@ -103,76 +107,87 @@ class AgeML:
         "rf": RandomForestRegressor,
         "hyperopt": HyperoptEstimator,
     }
-    model_hyperparameter_ranges = {'ridge': {'alpha': [-3, 3]},
-                                   
-                                   'lasso': {'alpha': [-3, 3]},
-                                   
-                                   'linear_svr': {'C': [-3, 3],
-                                                  'epsilon': [-3, 3]},
-                                   
-                                   'xgboost': {'eta': [-3, 3],
-                                               'gamma': [-3, 3],
-                                               'max_depth': [0, 100],
-                                               'min_child_weight': [0, 100],
-                                               'max_delta_step': [0, 100],
-                                               'subsample': [-3, 3],
-                                               'colsample_bytree': [0.001, 1],
-                                               'colsample_bylevel': [0.001, 1],
-                                               'colsample_bynode': [0.001, 1],
-                                               'lambda': [-3, 3],
-                                               'alpha': [-3, 3]},
-                                   
-                                   'rf': {'n_estimators': [1, 100],
-                                          'max_depth': [1, 100],
-                                          'min_samples_split': [1, 100],
-                                          'min_samples_leaf': [1, 100],
-                                          'max_features': [1, 100],
-                                          'min_impurity_decrease': [0, 1],
-                                          'max_leaf_nodes': [1, 100],
-                                          'min_weight_fraction_leaf': [-3, 3], }}
+    model_hyperparameter_ranges = {
+        "ridge": {"alpha": [-3, 3]},
+        "lasso": {"alpha": [-3, 3]},
+        "linear_svr": {"C": [-3, 3], "epsilon": [-3, 3]},
+        "xgboost": {
+            "eta": [-3, 3],
+            "gamma": [-3, 3],
+            "max_depth": [0, 100],
+            "min_child_weight": [0, 100],
+            "max_delta_step": [0, 100],
+            "subsample": [-3, 3],
+            "colsample_bytree": [0.001, 1],
+            "colsample_bylevel": [0.001, 1],
+            "colsample_bynode": [0.001, 1],
+            "lambda": [-3, 3],
+            "alpha": [-3, 3],
+        },
+        "rf": {
+            "n_estimators": [1, 100],
+            "max_depth": [1, 100],
+            "min_samples_split": [1, 100],
+            "min_samples_leaf": [1, 100],
+            "max_features": [1, 100],
+            "min_impurity_decrease": [0, 1],
+            "max_leaf_nodes": [1, 100],
+            "min_weight_fraction_leaf": [-3, 3],
+        },
+    }
 
-    model_hyperparameter_types = {'ridge': {'alpha': 'log'},
-                                  
-                                  'lasso': {'alpha': 'log'},
-                                  
-                                  'linear_svr': {'C': 'log',
-                                                 'epsilon': 'log'},
-                                  
-                                  'xgboost': {'eta': 'float',
-                                              'gamma': 'float',
-                                              'max_depth': 'int',
-                                              'min_child_weight': 'int',
-                                              'max_delta_step': 'int',
-                                              'subsample': 'float',
-                                              'colsample_bytree': 'float',
-                                              'colsample_bylevel': 'float',
-                                              'colsample_bynode': 'float',
-                                              'lambda': 'log',
-                                              'alpha': 'log'},
-                                  
-                                  'rf': {'n_estimators': 'int',
-                                         'max_depth': 'int',
-                                         'min_samples_split': 'int',
-                                         'min_samples_leaf': 'int',
-                                         'max_features': 'int',
-                                         'min_impurity_decrease': 'log',
-                                         'max_leaf_nodes': 'int'}}
+    model_hyperparameter_types = {
+        "ridge": {"alpha": "log"},
+        "lasso": {"alpha": "log"},
+        "linear_svr": {"C": "log", "epsilon": "log"},
+        "xgboost": {
+            "eta": "float",
+            "gamma": "float",
+            "max_depth": "int",
+            "min_child_weight": "int",
+            "max_delta_step": "int",
+            "subsample": "float",
+            "colsample_bytree": "float",
+            "colsample_bylevel": "float",
+            "colsample_bynode": "float",
+            "lambda": "log",
+            "alpha": "log",
+        },
+        "rf": {
+            "n_estimators": "int",
+            "max_depth": "int",
+            "min_samples_split": "int",
+            "min_samples_leaf": "int",
+            "max_features": "int",
+            "min_impurity_decrease": "log",
+            "max_leaf_nodes": "int",
+        },
+    }
 
-    def __init__(self, scaler_type, scaler_params, model_type, model_params, CV_split, seed,
-                 hyperparameter_tuning: int = 0, feature_extension: int = 0):
+    def __init__(
+        self,
+        scaler_type,
+        scaler_params,
+        model_type,
+        model_params,
+        CV_split,
+        seed,
+        hyperparameter_tuning: int = 0,
+        feature_extension: int = 0,
+    ):
         """Initialise variables."""
 
         # Scaler dictionary
         self.scaler_type = scaler_type
         self.scaler_dict = AgeML.scaler_dict
-        
+
         # Model dictionary
         self.model_type = model_type
         self.model_dict = AgeML.model_dict
         # Hyperparameters and feature extension
         self.hyperparameter_tuning = hyperparameter_tuning
         self.feature_extension = feature_extension
-        
+
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)
         self.set_model(model_type, **model_params)
@@ -256,7 +271,7 @@ class AgeML:
         pipe = []
         if self.model is None:
             raise ValueError("Must set a valid model before setting pipeline.")
-        
+
         # Scaler and whether it has to be optimized
         if self.scaler is not None and self.model_type != "hyperopt":
             pipe.append(("scaler", self.scaler))
@@ -449,14 +464,15 @@ class AgeML:
         # Print comparison with mean age as only predictor to have a reference of a dummy regressor
         dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
         dummy_mae = np.mean(np.abs(y - np.mean(y)))
-        print("When using mean of ages as predictor for each subject (dummy regressor):\n"
-              "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse))
+        print(
+            "When using mean of ages as predictor for each subject (dummy regressor):\n" "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse)
+        )
         print("Age range: %.2f" % (np.max(y) - np.min(y)))
 
         # Fit model on all data
         self.pipeline.fit(X, y)
         y_pred = self.pipeline.predict(X)
-        
+
         self.pipelineFit = True
         self.fit_age_bias(y, y_pred)
 
@@ -489,9 +505,9 @@ class AgeML:
 
 
 class Classifier:
-    
+
     """Classifier of class labels based on deltas.
-    
+
     This class allows the differentiation of two groups based
     on differences in their deltas based on a logistic regresor.
 
@@ -537,7 +553,7 @@ class Classifier:
         """Sets the model to use in the pipeline."""
 
         self.model = linear_model.LogisticRegression()
-    
+
     def set_CV_params(self, CV_split, seed=None):
         """Set the parameters of the Cross Validation Scheme.
 
@@ -548,7 +564,7 @@ class Classifier:
 
         self.CV_split = CV_split
         self.seed = seed
-    
+
     def set_threshold(self, thr):
         """Set the threshold for classification.
 
@@ -579,12 +595,12 @@ class Classifier:
         accs, aucs, spes, sens = [], [], [], []
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
-    
+
         kf = model_selection.KFold(n_splits=self.CV_split, shuffle=True, random_state=self.seed)
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
-    
+
             # Fit the model using the training data
             self.model.fit(X_train, y_train)
 
@@ -595,7 +611,7 @@ class Classifier:
             # Calculate AUC of model
             auc = metrics.roc_auc_score(y_test, y_pred)
             aucs.append(auc)
-    
+
             # Calculate relevant metrics
             acc = metrics.accuracy_score(y_test, y_pred > self.thr)
             tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
@@ -612,11 +628,11 @@ class Classifier:
         ci_spes = st.t.interval(confidence=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
 
         # Print results
-        print('Summary metrics over all CV splits (%s CI)' % (self.ci_val))
-        print('AUC: %.3f [%.3f-%.3f]' % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
-        print('Accuracy: %.3f [%.3f-%.3f]' % (np.mean(accs), ci_accs[0], ci_accs[1]))
-        print('Sensitivity: %.3f [%.3f-%.3f]' % (np.mean(sens), ci_sens[0], ci_sens[1]))
-        print('Specificity: %.3f [%.3f-%.3f]' % (np.mean(spes), ci_spes[0], ci_spes[1]))
+        print("Summary metrics over all CV splits (%s CI)" % (self.ci_val))
+        print("AUC: %.3f [%.3f-%.3f]" % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
+        print("Accuracy: %.3f [%.3f-%.3f]" % (np.mean(accs), ci_accs[0], ci_accs[1]))
+        print("Sensitivity: %.3f [%.3f-%.3f]" % (np.mean(sens), ci_sens[0], ci_sens[1]))
+        print("Specificity: %.3f [%.3f-%.3f]" % (np.mean(spes), ci_spes[0], ci_spes[1]))
 
         # Final model trained on all data
         self.model.fit(X, y)
@@ -625,7 +641,7 @@ class Classifier:
         self.modelFit = True
 
         return y_preds
-    
+
     def predict(self, X):
         """Predict class labels with fitted model.
 

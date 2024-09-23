@@ -90,10 +90,7 @@ ages_long_description = (
     "column is the delta. The first row should be the header for column names."
 )
 
-groups_long_description = (
-    "Clinical groups to do classification. \n"
-    "Two groups are required. (e.g. --groups cn ad)"
-)
+groups_long_description = "Clinical groups to do classification. \n" "Two groups are required. (e.g. --groups cn ad)"
 
 
 poly_feature_extension_description = (
@@ -107,16 +104,14 @@ hyperparameter_grid_description = (
     "(e.g.   -ht 100   /   --hyperparameter_tuning 100)"
 )
 
-thr_long_description = (
-    "Threshold for classification. Default: 0.5 \n"
-    "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"
+thr_long_description = "Threshold for classification. Default: 0.5 \n" "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"
+
+ci_long_description = "Confidence interval for classification metrics. Default: 0.95 \n"
+
+read_the_documentation_message = (
+    "\nFor more information, refer to the documentation in the ageml repository:\n"
+    "https://github.com/compneurobilbao/ageml/tree/main/docs\n"
 )
-
-ci_long_description = ("Confidence interval for classification metrics. Default: 0.95 \n")
-
-read_the_documentation_message = ("\nFor more information, refer to the documentation in the ageml repository:\n"
-                                  "https://github.com/compneurobilbao/ageml/tree/main/docs\n"
-                                  )
 
 # UI information
 
