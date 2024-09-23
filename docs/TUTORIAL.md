@@ -2,6 +2,8 @@
 
 This document shows a typical workflow you can follow with `ageml` to analyze your data.
 
+You can also tinker around with our [getting started Colab notebook](https://colab.research.google.com/drive/1FtHbIghXLswG8IcOgFZBHJ07wKnLuzbG?authuser=3) if you want a more interactive experience.
+
 ## Prerequisites
 
 ### Installation

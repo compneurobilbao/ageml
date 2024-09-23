@@ -228,7 +228,7 @@ class Interface:
         model = AgeML(
             self.args.scaler_type,
             self.args.scaler_params,
-            self.args.model_type,
+            self.arDgs.model_type,
             self.args.model_params,
             self.args.model_cv_split,
             self.args.model_seed,

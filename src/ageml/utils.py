@@ -1,10 +1,7 @@
 """Utility functions for the AgeML package."""
 
-import io
 import os
 import sys
-
-import numpy as np
 
 
 def insert_newlines(text, nwords):
@@ -13,7 +10,7 @@ def insert_newlines(text, nwords):
         raise ValueError("Cannot insert newlines every 0 words.")
 
     words = text.split()
-    new_lines = [words[i: i + nwords] for i in range(0, len(words), nwords)]
+    new_lines = [words[i : i + nwords] for i in range(0, len(words), nwords)]
     return "\n".join([" ".join(line) for line in new_lines])
 
 
@@ -31,7 +28,11 @@ def convert(value):
         converted_value = False
     else:
         try:
-            converted_value = float(value)
+            # If there is . treat as float if not as int
+            if "." in value:
+                converted_value = float(value)
+            else:
+                converted_value = int(value)
         except ValueError:
             # If the value cannot be converted to a float, keep it as a string
             converted_value = value
@@ -59,7 +60,7 @@ def significant_markers(bon, fdr):
     ----------
     bon: 1D-Array with boolean values for Bonferroni correction; shape=m
     fdr: 1D-Array with boolean values for FDR correction; shape=m"""
-    
+
     markers = []
     for i in range(len(bon)):
         if bon[i]:

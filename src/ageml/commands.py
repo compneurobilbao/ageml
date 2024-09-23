@@ -53,32 +53,67 @@ class ModelAge(Interface):
         """Configure parser with required arguments for processing."""
 
         # Required arguments
-        self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-                                 help=messages.output_long_description,)
-        self.parser.add_argument("-f", "--features", metavar="FILE", required=True,
-                                 help=messages.features_long_description)
-        
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-f",
+            "--features",
+            metavar="FILE",
+            required=True,
+            help=messages.features_long_description,
+        )
+
         # Parameter arguments with defaults
-        self.parser.add_argument("-m", "--model", nargs="*", default=["linear_reg"],
-                                 help=messages.model_long_description)
-        self.parser.add_argument("-s", "--scaler", nargs="*", default=["standard"],
-                                 help=messages.scaler_long_description)
-        self.parser.add_argument("--cv", nargs="+", type=int, default=[5, 0],
-                                 help=messages.cv_long_description)
-        self.parser.add_argument("-fext", "--feature_extension", nargs=1, default=['0'],
-                                 help=messages.poly_feature_extension_description)
-        self.parser.add_argument("-ht", "--hyperparameter_tuning", nargs=1, default=['0'],
-                                 help=messages.hyperparameter_grid_description)
-        
+        self.parser.add_argument(
+            "-m",
+            "--model",
+            nargs="*",
+            default=["linear_reg"],
+            help=messages.model_long_description,
+        )
+        self.parser.add_argument(
+            "-s",
+            "--scaler",
+            nargs="*",
+            default=["standard"],
+            help=messages.scaler_long_description,
+        )
+        self.parser.add_argument(
+            "--cv",
+            nargs="+",
+            type=int,
+            default=[5, 0],
+            help=messages.cv_long_description,
+        )
+        self.parser.add_argument(
+            "-fext",
+            "--feature_extension",
+            nargs=1,
+            default=["0"],
+            help=messages.poly_feature_extension_description,
+        )
+        self.parser.add_argument(
+            "-ht",
+            "--hyperparameter_tuning",
+            nargs=1,
+            default=["0"],
+            help=messages.hyperparameter_grid_description,
+        )
+
         # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE",
-                                 help=messages.covar_long_description)
-        self.parser.add_argument("--covar_name", metavar="COVAR_NAME",
-                                 help=messages.covar_name_long_description)
-        self.parser.add_argument("--clinical", metavar="FILE",
-                                 help=messages.clinical_long_description)
-        self.parser.add_argument("--systems", metavar="FILE",
-                                 help=messages.systems_long_description)
+        self.parser.add_argument("--covariates", metavar="FILE", help=messages.covar_long_description)
+        self.parser.add_argument(
+            "--covar_name",
+            metavar="COVAR_NAME",
+            help=messages.covar_name_long_description,
+        )
+        self.parser.add_argument("--clinical", metavar="FILE", help=messages.clinical_long_description)
+        self.parser.add_argument("--systems", metavar="FILE", help=messages.systems_long_description)
 
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
@@ -105,9 +140,7 @@ class ModelAge(Interface):
             for item in args.scaler[1:]:
                 # Check that item has one = to split
                 if item.count("=") != 1:
-                    raise ValueError(
-                        "Scaler parameters must be in the format param1=value1 param2=value2 ..."
-                    )
+                    raise ValueError("Scaler parameters must be in the format param1=value1 param2=value2 ...")
                 key, value = item.split("=")
                 value = convert(value)
                 scaler_params[key] = value
@@ -123,9 +156,7 @@ class ModelAge(Interface):
             for item in args.model[1:]:
                 # Check that item has one = to split
                 if item.count("=") != 1:
-                    raise ValueError(
-                        "Model parameters must be in the format param1=value1 param2=value2 ..."
-                    )
+                    raise ValueError("Model parameters must be in the format param1=value1 param2=value2 ...")
                 key, value = item.split("=")
                 value = convert(value)
                 model_params[key] = value
@@ -135,17 +166,13 @@ class ModelAge(Interface):
 
         # Set hyperparameter grid search value
         if len(args.hyperparameter_tuning) > 1 or not args.hyperparameter_tuning[0].isdigit():
-            raise ValueError(
-                "Hyperparameter grid points must be a non negative integer."
-            )
+            raise ValueError("Hyperparameter grid points must be a non negative integer.")
         else:
             args.hyperparameter_tuning = args.hyperparameter_tuning[0]
             args.hyperparameter_tuning = int(convert(args.hyperparameter_tuning))
         # Set polynomial feature extension value
         if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
-            raise ValueError(
-                "Polynomial feature extension degree must be a non negative integer."
-            )
+            raise ValueError("Polynomial feature extension degree must be a non negative integer.")
         else:
             args.feature_extension = args.feature_extension[0]
             args.feature_extension = int(convert(args.feature_extension))
@@ -178,14 +205,28 @@ class FactorCorrelation(Interface):
         """Configure parser with required arguments for processing."""
 
         # Required arguments
-        self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-                                 help=messages.output_long_description,)
-        self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-                                 help=messages.ages_long_description)
-        self.parser.add_argument("-f", "--factors", metavar="FILE", required=True,
-                                 help=messages.factors_long_description)
-        
-        # Optional arguments
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-a",
+            "--ages",
+            metavar="FILE",
+            required=True,
+            help=messages.ages_long_description,
+        )
+        self.parser.add_argument(
+            "-f",
+            "--factors",
+            metavar="FILE",
+            required=True,
+            help=messages.factors_long_description,
+        )
+
         self.parser.add_argument("--covariates", metavar="FILE", required=False,
                                  help=messages.covar_long_description)
         self.parser.add_argument("--clinical", metavar="FILE", required=False,
@@ -221,13 +262,27 @@ class ClinicalGroups(Interface):
         """Configure parser with required arguments for processing."""
 
         # Required arguments
-        self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-                                 help=messages.output_long_description,)
-        self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-                                 help=messages.ages_long_description)
-        self.parser.add_argument("--clinical", metavar="FILE", required=True,
-                                 help=messages.clinical_long_description)
-                            
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-a",
+            "--ages",
+            metavar="FILE",
+            required=True,
+            help=messages.ages_long_description,
+        )
+        self.parser.add_argument(
+            "--clinical",
+            metavar="FILE",
+            required=True,
+            help=messages.clinical_long_description,
+        )
+
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE", required=False,
                                  help=messages.covar_long_description)
@@ -265,23 +320,57 @@ class ClinicalClassification(Interface):
         """Configure parser with required arguments for processing."""
 
         # Required arguments
-        self.parser.add_argument("-o", "--output", metavar="DIR", required=True,
-                                 help=messages.output_long_description,)
-        self.parser.add_argument("-a", "--ages", metavar="FILE", required=True,
-                                 help=messages.ages_long_description)
-        self.parser.add_argument("--clinical", metavar="FILE", required=True,
-                                 help=messages.clinical_long_description)
-        self.parser.add_argument("--groups", nargs=2, metavar="GROUP", required=True,
-                                 help=messages.groups_long_description)
-        
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-a",
+            "--ages",
+            metavar="FILE",
+            required=True,
+            help=messages.ages_long_description,
+        )
+        self.parser.add_argument(
+            "--clinical",
+            metavar="FILE",
+            required=True,
+            help=messages.clinical_long_description,
+        )
+        self.parser.add_argument(
+            "--groups",
+            nargs=2,
+            metavar="GROUP",
+            required=True,
+            help=messages.groups_long_description,
+        )
+
         # Default argument
-        self.parser.add_argument("--cv", nargs="+", type=int, default=[5, 0],
-                                 help=messages.cv_long_description)
-        self.parser.add_argument("--thr", nargs=1, type=float, default=[0.5],
-                                 help=messages.thr_long_description)
-        self.parser.add_argument("--ci", nargs=1, type=float, default=[0.95],
-                                 help=messages.ci_long_description)
-        
+        self.parser.add_argument(
+            "--cv",
+            nargs="+",
+            type=int,
+            default=[5, 0],
+            help=messages.cv_long_description,
+        )
+        self.parser.add_argument(
+            "--thr",
+            nargs=1,
+            type=float,
+            default=[0.5],
+            help=messages.thr_long_description,
+        )
+        self.parser.add_argument(
+            "--ci",
+            nargs=1,
+            type=float,
+            default=[0.95],
+            help=messages.ci_long_description,
+        )
+
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE", required=False,
                                  help=messages.covar_long_description)
@@ -310,7 +399,7 @@ class ClinicalClassification(Interface):
             args.classifier_cv_split, args.classifier_seed = args.cv
         else:
             raise ValueError("Too many values to unpack")
-        
+
         # Set threshold
         args.classifier_thr = args.thr[0]
 
@@ -321,6 +410,7 @@ class ClinicalClassification(Interface):
 
 
 # Object wrappers
+
 
 def model_age():
     """Run ModelAge class."""
