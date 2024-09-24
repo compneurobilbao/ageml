@@ -531,13 +531,15 @@ files = [
 ]
 
 [[package]]
-name = "hpsklearn"
+name = "hpsklearn-compneurobilbao"
 version = "1.0.3"
-description = ""
+description = "Hyperparameter Optimization for sklearn, compneurobilbaolab unofficial version."
 optional = false
 python-versions = ">=3.9"
-files = []
-develop = false
+files = [
+    {file = "hpsklearn_compneurobilbao-1.0.3-py3-none-any.whl", hash = "sha256:44330a3355e9e252552b838a139c89282394b3a995069fa15e97a544e23c08df"},
+    {file = "hpsklearn_compneurobilbao-1.0.3.tar.gz", hash = "sha256:cb560a57c525868ea75f72817e630bdbc21d3476c92afd5dc93e87becb18318f"},
+]
 
 [package.dependencies]
 hyperopt = ">=0.2.6"
@@ -549,12 +551,6 @@ scipy = ">=1.11.2"
 lightgbm = ["lightgbm (>=4.0.0)"]
 testing = ["tox (>=4.11.3)"]
 xgboost = ["xgboost (>=2.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/hyperopt/hyperopt-sklearn"
-reference = "4bc286479677a0bfd2178dac4546ea268b3f3b77"
-resolved_reference = "4bc286479677a0bfd2178dac4546ea268b3f3b77"
 
 [[package]]
 name = "hyperopt"
@@ -2172,4 +2168,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "41b6734b9f7732010a0e692318300606886c293284a03ce913191309a49063e6"
+content-hash = "002d4a27b27effb6d00bd577185d5683982fcc2ba74e497d31f3b7b2d2c8d9ca"

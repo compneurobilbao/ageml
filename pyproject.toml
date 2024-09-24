@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "ageml"
-version = "0.1.0"
+version = "0.2.0"
 description = "AgeML is a Python package for Age Modelling with Machine Learning made easy."
 authors = [ "Computational Neuroimaging Lab Bilbao, IIS Biobizkaia",
             "jorge.garcia.condado <jorgegarciacondado@gmail.com>",
@@ -32,7 +32,7 @@ matplotlib = "3.5"
 scikit-learn = "1.3"
 xgboost = "^2.0.3"
 pillow = "^10.3.0"
-hpsklearn = {git = "https://github.com/hyperopt/hyperopt-sklearn", rev = "4bc286479677a0bfd2178dac4546ea268b3f3b77"}
+hpsklearn-compneurobilbao = "*"
 
 [tool.poetry.dev-dependencies]
 # Testing and linting tool
