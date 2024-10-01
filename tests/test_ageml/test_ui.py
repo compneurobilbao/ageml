@@ -920,7 +920,15 @@ def test_run_model_feature_influence(dummy_interface, features, clinical):
     dummy_interface.args.group1 = "cn"
     dummy_interface.args.group2 = "group1"
 
+    # Run model feature influence
     dummy_interface.run_model_feature_influence()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output log
+    log_path = os.path.join(dummy_interface.dir_path, "model_feature_influence/log.txt")
+    assert os.path.exists(log_path)
 
 
 def test_run_factor_correlation(dummy_interface, ages, factors, covariates):

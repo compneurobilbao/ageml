@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy import stats
+from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
 
 
 def find_correlations(X, Y):
@@ -23,6 +24,55 @@ def find_correlations(X, Y):
         order = [o for o in np.argsort(np.abs(corr_coefs))[::-1] if corr_coefs[o] is not np.nan]
         return corr_coefs, order, p_values
 
+
+def features_mutual_info(X, y):
+    """Sort features by mutual information with target variable
+    
+    Inputs:
+    -------
+    X: numpy array with the features (n_samples, n_features)
+    y: numpy array with the target variable (n_samples, )
+
+    Output:
+    -------
+    order: list with the indices of the top features sorted by mutual information with the target variable
+    mi_scores: numpy array with the mutual information scores of the selected features
+    """
+
+    # Calculate mutual information between each feature and the target variable
+    mi_scores = mutual_info_regression(X, y)
+
+    # Order from highest to lowest based on mutual information scores
+    order = np.argsort(-mi_scores)
+    
+    return order, mi_scores
+
+
+def feature_mutual_info_discrimination(X, y):
+    """Sort features by discrimination between two groups and select top features using mutual information
+    
+    Inputs:
+    -------
+    X: numpy array with the features (n_samples, n_features)
+    y: numpy array with the target labels (n_samples, ) (This must be zeros and ones)
+
+    Output:
+    -------
+    order: list with the indices of the top discriminative features sorted by mutual information
+    mi_scores: numpy array with the mutual information scores for the selected features
+    """
+
+    # Check if y contains only 0s and 1s
+    if not np.array_equal(np.unique(y), np.array([0, 1])):
+        raise ValueError("Target labels y must contain only 0s and 1s.")
+
+    # Compute mutual information scores
+    mi_scores = mutual_info_classif(X, y)
+
+    # Order from highest to lowest based on mutual information scores
+    order = np.argsort(-mi_scores)
+
+    return order, mi_scores
 
 def covariate_correction(X, Z, beta=None):
     """Correct for covariates Z in X using linear OLS.

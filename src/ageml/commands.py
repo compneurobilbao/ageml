@@ -222,6 +222,7 @@ class ModelFeatureInfluence(Interface):
         # Configure parser
         self.configure_parser()
         args = self.parser.parse_args()
+        args = self.configure_args(args)
 
         # Initialise parent class
         super().__init__(args)
@@ -272,6 +273,8 @@ class ModelFeatureInfluence(Interface):
         args.group1, args.group2 = args.groups
         args.group1 = args.group1.lower()
         args.group2 = args.group2.lower()
+
+        return args
  
 class FactorCorrelation(Interface):
     """Run factor correlation analysis with required parameters."""

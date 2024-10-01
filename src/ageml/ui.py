@@ -25,8 +25,8 @@ import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
 from ageml.modelling import AgeML, Classifier
-from ageml.processing import find_correlations, covariate_correction, cohen_d
 from ageml.datasets.synthetic_data import rng
+from ageml.processing import find_correlations, features_mutual_info, covariate_correction, cohen_d
 
 
 class Interface:
@@ -780,6 +780,50 @@ class Interface:
             X_list, y_list, corr_list, order_list, significance_list, feature_names, tag, list(features_dict.keys())
         )
 
+    def feature_ordering(self, tag):
+        """Order features by correlation with age.
+
+        Parameters
+        ----------
+        df: dataframe with features and age; shape=(n,m+1)
+        tag: NameTag object"""
+
+        # Show feature ordering
+        print("-----------------------------------")
+        print("Feature ordering")
+
+        # Relationship between features and age of controls
+        print("Features mutual information with Age of Controls [System: %s]" % tag.system)
+
+        # Extract features for controls
+        X, age, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system])
+
+        # Use mutual information to order acording to age
+        order_age, mi_scores_age = features_mutual_info(X, age)
+
+        # Print results
+        for idx, order_element in enumerate(order_age):
+            print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_age[order_element]))
+    
+        # Relationiship between features and discrimination between groups
+        print("Features mutual information for Discrimination between Groups [System: %s]" % tag.system)
+
+        # Extract feature for each group
+        df1 = self.dfs[self.args.group1][tag.covar][tag.system]
+        df2 = self.dfs[self.args.group2][tag.covar][tag.system]
+        X1, _, _ = feature_extractor(df1)
+        X2, _, _ = feature_extractor(df2)
+
+        # Use mutual information to order according to discrimination between groups
+        labels = np.concatenate((np.zeros(X1.shape[0]), np.ones(X2.shape[0])))
+        X = np.concatenate((X1, X2))
+        order_discrimination, mi_scores_discrimination = features_mutual_info(X, labels)
+
+        # Print results
+        for idx, order_element in enumerate(order_discrimination):
+            print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_discrimination[order_element]))
+        
+
     def model_age(self, df, model, tag):
         """Use AgeML to fit age model with data.
 
@@ -1255,9 +1299,32 @@ class Interface:
     def run_model_feature_influence(self):
         """Run feature influence on age model and classification."""
 
-       # Run age modelling
+       # Run model feature influence
         print("Running model feature influence...")
- 
+
+        # Run setup
+        self.command_setup("model_feature_influence")
+
+        # Load data
+        self.load_data(required=["features", "clinical"])
+
+        # Initialize dictionaries
+        self.set_dict()
+
+        # Check that arguments given for each group and that they exist
+        if self.args.group1 is None or self.args.group2 is None:
+            raise ValueError("Must provide two groups to classify.")
+        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
+            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+
+        # Set dataframes
+        self.set_features_dataframes()
+
+        # Show ordering of features with importance to age vs discrimination of clinical groups
+        for system in self.systems:
+            for covar in self.covars:
+                tag = NameTag(covar=covar, system=system)
+                self.feature_ordering(tag)
 
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
