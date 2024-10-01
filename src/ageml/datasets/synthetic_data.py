@@ -217,10 +217,10 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
         covar_data_path = os.path.join(save_path, "toy_covar.csv")
         systems_path = os.path.join(save_path, "toy_systems.txt")
 
-        all_synthetic_data.to_csv(features_path, index=True, header=True)
-        clinical_data.to_csv(clinical_path, index=True, header=True)
-        factors_data.to_csv(factors_path, index=True, header=True)
-        covar_data.to_csv(covar_data_path, index=True, header=True)
+        all_synthetic_data.to_csv(features_path, index=True, header=True, float_format="%.3f")
+        clinical_data.to_csv(clinical_path, index=True, header=True, float_format="%.3f")
+        factors_data.to_csv(factors_path, index=True, header=True, float_format="%.3f")
+        covar_data.to_csv(covar_data_path, index=True, header=True, float_format="%.3f")
 
         # Write systems data to a .txt file exactly as it is
         with open(systems_path, "w") as f:
