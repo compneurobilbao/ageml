@@ -911,8 +911,20 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
+def test_run_model_feature_influence(dummy_interface, features, clinical):
+    # Run model feature influence pipeline
+    features_path = create_csv(features, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.args.group1 = "cn"
+    dummy_interface.args.group2 = "group1"
+
+    dummy_interface.run_model_feature_influence()
+
+
 def test_run_factor_correlation(dummy_interface, ages, factors, covariates):
-    # Run the lifestyle pipeline
+    # Run the factor correaltion pipeline
     ages_path = create_csv(ages, dummy_interface.dir_path)
     factors_path = create_csv(factors, dummy_interface.dir_path)
     covariates_path = create_csv(covariates, dummy_interface.dir_path)

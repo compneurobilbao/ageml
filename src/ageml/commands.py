@@ -207,6 +207,72 @@ class ModelAge(Interface):
         return args
 
 
+class ModelFeatureInfluence(Interface):
+    """Run feature influence analysis with required parameters."""
+
+    def __init__(self):
+        """Initialise variables."""
+
+        # Initialise parser
+        self.parser = argparse.ArgumentParser(
+            description="Feature influence on model construction.",
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
+
+        # Configure parser
+        self.configure_parser()
+        args = self.parser.parse_args()
+
+        # Initialise parent class
+        super().__init__(args)
+
+        # Run feature influence analysis
+        self.run_wrapper(self.run_model_feature_influence)
+
+    def configure_parser(self):
+        """Configure parser with required arguments for processing"""
+        
+        # Required arguments
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-f",
+            "--features",
+            metavar="FILE",
+            required=True,
+            help=messages.features_long_description,
+        )
+        self.parser.add_argument(
+            "--clinical", 
+            metavar="FILE",
+            required=True,
+            help=messages.clinical_long_description)
+        self.parser.add_argument(
+            "--groups",
+            nargs=2,
+            metavar="GROUP",
+            required=True,
+            help=messages.groups_long_description,
+        ) 
+
+    def configure_args(self, args):
+        """Configure argumens with required fromatting for modelling.
+
+        Parameters
+        ----------
+        args: arguments object from parser
+        """
+
+        # Set groups
+        args.group1, args.group2 = args.groups
+        args.group1 = args.group1.lower()
+        args.group2 = args.group2.lower()
+ 
 class FactorCorrelation(Interface):
     """Run factor correlation analysis with required parameters."""
 
@@ -441,6 +507,11 @@ def model_age():
 
     ModelAge()
 
+
+def model_feature_influence():
+    """Run ModelFeatureInfluence class."""
+
+    ModelFeatureInfluence()
 
 def factor_correlation():
     """Run FactorCorrelation class."""

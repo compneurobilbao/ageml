@@ -1251,6 +1251,13 @@ class Interface:
 
         # Save prediction
         self.save_predictions()
+    
+    def run_model_feature_influence(self):
+        """Run feature influence on age model and classification."""
+
+       # Run age modelling
+        print("Running model feature influence...")
+ 
 
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
