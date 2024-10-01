@@ -55,6 +55,7 @@ ruff = "^0.3.0"
 [tool.poetry.scripts]
 ageml = "ageml.__main__:main"
 model_age = "ageml.commands:model_age"
+model_feature_influence = "ageml.commands:model_feature_influence"
 factor_correlation = "ageml.commands:factor_correlation"
 clinical_groups = "ageml.commands:clinical_groups"
 clinical_classify = "ageml.commands:clinical_classify"
