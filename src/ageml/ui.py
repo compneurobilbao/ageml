@@ -813,6 +813,7 @@ class Interface:
         for idx, order_element in enumerate(order_discrimination):
             print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_discrimination[order_element]))
         
+        return order_age, order_discrimination
 
     def model_age(self, df, model, tag):
         """Use AgeML to fit age model with data.
@@ -952,6 +953,58 @@ class Interface:
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.command_dir, filename))
+
+    def model_feature_analysis(self, order_age, order_discrimination, tag):
+        """Train different models using the specificed order of features."""
+
+        print("-----------------------------------")
+        print("Training different models with different set of features")
+
+        # Obtain features of controls
+        _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
+
+        # For each order iterate over all sets of features in order
+        order_type = ['age', 'discrimination']
+
+        # TODO metric storage
+
+        for order, type in zip([order_age, order_discrimination], order_type):
+            print("Ordering by: %s" % type)
+            print("Order %s" % [feature_names[o] for o in order]) 
+
+            # TODO encapsulate this into one function that returns metrics
+
+            # Iterate over each order to create subsets
+            for i in range(len(order)):
+
+                # Get subset for controls, group1 and group2
+                features = [feature_names[o] for o in order[:i+1]]
+                df_subset_cn = self.dfs["cn"][tag.covar][tag.system][['age'] + features]
+                df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][features]
+                df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][features]
+            
+                # TODO change model generation to be silent and return metrics
+                # TODO no need to use model_age but model directly
+                # Train model based on controls
+                ageml_model = self.generate_model()
+                model, df_pred_cn, betas = self.model_age(df_subset_cn, ageml_model, tag=tag)
+                
+                # For each group now predict except if they are controls
+                # TODO use model directly to predict 
+                if self.args.group1 != 'cn':
+                    df_pred_group1 = self.predict_age(df_subset_group1, model, tag, betas)
+                else:
+                    df_pred_group1 = df_pred_cn
+                if self.args.group1 != 'cn':
+                    df_pred_group2 = self.predict_age(df_subset_group2, model, tag, betas)
+                else:
+                    df_pred_group2 = df_pred_cn
+
+                print(df_pred_group1, df_pred_group2)
+                # TODO subsampling and classificaiton
+
+                # TODO calculate MAE and AUC
+
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.
@@ -1277,7 +1330,8 @@ class Interface:
         for system in self.systems:
             for covar in self.covars:
                 tag = NameTag(covar=covar, system=system)
-                self.feature_ordering(tag)
+                order_age, order_discrimination = self.feature_ordering(tag)
+                self.model_feature_analysis(order_age, order_discrimination, tag)
 
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
