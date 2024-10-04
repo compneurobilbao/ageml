@@ -19,6 +19,7 @@ import warnings
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
+from sklearn import metrics
 import scipy.stats as stats
 
 import ageml.messages as messages
@@ -999,6 +1000,78 @@ class Interface:
                 "split was used forced by the election of the 'hyperopt' model."
             )
             print(msg)
+            
+    def model_feature_analysis(self, order_age, order_discrimination, tag):
+        """Train different models using the specificed order of features."""
+
+        print("-----------------------------------")
+        print("Training different models with different set of features")
+
+        # Obtain features of controls
+        _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
+
+        # For each order iterate over all sets of features in order
+        order_type = ['age', 'discrimination']
+
+        # TODO metric storage
+        maes = []
+        aucs = []
+
+        for order, type in zip([order_age, order_discrimination], order_type):
+            print("Ordering by: %s" % type)
+            print("Order %s" % [feature_names[o] for o in order]) 
+
+            # TODO encapsulate this into one function that returns metrics
+
+            # Iterate over each order to create subsets
+            for i in range(len(order)):
+
+                # Get subset for controls, group1 and group2
+                features = [feature_names[o] for o in order[:i+1]]
+                df_subset_cn = self.dfs["cn"][tag.covar][tag.system][['age'] + features]
+                df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][['age'] + features]
+                df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][['age'] + features]
+            
+                # TODO change model generation to be silent and return metrics
+                # Train model based on controls
+                model = self.generate_model()
+                X_cn, y_cn, _ = feature_extractor(df_subset_cn) 
+                y_pred_cn, y_corrected_cn = model.fit_age(X_cn, y_cn)
+
+                # Calculate metrics
+                mae, _, _, _ = model.calculate_metrics(y_cn, y_pred_cn)
+                maes.append(mae)
+                
+                # For each group now predict except if they are controls use CV predicted values
+                if self.args.group1 != 'cn':
+                    X_group1, y_group1, _ = feature_extractor(df_subset_group1)
+                    _, y_corrected_group1 = model.predict_age(X_group1, y_group1)
+                    deltas_group1 = y_corrected_group1 - y_group1
+                else:
+                    deltas_group1 = y_corrected_cn - y_cn
+                if self.args.group2 != 'cn':
+                    X_group2, y_group2, _ = feature_extractor(df_subset_group2)
+                    _, y_corrected_group2 = model.predict_age(X_group2, y_group2)
+                    deltas_group2 = y_corrected_group2 - y_group2
+                else:
+                    deltas_group2 = y_corrected_cn - y_cn
+
+                # Subsampling bigger group to make same size as smaller group
+                min_samples = min(len(deltas_group1), len(deltas_group2))
+                deltas_group1 = np.random.choice(deltas_group1, min_samples, replace=False)
+                deltas_group2 = np.random.choice(deltas_group2, min_samples, replace=False)
+
+                # Classify between groups using deltas
+                deltas = np.concatenate((deltas_group1, deltas_group2)).reshape(-1, 1)
+                labels = np.concatenate((np.zeros(deltas_group1.shape), np.ones(deltas_group2.shape)))
+                self.classifier = self.generate_classifier()
+                labels_pred = self.classifier.fit_model(deltas, labels)
+
+                # Calculate AUC
+                auc = metrics.roc_auc_score(labels, labels_pred)
+                aucs.append(auc)
+
+        print(maes, aucs)
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.

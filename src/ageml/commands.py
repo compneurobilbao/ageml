@@ -261,6 +261,36 @@ class ModelFeatureInfluence(Interface):
             help=messages.groups_long_description,
         ) 
 
+        self.parser.add_argument(
+            "--thr",
+            nargs=1,
+            type=float,
+            default=[0.5],
+            help=messages.thr_long_description,
+        )
+        self.parser.add_argument(
+            "--ci",
+            nargs=1,
+            type=float,
+            default=[0.95],
+            help=messages.ci_long_description,
+        )
+
+        self.parser.add_argument(
+            "--thr",
+            nargs=1,
+            type=float,
+            default=[0.5],
+            help=messages.thr_long_description,
+        )
+        self.parser.add_argument(
+            "--ci",
+            nargs=1,
+            type=float,
+            default=[0.95],
+            help=messages.ci_long_description,
+        )
+
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 
@@ -273,6 +303,70 @@ class ModelFeatureInfluence(Interface):
         args.group1, args.group2 = args.groups
         args.group1 = args.group1.lower()
         args.group2 = args.group2.lower()
+
+        # Set CV params first item is the number of CV splits
+        if len(args.cv) == 1:
+            args.model_cv_split = args.cv[0]
+            args.classifier_cv_split = args.cv[0]
+            args.model_seed = self.parser.get_default("cv")[1]
+            args.classifier_seed = self.parser.get_default("cv")[1]
+        elif len(args.cv) == 2:
+            args.model_cv_split, args.model_seed = args.cv
+            args.classifier_cv_split, args.classifier_seed = args.cv
+        else:
+            raise ValueError("Too many values to unpack")
+
+        # Set Scaler parameters first item is the scaler type
+        # The rest of the arguments conform a dictionary for **kwargs
+        args.scaler_type = args.scaler[0]
+        if len(args.scaler) > 1:
+            scaler_params = {}
+            for item in args.scaler[1:]:
+                # Check that item has one = to split
+                if item.count("=") != 1:
+                    raise ValueError("Scaler parameters must be in the format param1=value1 param2=value2 ...")
+                key, value = item.split("=")
+                value = convert(value)
+                scaler_params[key] = value
+            args.scaler_params = scaler_params
+        else:
+            args.scaler_params = {}
+
+        # Set Model parameters first item is the model type
+        # The rest of the arguments conform a dictionary for **kwargs
+        args.model_type = args.model[0]
+        if len(args.model) > 1:
+            model_params = {}
+            for item in args.model[1:]:
+                # Check that item has one = to split
+                if item.count("=") != 1:
+                    raise ValueError("Model parameters must be in the format param1=value1 param2=value2 ...")
+                key, value = item.split("=")
+                value = convert(value)
+                model_params[key] = value
+            args.model_params = model_params
+        else:
+            args.model_params = {}
+
+                # Set hyperparameter grid search value
+        if len(args.hyperparameter_tuning) > 1 or not args.hyperparameter_tuning[0].isdigit():
+            raise ValueError("Hyperparameter grid points must be a non negative integer.")
+        else:
+            args.hyperparameter_tuning = args.hyperparameter_tuning[0]
+            args.hyperparameter_tuning = int(convert(args.hyperparameter_tuning))
+
+        # Set polynomial feature extension value
+        if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
+            raise ValueError("Polynomial feature extension degree must be a non negative integer.")
+        else:
+            args.feature_extension = args.feature_extension[0]
+            args.feature_extension = int(convert(args.feature_extension))
+
+        # Set threshold
+        args.classifier_thr = args.thr[0]
+
+        # Set confidence interval
+        args.classifier_ci = args.ci[0]
 
         return args
  
