@@ -272,6 +272,21 @@ class ModelFeatureInfluence(Interface):
             help=messages.hyperparameter_grid_description,
         )
 
+        self.parser.add_argument(
+            "--thr",
+            nargs=1,
+            type=float,
+            default=[0.5],
+            help=messages.thr_long_description,
+        )
+        self.parser.add_argument(
+            "--ci",
+            nargs=1,
+            type=float,
+            default=[0.95],
+            help=messages.ci_long_description,
+        )
+
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 
@@ -288,9 +303,12 @@ class ModelFeatureInfluence(Interface):
         # Set CV params first item is the number of CV splits
         if len(args.cv) == 1:
             args.model_cv_split = args.cv[0]
+            args.classifier_cv_split = args.cv[0]
             args.model_seed = self.parser.get_default("cv")[1]
+            args.classifier_seed = self.parser.get_default("cv")[1]
         elif len(args.cv) == 2:
             args.model_cv_split, args.model_seed = args.cv
+            args.classifier_cv_split, args.classifier_seed = args.cv
         else:
             raise ValueError("Too many values to unpack")
 
@@ -339,7 +357,12 @@ class ModelFeatureInfluence(Interface):
         else:
             args.feature_extension = args.feature_extension[0]
             args.feature_extension = int(convert(args.feature_extension))
-        return args
+
+        # Set threshold
+        args.classifier_thr = args.thr[0]
+
+        # Set confidence interval
+        args.classifier_ci = args.ci[0]
 
         return args
  
