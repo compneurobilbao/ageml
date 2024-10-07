@@ -47,6 +47,8 @@ class Visualizer:
 
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
 
+    metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title): Plots MAE and AUC against the number of features used.
+
     factors_vs_deltas(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
 
     deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
@@ -216,6 +218,53 @@ class Visualizer:
         plt.suptitle(f"[Covariate: {tag.covar}, System: {tag.system}]\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
+
+    def metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title):
+        """
+        Plots MAE and AUC against the number of features used.
+    
+        Parameters:
+        -----------
+        mae: numpy array
+            Array containing the mean absolute errors.
+        mae_std: numpy array
+            Array containing the standard deviation of the MAE.
+        auc_std: numpy array
+            Array containing the standard deviation of the AUC.
+        auc_data: numpy array
+            Array containing the AUC values.
+        title: str
+            Title of the plot.
+    """
+        
+        # Create a figure and axis
+        fig, ax = plt.subplots()
+
+        # Determine the number of features
+        num_features= np.arange(len(mae)) + 1
+    
+        # Plot the selected metric 
+        line1, = ax.plot(num_features, mae, color='blue', linestyle='-')
+        ax.fill_between(num_features, mae - mae_std, mae + mae_std, color='blue', alpha=0.2)
+        
+        # Set labels and title for the primary y-axis
+        ax.set_xlabel('Number of Features Used')
+        ax.set_ylabel('mae', color='blue')
+        ax.tick_params(axis='y', labelcolor='blue')
+        ax.set_title(title)
+
+        # Create a twin y-axis for AUC
+        ax2 = ax.twinx()
+        line2, = ax2.plot(num_features, auc, color='green', linestyle='-')
+        ax2.fill_between(num_features, auc - auc_std, auc + auc_std, color='green', alpha=0.2)
+        ax2.set_ylabel('AUC', color='green')
+        ax2.tick_params(axis='y', labelcolor='green')
+
+        # Save figure 
+        plt.tight_layout()
+        filename = f"metrics_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close() 
 
     def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.

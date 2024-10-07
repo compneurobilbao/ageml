@@ -19,7 +19,6 @@ import warnings
 from datetime import datetime
 from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
-from sklearn import metrics
 import scipy.stats as stats
 
 import ageml.messages as messages
@@ -1013,11 +1012,14 @@ class Interface:
         # For each order iterate over all sets of features in order
         order_type = ['age', 'discrimination']
 
-        # TODO metric storage
-        maes = []
-        aucs = []
-
         for order, type in zip([order_age, order_discrimination], order_type):
+
+            # Metrics
+            maes = []
+            maes_std = []
+            aucs = []
+            auc_std = []
+
             print("Ordering by: %s" % type)
             print("Order %s" % [feature_names[o] for o in order]) 
 
@@ -1039,8 +1041,10 @@ class Interface:
                 y_pred_cn, y_corrected_cn = model.fit_age(X_cn, y_cn)
 
                 # Calculate metrics
-                mae, _, _, _ = model.calculate_metrics(y_cn, y_pred_cn)
+                mae = np.mean(np.abs(y_pred_cn - y_cn))
+                mae_std = np.std(np.abs(y_pred_cn - y_cn))
                 maes.append(mae)
+                maes_std.append(mae_std)
                 
                 # For each group now predict except if they are controls use CV predicted values
                 if self.args.group1 != 'cn':
@@ -1065,13 +1069,25 @@ class Interface:
                 deltas = np.concatenate((deltas_group1, deltas_group2)).reshape(-1, 1)
                 labels = np.concatenate((np.zeros(deltas_group1.shape), np.ones(deltas_group2.shape)))
                 self.classifier = self.generate_classifier()
-                labels_pred = self.classifier.fit_model(deltas, labels)
+                _ = self.classifier.fit_model(deltas, labels)
 
                 # Calculate AUC
-                auc = metrics.roc_auc_score(labels, labels_pred)
-                aucs.append(auc)
+                aucs.append(np.mean(self.classifier.aucs))
+                auc_std.append(np.std(self.classifier.aucs))
 
-        print(maes, aucs)
+            # Convert maes, aucs to numpy arrays
+            maes = np.array(maes)
+            maes_std = np.array(maes_std)
+            aucs = np.array(aucs)
+            auc_std = np.array(auc_std)
+            
+            # Visualize results
+            self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, auc_std, type)
+
+            # TODO Print resuts mor nicely with standard deviation and number of features
+            print(maes)
+            print(aucs)
+
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.

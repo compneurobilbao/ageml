@@ -620,7 +620,7 @@ class Classifier:
         y: 1D-Array with labbels; shape=n"""
 
         # Arrays to store  values
-        accs, aucs, spes, sens = [], [], [], []
+        accs, self.aucs, spes, sens = [], [], [], []
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
 
@@ -638,7 +638,7 @@ class Classifier:
 
             # Calculate AUC of model
             auc = metrics.roc_auc_score(y_test, y_pred)
-            aucs.append(auc)
+            self.aucs.append(auc)
 
             # Calculate relevant metrics
             acc = metrics.accuracy_score(y_test, y_pred > self.thr)
@@ -651,13 +651,13 @@ class Classifier:
 
         # Compute confidence intervals
         ci_accs = st.t.interval(confidence=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
-        ci_aucs = st.t.interval(confidence=self.ci_val, df=len(aucs) - 1, loc=np.mean(aucs), scale=st.sem(aucs))
+        ci_aucs = st.t.interval(confidence=self.ci_val, df=len(self.aucs) - 1, loc=np.mean(self.aucs), scale=st.sem(self.aucs))
         ci_sens = st.t.interval(confidence=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
         ci_spes = st.t.interval(confidence=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
 
         # Print results
         print("Summary metrics over all CV splits (%s CI)" % (self.ci_val))
-        print("AUC: %.3f [%.3f-%.3f]" % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
+        print("AUC: %.3f [%.3f-%.3f]" % (np.mean(self.aucs), ci_aucs[0], ci_aucs[1]))
         print("Accuracy: %.3f [%.3f-%.3f]" % (np.mean(accs), ci_accs[0], ci_accs[1]))
         print("Sensitivity: %.3f [%.3f-%.3f]" % (np.mean(sens), ci_sens[0], ci_sens[1]))
         print("Specificity: %.3f [%.3f-%.3f]" % (np.mean(spes), ci_spes[0], ci_spes[1]))
