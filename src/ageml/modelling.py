@@ -33,7 +33,8 @@ from sklearn.preprocessing import (
 from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
 from hyperopt import tpe
 
-from ageml.utils import verbose_wrapper 
+from ageml.utils import verbose_wrapper
+from ageml.processing import FoldMetrics, CVMetricsHandler
 
 
 class AgeML:
@@ -64,8 +65,6 @@ class AgeML:
     set_CV_params(self, CV_split, seed): Set the parameters of the Cross Validation scheme.
 
     calculate_metrics(self, y_true, y_pred): Calculates MAE, RMSE, R2 and p (Pearson's corelation)
-
-    summary_metrics(self, array): Calculates mean and standard deviations of metrics.
 
     fit_age_bias(self, y_true, y_pred): Fit a linear age bias correction model.
 
@@ -187,6 +186,7 @@ class AgeML:
         # Model dictionary
         self.model_type = model_type
         self.model_dict = AgeML.model_dict
+
         # Hyperparameters and feature extension
         self.hyperparameter_tuning = hyperparameter_tuning
         self.feature_extension = feature_extension
@@ -202,6 +202,9 @@ class AgeML:
         self.pipelineFit = False
         self.age_biasFit = False
         self.verbose = verbose
+
+        # Initialize metrics storage
+        self.metrics = CVMetricsHandler()
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -314,21 +317,6 @@ class AgeML:
         p, _ = stats.pearsonr(y_true, y_pred)
         return MAE, rmse, r2, p
 
-    def summary_metrics(self, array):
-        """Calculates mean and standard deviations of metrics.
-
-        Parameters:
-        -----------
-        array: 2D-array with metrics in axis=0; shape=(n, 4)"""
-
-        means = np.mean(array, axis=0)
-        stds = np.std(array, axis=0)
-        summary = []
-        for mean, std in zip(means, stds):
-            summary.append(mean)
-            summary.append(std)
-        return summary
-
     def fit_age_bias(self, y_true, y_pred):
         """Fit a linear age bias correction model.
 
@@ -375,8 +363,6 @@ class AgeML:
         # Variables of interes
         pred_age = np.zeros(y.shape)
         corrected_age = np.zeros(y.shape)
-        metrics_train = []
-        metrics_test = []
 
         # Optimize hyperparameters if required
         if self.hyperparameter_grid != {}:
@@ -417,10 +403,12 @@ class AgeML:
                 best_models.append(best_model)
                 best_preprocs.append(best_preprocessing)
                 scores.append(score)
+
             # Select the best model based on validation scores
             best_index = np.argmax(scores)
             best_model = best_models[best_index]
             best_preprocessing = best_preprocs[best_index]
+
             # Set the best model and preprocessing in the pipeline
             pipe = [(f"preproc_{i}", preproc) for i, preproc in enumerate(best_preprocessing)]
             pipe.append(("model", best_model))
@@ -447,10 +435,13 @@ class AgeML:
 
             # Metrics
             print("Fold N: %d" % (i + 1))
-            metrics_train.append(self.calculate_metrics(y_train, y_pred_train))
-            print("Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % metrics_train[i])
-            metrics_test.append(self.calculate_metrics(y_test, y_pred_test))
-            print("Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % metrics_test[i])
+            mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
+            train_fold = FoldMetrics(mae_train, rmse_train, r2_train, p_train)
+            print("Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % (mae_train, rmse_train, r2_train, p_train))
+            mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
+            test_fold = FoldMetrics(mae_test, rmse_test, r2_test, p_test)
+            print("Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % (mae_test, rmse_test, r2_test, p_test))
+            self.metrics.add_fold_metrics(train_fold, test_fold)
 
             # Fit and apply age-bias correction
             self.fit_age_bias(y_train, y_pred_train)
@@ -461,11 +452,19 @@ class AgeML:
             corrected_age[test] = y_pred_test_no_bias
 
         # Calculate metrics over all splits
+        summary_dict = self.metrics.get_summary()
         print("Summary metrics over all CV splits")
-        summary_train = self.summary_metrics(metrics_train)
-        print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
-        summary_test = self.summary_metrics(metrics_test)
-        print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
+        print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+              % (summary_dict['train']['mae']['mean'], summary_dict['train']['mae']['std'],
+                 summary_dict['train']['rmse']['mean'], summary_dict['train']['rmse']['std'],
+                 summary_dict['train']['r2']['mean'], summary_dict['train']['r2']['std'],
+                 summary_dict['train']['p']['mean'], summary_dict['train']['p']['std']))
+        print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+              % (summary_dict['test']['mae']['mean'], summary_dict['test']['mae']['std'],
+                 summary_dict['test']['rmse']['mean'], summary_dict['test']['rmse']['std'],
+                 summary_dict['test']['r2']['mean'], summary_dict['test']['r2']['std'],
+                 summary_dict['test']['p']['mean'], summary_dict['test']['p']['std']))
+
         # Print comparison with mean age as only predictor to have a reference of a dummy regressor
         dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
         dummy_mae = np.mean(np.abs(y - np.mean(y)))
