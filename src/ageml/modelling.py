@@ -33,6 +33,8 @@ from sklearn.preprocessing import (
 from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
 from hyperopt import tpe
 
+from ageml.utils import verbose_wrapper 
+
 
 class AgeML:
 
@@ -174,6 +176,7 @@ class AgeML:
         seed,
         hyperparameter_tuning: int = 0,
         feature_extension: int = 0,
+        verbose: bool = False,
     ):
         """Initialise variables."""
 
@@ -198,6 +201,7 @@ class AgeML:
         # Initialise flags
         self.pipelineFit = False
         self.age_biasFit = False
+        self.verbose = verbose
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -355,6 +359,7 @@ class AgeML:
 
         return y_corrected
 
+    @verbose_wrapper
     def fit_age(self, X, y):
         """Fit the age model.
 
@@ -533,7 +538,7 @@ class Classifier:
     predict(self, X): Predict class labels with fitted model.
     """
 
-    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95):
+    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95, verbose: bool = False):
         """Initialise variables."""
 
         # Set required modelling parts
@@ -548,6 +553,7 @@ class Classifier:
 
         # Initialise flags
         self.modelFit = False
+        self.verbose = verbose
 
     def set_model(self):
         """Sets the model to use in the pipeline."""
@@ -583,6 +589,7 @@ class Classifier:
 
         self.ci_val = ci_val
 
+    @verbose_wrapper
     def fit_model(self, X, y):
         """Fit the model.
 

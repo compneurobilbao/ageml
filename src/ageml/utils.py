@@ -1,5 +1,6 @@
 """Utility functions for the AgeML package."""
 
+import io
 import os
 import sys
 
@@ -107,6 +108,29 @@ def log(func):
 
     return wrapper
 
+
+def verbose_wrapper(func):
+    """Decorator function to capture print statements if verbose is False."""
+
+    def wrapper(self, *args, **kwargs):
+        # If verbose is False, redirect stdout to capture prints
+        if not getattr(self, 'verbose', True):
+            # Create a string buffer to capture output
+            captured_output = io.StringIO()
+            sys.stdout = captured_output
+
+            try:
+                result = func(self, *args, **kwargs)
+            finally:
+                # Restore stdout
+                sys.stdout = sys.__stdout__
+
+        else:
+            # If verbose is True, just run the function normally
+            result = func(self, *args, **kwargs)
+            
+        return result
+    return wrapper
 
 class NameTag:
     """Class to create unique names for objects."""
