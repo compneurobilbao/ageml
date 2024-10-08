@@ -223,7 +223,7 @@ class Interface:
                     # Save the dataframe
                     self.dfs[subject_type][covar][system] = df_sys
 
-    def generate_model(self):
+    def generate_model(self, verbose=False):
         """Set model with parameters."""
 
         model = AgeML(
@@ -236,13 +236,14 @@ class Interface:
             self.args.hyperparameter_tuning,
             self.args.hyperparameter_params,
             self.args.feature_extension,
+            verbose=verbose,
         )
         return model
 
-    def generate_classifier(self):
+    def generate_classifier(self, verbose=False):
         """Set classifier with parameters."""
 
-        classifier = Classifier(self.args.classifier_cv_split, self.args.classifier_seed, self.args.classifier_thr, self.args.classifier_ci)
+        classifier = Classifier(self.args.classifier_cv_split, self.args.classifier_seed, self.args.classifier_thr, self.args.classifier_ci, verbose=verbose)
 
         return classifier
 
@@ -806,7 +807,7 @@ class Interface:
             print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_age[order_element]))
     
         # Relationiship between features and discrimination between groups
-        print("Features mutual information for Discrimination between Groups [System: %s]" % tag.system)
+        print("Features mutual information for Discrimination between Groups %s and %s [System: %s]" % (self.args.group1, self.args.group2, tag.system))
 
         # Extract feature for each group
         df1 = self.dfs[self.args.group1][tag.covar][tag.system]
@@ -878,7 +879,7 @@ class Interface:
                 covar_tag = self.args.covar_name + "_" + str(covar) if self.flags["covarname"] else covar
                 tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
-                ageml_model = self.generate_model()
+                ageml_model = self.generate_model(verbose=True)
                 data = self.dfs["cn"][covar][system]
                 ageml_model.train_indices = train_indices
                 ageml_model.test_indices = test_indices
@@ -1005,6 +1006,7 @@ class Interface:
 
         print("-----------------------------------")
         print("Training different models with different set of features")
+        print('Using groups: "%s" and "%s"' % (self.args.group1, self.args.group2))
 
         # Obtain features of controls
         _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
@@ -1018,10 +1020,10 @@ class Interface:
             maes = []
             maes_std = []
             aucs = []
-            auc_std = []
+            aucs_std = []
 
             print("Ordering by: %s" % type)
-            print("Order %s" % [feature_names[o] for o in order]) 
+            print("Feature added: MAE ± std, AUC ± std")
 
             # TODO encapsulate this into one function that returns metrics
 
@@ -1072,22 +1074,22 @@ class Interface:
                 _ = self.classifier.fit_model(deltas, labels)
 
                 # Calculate AUC
-                aucs.append(np.mean(self.classifier.aucs))
-                auc_std.append(np.std(self.classifier.aucs))
+                auc = np.mean(self.classifier.aucs)
+                auc_std = np.std(self.classifier.aucs)
+                aucs.append(auc)
+                aucs_std.append(auc_std)
+
+                # Print results nicely with feature added and number its on mae +- mae_std and auc +- auc_std
+                print("%d. %s: %.2f ± %.2f, %.2f ± %.2f" % (i + 1, feature_names[order[i]], mae, mae_std, auc, auc_std))
 
             # Convert maes, aucs to numpy arrays
             maes = np.array(maes)
             maes_std = np.array(maes_std)
             aucs = np.array(aucs)
-            auc_std = np.array(auc_std)
+            aucs_std = np.array(aucs_std)
             
             # Visualize results
-            self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, auc_std, type)
-
-            # TODO Print resuts mor nicely with standard deviation and number of features
-            print(maes)
-            print(aucs)
-
+            self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, aucs_std, type)
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.
@@ -1321,7 +1323,7 @@ class Interface:
             raise ValueError("Not enough subjects for classification for each CV split.")
 
         # Generate classifier
-        self.classifier = self.generate_classifier()
+        self.classifier = self.generate_classifier(verbose=True)
 
         # Apply covariate correction
         # TODO: AGAIN? Commented for now.
