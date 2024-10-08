@@ -1,6 +1,10 @@
 """Define processing functions for AgeML package"""
 
 import numpy as np
+import pandas as pd
+
+from dataclasses import dataclass
+from typing import List, Dict
 from scipy import stats
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
 
@@ -126,3 +130,60 @@ def cohen_d(group1, group2):
     # Calculate Cohen's d
     d = (mean1 - mean2) / pooled_std
     return d
+
+
+@dataclass
+class FoldMetrics:
+    mae: float
+    rmse: float
+    r2: float
+    p: float
+
+class CVMetricsHandler:
+    def __init__(self):
+        self.train_metrics: List[FoldMetrics] = []
+        self.test_metrics: List[FoldMetrics] = []
+    
+    def add_fold_metrics(self, fold_train: FoldMetrics, fold_test: FoldMetrics):
+        self.train_metrics.append(fold_train)
+        self.test_metrics.append(fold_test)
+    
+    def _calculate_summary(self, metrics_list: List[FoldMetrics]) -> Dict[str, Dict[str, float]]:
+        all_metrics = {
+            'mae': [m.mae for m in metrics_list],
+            'rmse': [m.rmse for m in metrics_list],
+            'r2': [m.r2 for m in metrics_list],
+            'p': [m.p for m in metrics_list]
+        }
+        
+        summary = {}
+        for metric_name, values in all_metrics.items():
+            summary[metric_name] = {
+                'mean': np.mean(values),
+                'std': np.std(values),
+                'min': np.min(values),
+                'max': np.max(values)
+            }
+        return summary
+    
+    def get_summary(self) -> Dict[str, Dict[str, Dict[str, float]]]:
+        return {
+            'train': self._calculate_summary(self.train_metrics),
+            'test': self._calculate_summary(self.test_metrics)
+        }
+    
+    def get_summary_dataframe(self) -> pd.DataFrame:
+        summary = self.get_summary()
+        data = []
+        
+        for split in ['train', 'test']:
+            for metric in ['mae', 'rmse', 'r2', 'p']:
+                for stat, value in summary[split][metric].items():
+                    data.append({
+                        'split': split,
+                        'metric': metric,
+                        'statistic': stat,
+                        'value': value
+                    })
+        
+        return pd.DataFrame(data)

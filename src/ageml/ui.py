@@ -1036,15 +1036,14 @@ class Interface:
                 df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][['age'] + features]
                 df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][['age'] + features]
             
-                # TODO change model generation to be silent and return metrics
                 # Train model based on controls
                 model = self.generate_model()
                 X_cn, y_cn, _ = feature_extractor(df_subset_cn) 
                 y_pred_cn, y_corrected_cn = model.fit_age(X_cn, y_cn)
 
                 # Calculate metrics
-                mae = np.mean(np.abs(y_pred_cn - y_cn))
-                mae_std = np.std(np.abs(y_pred_cn - y_cn))
+                age_metrics = model.metrics.get_summary()
+                mae, mae_std  = age_metrics['test']['mae']['mean'], age_metrics['test']['mae']['std']
                 maes.append(mae)
                 maes_std.append(mae_std)
                 
