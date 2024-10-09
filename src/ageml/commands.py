@@ -369,7 +369,118 @@ class ModelFeatureInfluence(Interface):
         args.classifier_ci = args.ci[0]
 
         return args
- 
+
+class AgeModelvsLogisticRegression(Interface):
+    """Compare performance of Age Model vs Logistic Regression."""
+    
+    def __init__(self):
+        """Initialise variables."""
+
+        # Initialise parser
+        self.parser = argparse.ArgumentParser(
+            description="Feature influence on model construction.",
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
+
+        # Configure parser
+        self.configure_parser()
+        args = self.parser.parse_args()
+        args = self.configure_args(args)
+
+        # Initialise parent class
+        super().__init__(args)
+
+        # Run feature influence analysis
+        self.run_wrapper(self.run_age_model_vs_logistic_regression)
+
+    def configure_parser(self):
+
+        # Required arguments
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            metavar="DIR",
+            required=True,
+            help=messages.output_long_description,
+        )
+        self.parser.add_argument(
+            "-f",
+            "--features",
+            metavar="FILE",
+            required=True,
+            help=messages.features_long_description,
+        )
+        self.parser.add_argument(
+            "--clinical", 
+            metavar="FILE",
+            required=True,
+            help=messages.clinical_long_description)
+        self.parser.add_argument(
+            "--groups",
+            nargs=2,
+            metavar="GROUP",
+            required=True,
+            help=messages.groups_long_description,
+        )
+
+        # Optional arguments
+        self.parser.add_argument(
+            "--cv",
+            nargs="+",
+            type=int,
+            default=[5, 0],
+            help=messages.cv_long_description,
+        )
+
+        self.parser.add_argument(
+            "--thr",
+            nargs=1,
+            type=float,
+            default=[0.5],
+            help=messages.thr_long_description,
+        )
+
+        self.parser.add_argument(
+            "--ci",
+            nargs=1,
+            type=float,
+            default=[0.95],
+            help=messages.ci_long_description,
+        ) 
+
+    def configure_args(self, args):
+        """Configure argumens with required fromatting for modelling.
+
+        Parameters
+        ----------
+        args: arguments object from parser
+        """
+
+        # Set groups
+        args.group1, args.group2 = args.groups
+        args.group1 = args.group1.lower()
+        args.group2 = args.group2.lower()
+
+        # Set CV params first item is the number of CV splits
+        if len(args.cv) == 1:
+            args.model_cv_split = args.cv[0]
+            args.classifier_cv_split = args.cv[0]
+            args.model_seed = self.parser.get_default("cv")[1]
+            args.classifier_seed = self.parser.get_default("cv")[1]
+        elif len(args.cv) == 2:
+            args.model_cv_split, args.model_seed = args.cv
+            args.classifier_cv_split, args.classifier_seed = args.cv
+        else:
+            raise ValueError("Too many values to unpack")
+        
+        # Set threshold
+        args.classifier_thr = args.thr[0]
+
+        # Set confidence interval
+        args.classifier_ci = args.ci[0]
+
+        return args
+
 class FactorCorrelation(Interface):
     """Run factor correlation analysis with required parameters."""
 
@@ -609,6 +720,11 @@ def model_feature_influence():
     """Run ModelFeatureInfluence class."""
 
     ModelFeatureInfluence()
+
+def age_model_vs_logistic_regression():
+    """Run AgeModelvsLogisticRegression class."""
+
+    AgeModelvsLogisticRegression()
 
 def factor_correlation():
     """Run FactorCorrelation class."""

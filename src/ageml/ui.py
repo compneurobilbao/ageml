@@ -1416,6 +1416,29 @@ class Interface:
                 tag = NameTag(covar=covar, system=system)
                 self.feature_ordering(tag)
 
+    def run_age_model_vs_logistic_regression(self):
+        """Run age model vs logistic regression for classification."""
+
+        print("Running age model vs logistic regression...")
+
+        # Set up
+        self.command_setup("age_model_vs_logistic_regression")
+
+        # Load data
+        self.load_data(required=["features", "clinical"])
+
+        # Initialize dictionaries
+        self.set_dict()
+
+        # Check that arguments given for each group and that they exist
+        if self.args.group1 is None or self.args.group2 is None:
+            raise ValueError("Must provide two groups to classify.")
+        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
+            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+        
+        # Set dataframes
+        self.set_features_dataframes()
+
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
 
