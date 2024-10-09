@@ -1001,6 +1001,53 @@ class Interface:
             )
             print(msg)
             
+    def model_age_and_classify(self, features, model, tag):
+        """Train model to predict age and classify between groups using deltas."""
+
+        # Get subset for controls, group1 and group2
+        df_subset_cn = self.dfs["cn"][tag.covar][tag.system][['age'] + features]
+        df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][['age'] + features]
+        df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][['age'] + features]
+        
+        # Train model based on controls
+        X_cn, y_cn, _ = feature_extractor(df_subset_cn) 
+        y_pred_cn, y_corrected_cn = model.fit_age(X_cn, y_cn)
+
+        # Calculate metrics
+        age_metrics = model.metrics.get_summary()
+        mae, mae_std  = age_metrics['test']['mae']['mean'], age_metrics['test']['mae']['std']
+    
+        # For each group now predict except if they are controls use CV predicted values
+        if self.args.group1 != 'cn':
+            X_group1, y_group1, _ = feature_extractor(df_subset_group1)
+            _, y_corrected_group1 = model.predict_age(X_group1, y_group1)
+            deltas_group1 = y_corrected_group1 - y_group1
+        else:
+            deltas_group1 = y_corrected_cn - y_cn
+        if self.args.group2 != 'cn':
+            X_group2, y_group2, _ = feature_extractor(df_subset_group2)
+            _, y_corrected_group2 = model.predict_age(X_group2, y_group2)
+            deltas_group2 = y_corrected_group2 - y_group2
+        else:
+            deltas_group2 = y_corrected_cn - y_cn
+
+        # Subsampling bigger group to make same size as smaller group
+        min_samples = min(len(deltas_group1), len(deltas_group2))
+        deltas_group1 = np.random.choice(deltas_group1, min_samples, replace=False)
+        deltas_group2 = np.random.choice(deltas_group2, min_samples, replace=False)
+
+        # Classify between groups using deltas
+        deltas = np.concatenate((deltas_group1, deltas_group2)).reshape(-1, 1)
+        labels = np.concatenate((np.zeros(deltas_group1.shape), np.ones(deltas_group2.shape)))
+        self.classifier = self.generate_classifier()
+        _ = self.classifier.fit_model(deltas, labels)
+
+        # Calculate AUC
+        auc = np.mean(self.classifier.aucs)
+        auc_std = np.std(self.classifier.aucs)
+
+        return mae, mae_std, auc, auc_std
+
     def model_feature_analysis(self, order_age, order_discrimination, tag):
         """Train different models using the specificed order of features."""
 
@@ -1016,65 +1063,25 @@ class Interface:
 
         for order, type in zip([order_age, order_discrimination], order_type):
 
-            # Metrics
-            maes = []
-            maes_std = []
-            aucs = []
-            aucs_std = []
-
             print("Ordering by: %s" % type)
             print("Feature added: MAE ± std, AUC ± std")
 
-            # TODO encapsulate this into one function that returns metrics
+            # Metrics
+            maes, maes_std, aucs, aucs_std = [], [], [], []
 
             # Iterate over each order to create subsets
             for i in range(len(order)):
 
-                # Get subset for controls, group1 and group2
+                # Get subset of features
                 features = [feature_names[o] for o in order[:i+1]]
-                df_subset_cn = self.dfs["cn"][tag.covar][tag.system][['age'] + features]
-                df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][['age'] + features]
-                df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][['age'] + features]
-            
-                # Train model based on controls
+                
+                # Model age and classify
                 model = self.generate_model()
-                X_cn, y_cn, _ = feature_extractor(df_subset_cn) 
-                y_pred_cn, y_corrected_cn = model.fit_age(X_cn, y_cn)
-
-                # Calculate metrics
-                age_metrics = model.metrics.get_summary()
-                mae, mae_std  = age_metrics['test']['mae']['mean'], age_metrics['test']['mae']['std']
+                mae, mae_std, auc, auc_std = self.model_age_and_classify(features, model, tag)
+            
+                # Store results
                 maes.append(mae)
                 maes_std.append(mae_std)
-                
-                # For each group now predict except if they are controls use CV predicted values
-                if self.args.group1 != 'cn':
-                    X_group1, y_group1, _ = feature_extractor(df_subset_group1)
-                    _, y_corrected_group1 = model.predict_age(X_group1, y_group1)
-                    deltas_group1 = y_corrected_group1 - y_group1
-                else:
-                    deltas_group1 = y_corrected_cn - y_cn
-                if self.args.group2 != 'cn':
-                    X_group2, y_group2, _ = feature_extractor(df_subset_group2)
-                    _, y_corrected_group2 = model.predict_age(X_group2, y_group2)
-                    deltas_group2 = y_corrected_group2 - y_group2
-                else:
-                    deltas_group2 = y_corrected_cn - y_cn
-
-                # Subsampling bigger group to make same size as smaller group
-                min_samples = min(len(deltas_group1), len(deltas_group2))
-                deltas_group1 = np.random.choice(deltas_group1, min_samples, replace=False)
-                deltas_group2 = np.random.choice(deltas_group2, min_samples, replace=False)
-
-                # Classify between groups using deltas
-                deltas = np.concatenate((deltas_group1, deltas_group2)).reshape(-1, 1)
-                labels = np.concatenate((np.zeros(deltas_group1.shape), np.ones(deltas_group2.shape)))
-                self.classifier = self.generate_classifier()
-                _ = self.classifier.fit_model(deltas, labels)
-
-                # Calculate AUC
-                auc = np.mean(self.classifier.aucs)
-                auc_std = np.std(self.classifier.aucs)
                 aucs.append(auc)
                 aucs_std.append(auc_std)
 
@@ -1082,13 +1089,45 @@ class Interface:
                 print("%d. %s: %.2f ± %.2f, %.2f ± %.2f" % (i + 1, feature_names[order[i]], mae, mae_std, auc, auc_std))
 
             # Convert maes, aucs to numpy arrays
-            maes = np.array(maes)
-            maes_std = np.array(maes_std)
-            aucs = np.array(aucs)
-            aucs_std = np.array(aucs_std)
+            maes, maes_std, aucs, auc_std  = np.array(maes), np.array(maes_std), np.array(aucs), np.array(aucs_std)
             
             # Visualize results
             self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, aucs_std, type)
+
+    def classification_feature_analysis(self, order, tag):
+
+        print("-----------------------------------")
+        print("Training different models with different set of features")
+        print('Using groups: "%s" and "%s"' % (self.args.group1, self.args.group2))
+
+        # Obtain features of controls
+        _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
+
+        # Metrics
+        aucs, aucs_std = [], []
+
+        # TODO iterate over multiple model types using dictionary
+
+        # Iterate over each order to create subsets
+        for i in range(len(order)):
+
+            # Get subset of features
+            features = [feature_names[o] for o in order[:i+1]]
+                
+            # Model age and classify
+            model = AgeML('standard', {}, 'linear_reg', {}, self.args.model_cv_split, self.args.model_seed)
+            _, _, auc, auc_std = self.model_age_and_classify(features, model, tag)
+            
+            # Store results
+            aucs.append(auc)
+            aucs_std.append(auc_std)
+
+        # Convert maes, aucs to numpy arrays
+        aucs, auc_std = np.array(aucs), np.array(aucs_std)
+        print(aucs, auc_std)
+        
+        # TODO visualize for all and print for all
+
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.
@@ -1438,6 +1477,14 @@ class Interface:
         
         # Set dataframes
         self.set_features_dataframes()
+
+        # Show ordering of features with importance to age vs discrimination of clinical groups
+        for system in self.systems:
+            for covar in self.covars:
+                tag = NameTag(covar=covar, system=system)
+                order_age, order_discrimination = self.feature_ordering(tag)
+                self.classification_feature_analysis(order_age, tag)
+
 
     def run_factor_correlation(self):
         """Run factor correlation analysis between deltas and factors."""
