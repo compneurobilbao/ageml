@@ -96,6 +96,14 @@ class Interface:
 
     save_predictions(self): Save age predictions to csv.
 
+    model_age_and_clasify(self, features, model, tag): Use AgeML to fit model with data and classify.
+
+    classify_with_features(self, features, tag): Classify two groups based on features.
+
+    model_feature_anaylsis(self, df, tag): Use AgeML to fit model with data.
+
+    classification_feature_analysis(self, df, tag): Use AgeML to fit model with data and classify.
+
     factors_vs_deltas(self, dfs_ages, dfs_factors, groups, significance=0.05): Calculate correlations between factors and deltas.
 
     deltas_by_group(self, df, labels): Calculate summary metrics of deltas by group.
@@ -105,6 +113,10 @@ class Interface:
     run_wrapper(self, run): Wrapper for running modelling with log.
 
     run_age(self): Run age modelling.
+
+    run_model_feautre_influence(self): Run model feature influence analysis.
+
+    run_age_model_vs_logistic_regression(self): Run age model vs logistic regression.
 
     run_factor_correlation(self): Factor correlation analysis between deltas and factors.
 
@@ -1048,6 +1060,35 @@ class Interface:
 
         return mae, mae_std, auc, auc_std
 
+    def classify_with_features(self, features, tag):
+        """Classify between groups using features."""
+
+        # Get subset for controls, group1 and group2
+        df_subset_group1 = self.dfs[self.args.group1][tag.covar][tag.system][['age'] + features]
+        df_subset_group2 = self.dfs[self.args.group2][tag.covar][tag.system][['age'] + features]
+
+        # Extract features
+        X_group1, _, _ = feature_extractor(df_subset_group1)
+        X_group2, _, _ = feature_extractor(df_subset_group2)
+
+        # Concatenate features
+        X = np.concatenate((X_group1, X_group2))
+        y = np.concatenate((np.zeros(X_group1.shape[0]), np.ones(X_group2.shape[0])))
+
+        # Standardize features
+        from sklearn.preprocessing import StandardScaler
+        X = StandardScaler().fit_transform(X)
+
+        # Classify between groups using features
+        self.classifier = self.generate_classifier()
+        _ = self.classifier.fit_model(X, y)
+
+        # Calculate AUC
+        auc = np.mean(self.classifier.aucs)
+        auc_std = np.std(self.classifier.aucs)
+
+        return auc, auc_std
+
     def model_feature_analysis(self, order_age, order_discrimination, tag):
         """Train different models using the specificed order of features."""
 
@@ -1103,31 +1144,41 @@ class Interface:
         # Obtain features of controls
         _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
 
+        # Models to train
+        models = ['linear_reg', 'ridge', 'logistic_regression']
+
         # Metrics
-        aucs, aucs_std = [], []
+        aucs, aucs_std = {}, {}
 
-        # TODO iterate over multiple model types using dictionary
+        # Iterate over each model type
+        for model_type in models:
+            print("Model: %s" % model_type)
 
-        # Iterate over each order to create subsets
-        for i in range(len(order)):
+            # Arrays for storage
+            aucs[model_type], aucs_std[model_type] = [], []
 
-            # Get subset of features
-            features = [feature_names[o] for o in order[:i+1]]
+            # Iterate over each order to create subsets
+            for i in range(len(order)):
+
+                # Get subset of features
+                features = [feature_names[o] for o in order[:i+1]]
                 
-            # Model age and classify
-            model = AgeML('standard', {}, 'linear_reg', {}, self.args.model_cv_split, self.args.model_seed)
-            _, _, auc, auc_std = self.model_age_and_classify(features, model, tag)
+                # Model age and classify
+                if model_type != 'logistic_regression':
+                    model = AgeML('standard', {}, model_type, {}, self.args.model_cv_split, self.args.model_seed)
+                    _, _, auc, auc_std = self.model_age_and_classify(features, model, tag)
+                else:
+                    auc, auc_std = self.classify_with_features(features, tag)
             
-            # Store results
-            aucs.append(auc)
-            aucs_std.append(auc_std)
+                # Store results
+                aucs[model_type].append(auc)
+                aucs_std[model_type].append(auc_std)
 
-        # Convert maes, aucs to numpy arrays
-        aucs, auc_std = np.array(aucs), np.array(aucs_std)
-        print(aucs, auc_std)
+        # TODO print resutls2
+
+        # Visualize results
+        self.visualizer.auc_vs_num_features(aucs, aucs_std, 'linear_reg')
         
-        # TODO visualize for all and print for all
-
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.

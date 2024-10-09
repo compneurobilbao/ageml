@@ -265,6 +265,38 @@ class Visualizer:
         filename = f"metrics_vs_num_features_{title}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close() 
+    
+    def auc_vs_num_features(self, aucs, aucs_std, title):
+        """Plot AUCs with standard deviation against the number of features used for each model.
+        
+        Parameters
+        ----------
+        auc: dict
+            Dictionary containing the AUC values for each model
+        auc_std: dict
+            Dictionary containing the standard deviation of the AUC values for each model
+        title: str
+            Title of the plot"""
+
+        for model in aucs.keys():
+            # Determine the number of features
+            num_features = np.arange(len(aucs[model])) + 1
+
+            # Plot the AUC values
+            plt.errorbar(num_features, aucs[model], yerr=aucs_std[model], label=model)
+
+        # Add titles and labels
+        plt.title(title)
+        plt.xlabel('Number of Features Used')
+        plt.ylabel('Mean AUC')
+        plt.legend(title='Model', loc='lower right')
+        plt.grid(True)
+
+        # Save figure 
+        plt.tight_layout()
+        filename = f"auc_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()         
 
     def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.
