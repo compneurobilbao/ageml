@@ -611,22 +611,23 @@ class Interface:
                 warnings.warn(warn_message, category=UserWarning)
                 dfs[label] = df.drop(missing_subjects)
 
-        # Check that all dataframes have the same subjects
+        # Compute the intersection of the indices of the dataframes
+        indices_collection = [set(df.index) for df in dfs.values()]
+        shared_idx = list(indices_collection[0].intersection(*indices_collection[1:]))
+        # Remove subjects not shared among dataframes, report subjects left for analysis, and set dataframes
         print("Removing subjects not shared among dataframes...")
-        for l1, df1 in dfs.items():
-            for l2, df2 in dfs.items():
-                if l1 != l2:
-                    non_shared_idx = df1.index[~df1.index.isin(set(df2.index.to_list()))]
-                    if non_shared_idx.__len__() != 0:
-                        warn_message = "Subjects in dataframe %s not in dataframe %s: %s" % (l1, l2, non_shared_idx.to_list())
-                        print(warn_message)
-                        warnings.warn(warn_message, category=UserWarning)
-                        dfs[l1] = df1.drop(non_shared_idx)
-
-        # Set dataframes
-        for label, df in dfs.items():
-            print("Final number of subjects in dataframe %s: %d (%.2f %% of initial)" % (label, len(df), len(df) / init_count[label] * 100))
-            setattr(self, f"df_{label}", df)
+        for label in dfs.keys():
+            removed_subjects = set(dfs[label].index) - set(shared_idx)
+            warn_message = f"{len(removed_subjects)} subjects removed from {label} dataframe: {removed_subjects}"
+            dfs[label] = dfs[label].loc[shared_idx]
+            print(warn_message)
+            warnings.warn(warn_message, category=UserWarning)
+            setattr(self, f"df_{label}", dfs[label])
+            msg = (
+                f"Final number of subjects in dataframe {label}: {len(shared_idx)} "
+                f"({len(shared_idx) / init_count[label] * 100:.2f} % of initial)"
+            )
+            print(msg)
 
     def load_data(self, required=None):
         """Load data from csv files.
