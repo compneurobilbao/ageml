@@ -22,6 +22,10 @@ from .utils import insert_newlines, create_directory, NameTag
 matplotlib.use("Agg")
 plt.rcParams.update({"font.size": 12})
 
+# RNG for reproducibility
+seed = 107146869338163146621163044826586732901
+rng = np.random.default_rng(seed)
+
 
 class Visualizer:
     """Manages the visualization of data and results.
@@ -281,7 +285,7 @@ class Visualizer:
             box.set_alpha(0.5)
         # Plot scatter
         for i, (vals, clevel) in enumerate(zip(deltas, clevels)):
-            x = np.random.normal(i + 1, 0.04, size=len(vals))
+            x = rng.normal(i + 1, 0.04, size=len(vals))
             plt.scatter(x, vals, color=self.cmap(clevel))
         plt.xlabel("Group")
         plt.ylabel("Delta")
