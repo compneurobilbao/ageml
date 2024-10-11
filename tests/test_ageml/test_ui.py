@@ -11,6 +11,11 @@ import ageml.messages as messages
 from ageml.ui import Interface, CLI, AgeML
 
 
+# RNG for reproducibility
+seed = 107146869338163146621163044826586732901
+rng = np.random.default_rng(seed)
+
+
 class ExampleArguments(object):
     def __init__(self):
         self.scaler_type = "standard"
@@ -573,8 +578,8 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
 
 def test_age_distribution_warning(dummy_interface):
     # Create different distributions
-    dist1 = np.random.normal(loc=50, scale=1, size=100)
-    dist2 = np.random.normal(loc=0, scale=1, size=100)
+    dist1 = rng.normal(loc=50, scale=1, size=100)
+    dist2 = rng.normal(loc=0, scale=1, size=100)
     dists = {"dist1": dist1, "dist2": dist2}
 
     # Set visualized in temporal directory
