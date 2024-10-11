@@ -365,6 +365,7 @@ class AgeML:
         corrected_age = np.zeros(y.shape)
 
         # Optimize hyperparameters if required
+        # Test CN
         if self.hyperparameter_grid != {}:
             print("Running Hyperparameter optimization...")
             opt_pipeline = model_selection.GridSearchCV(self.pipeline,
@@ -589,7 +590,7 @@ class Classifier:
         self.ci_val = ci_val
 
     @verbose_wrapper
-    def fit_model(self, X, y):
+    def fit_model(self, X, y, scale=False):
         """Fit the model.
 
         Parameters
@@ -606,6 +607,12 @@ class Classifier:
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
+
+            # Scale data
+            if scale:
+                self.scaler = StandardScaler()
+                X_train = self.scaler.fit_transform(X_train)
+                X_test = self.scaler.transform(X_test)
 
             # Fit the model using the training data
             self.model.fit(X_train, y_train)
@@ -641,6 +648,8 @@ class Classifier:
         print("Specificity: %.3f [%.3f-%.3f]" % (np.mean(spes), ci_spes[0], ci_spes[1]))
 
         # Final model trained on all data
+        if scale:
+            X = self.scaler.fit_transform(X)
         self.model.fit(X, y)
 
         # Set flag
@@ -648,7 +657,7 @@ class Classifier:
 
         return y_preds
 
-    def predict(self, X):
+    def predict(self, X, scale=False):
         """Predict class labels with fitted model.
 
         Parameters:
@@ -658,6 +667,12 @@ class Classifier:
         # Check that model has previously been fit
         if not self.modelFit:
             raise ValueError("Must fit the classifier before calling predict.")
+        
+        # Scale data
+        if scale and hasattr(self, 'scaler'):
+            X = self.scaler.transform(X)
+        elif scale and not hasattr(self, 'scaler'):
+            raise ValueError("Must fit the model with scaling before calling predict with scaling.")
 
         # Predict class labels
         y_pred = self.model.predict_proba(X)[::, 1]
