@@ -557,8 +557,10 @@ def test_load_data_nan_values_warning(dummy_interface, features):
 
 def test_load_data_different_indexes_warning(dummy_interface, features, clinical):
     # Drop subjects 2 and 3 from features
-    features.drop([2, 3], axis=0, inplace=True)
-    clinical.drop([4], axis=0, inplace=True)
+    drop_features = [2, 3]
+    drop_clinical = [4]
+    features.drop(drop_features, axis=0, inplace=True)
+    clinical.drop(drop_clinical, axis=0, inplace=True)
     features_path = create_csv(features, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
@@ -567,13 +569,10 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = "Subjects in dataframe features not in dataframe clinical: [%d]" % (4)
+    expected = f"1 subjects removed from features dataframe: {set(drop_clinical)}"
     assert warn_record.list[0].message.args[0] == expected
     assert isinstance(warn_record.list[1].message, UserWarning)
-    expected = "Subjects in dataframe clinical not in dataframe features: [%d, %d]" % (
-        2,
-        3,
-    )
+    expected = f"2 subjects removed from clinical dataframe: {set(drop_features)}"
     assert warn_record.list[1].message.args[0] == expected
 
 
