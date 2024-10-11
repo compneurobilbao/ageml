@@ -1072,13 +1072,9 @@ class Interface:
         X = np.concatenate((X_group1, X_group2))
         y = np.concatenate((np.zeros(X_group1.shape[0]), np.ones(X_group2.shape[0])))
 
-        # Standardize features
-        from sklearn.preprocessing import StandardScaler
-        X = StandardScaler().fit_transform(X)
-
         # Classify between groups using features
         self.classifier = self.generate_classifier()
-        _ = self.classifier.fit_model(X, y)
+        _ = self.classifier.fit_model(X, y, scale=True)
 
         # Calculate AUC
         auc = np.mean(self.classifier.aucs)
