@@ -117,3 +117,28 @@ def test_classification_predict_error(dummy_classifier):
     assert exc_info.type == ValueError
     error_message = "Must fit the classifier before calling predict."
     assert str(exc_info.value) == error_message
+
+def test_classifier_predict_scale(dummy_classifier):
+
+    # Data
+        # Create data
+    x = np.concatenate((np.zeros(1000), np.ones(1000)))
+    y = np.concatenate((np.zeros(1000), np.ones(1000)))
+
+    # Modify x
+    x[0] = 1
+    x[1000] = 0
+    x = x.reshape(-1, 1)
+
+    # Fit
+    _ = dummy_classifier.fit_model(x, y)
+
+    # New data
+    x_new = np.array([0.5, 0.5]).reshape(-1, 1)
+
+    # Assert error risen as not trained with scale
+    with pytest.raises(ValueError) as exc_info:
+        dummy_classifier.predict(x_new, scale=True)
+    assert exc_info.type == ValueError
+    error_message = "Must fit the model with scaling before calling predict with scaling."
+    assert str(exc_info.value) == error_message

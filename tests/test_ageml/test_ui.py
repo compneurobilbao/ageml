@@ -930,6 +930,36 @@ def test_run_model_feature_influence(dummy_interface, features, clinical):
     log_path = os.path.join(dummy_interface.dir_path, "model_feature_influence/log.txt")
     assert os.path.exists(log_path)
 
+    # Check existance of figures
+    figs = ["metrics_vs_num_features_age.png", "metrics_vs_num_features_discrimination.png"]
+    png_paths = [os.path.join(dummy_interface.dir_path, f"model_feature_influence/figures/{fig}") for fig in figs]
+    assert all([os.path.exists(png_path) for png_path in png_paths])
+
+
+def test_run_age_models_vs_logistic_regression(dummy_interface, features, clinical):
+    # Run age models vs logsitic regression
+    features_path = create_csv(features, dummy_interface.dir_path)
+    clinical_path = create_csv(clinical, dummy_interface.dir_path)
+    dummy_interface.args.features = features_path
+    dummy_interface.args.clinical = clinical_path
+    dummy_interface.args.group1 = "cn"
+    dummy_interface.args.group2 = "group1"
+
+    # Run age models vs logistic regression
+    dummy_interface.run_age_model_vs_logistic_regression()
+
+    # Check for the existence of the output directory
+    assert os.path.exists(dummy_interface.dir_path)
+
+    # Check for the existence of the output log
+    log_path = os.path.join(dummy_interface.dir_path, "age_model_vs_logistic_regression/log.txt")
+    assert os.path.exists(log_path)
+
+    # Check for the existence of the output figures
+    figs = ["auc_vs_num_features_linear_reg.png"]
+    png_paths = [os.path.join(dummy_interface.dir_path, f"age_model_vs_logistic_regression/figures/{fig}") for fig in figs]
+    assert all([os.path.exists(png_path) for png_path in png_paths])
+
 
 def test_run_factor_correlation(dummy_interface, ages, factors, covariates):
     # Run the factor correaltion pipeline

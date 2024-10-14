@@ -49,6 +49,8 @@ class Visualizer:
 
     metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title): Plots MAE and AUC against the number of features used.
 
+    auc_vs_num_features(self, aucs, aucs_std, title): Plot AUCs with standard deviation against the number of features used for each model.
+
     factors_vs_deltas(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
 
     deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
