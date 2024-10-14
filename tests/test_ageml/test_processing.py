@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
+import pandas as pd
 import ageml.processing as processing
-
 
 def test_find_correlations():
     # Test a very simple correlation
@@ -102,3 +102,58 @@ def test_covariate_correction():
     _, beta = processing.covariate_correction(X, Z)
     beta_expected = np.array([2.0, 4.0, -6.0])
     assert np.allclose(beta, beta_expected)
+
+
+@pytest.fixture
+def handler():
+    return processing.CVMetricsHandler()
+
+@pytest.fixture
+def sample_metrics():
+    return (
+        processing.FoldMetrics(mae=1.0, rmse=1.5, r2=0.8, p=0.05),
+        processing.FoldMetrics(mae=1.2, rmse=1.7, r2=0.75, p=0.06)
+    )
+
+def test_add_fold_metrics(handler, sample_metrics):
+    train_fold, test_fold = sample_metrics
+    handler.add_fold_metrics(train_fold, test_fold)
+    
+    assert len(handler.train_metrics) == 1
+    assert len(handler.test_metrics) == 1
+    assert handler.train_metrics[0] == train_fold
+    assert handler.test_metrics[0] == test_fold
+
+def test_calculate_summary(handler, sample_metrics):
+    summary = handler._calculate_summary(list(sample_metrics))
+
+    assert set(summary.keys()) == {'mae', 'rmse', 'r2', 'p'}
+    for metric in summary.values():
+        assert set(metric.keys()) == {'mean', 'std', 'min', 'max'}
+
+    assert pytest.approx(summary['mae']['mean']) == 1.1
+    assert pytest.approx(summary['rmse']['mean']) == 1.6
+
+def test_get_summary(handler, sample_metrics):
+    train_fold, test_fold = sample_metrics
+    handler.add_fold_metrics(train_fold, test_fold)
+    summary = handler.get_summary()
+
+    assert set(summary.keys()) == {'train', 'test'}
+    for split in summary.values():
+        assert set(split.keys()) == {'mae', 'rmse', 'r2', 'p'}
+        for metric in split.values():
+            assert set(metric.keys()) == {'mean', 'std', 'min', 'max'}
+
+def test_get_summary_dataframe(handler, sample_metrics):
+    train_fold, test_fold = sample_metrics
+    handler.add_fold_metrics(train_fold, test_fold)
+    df = handler.get_summary_dataframe()
+
+    assert isinstance(df, pd.DataFrame)
+    assert set(df.columns) == {'split', 'metric', 'statistic', 'value'}
+    assert len(df) == 32  # 2 splits * 4 metrics * 4 statistics
+
+    assert set(df['split'].unique()) == {'train', 'test'}
+    assert set(df['metric'].unique()) == {'mae', 'rmse', 'r2', 'p'}
+    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max'}

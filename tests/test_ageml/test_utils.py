@@ -4,7 +4,6 @@ import shutil
 import pandas as pd
 import ageml.utils as utils
 
-
 class InstanceClass(object):
     """
     Dummy class to test the ageml.utils.log decorator.
@@ -15,6 +14,16 @@ class InstanceClass(object):
 
     def __init__(self, log_path):
         self.log_path = log_path
+
+
+class DummyClass:
+    def __init__(self, verbose=True):
+        self.verbose = verbose
+
+    @utils.verbose_wrapper
+    def print_message(self):
+        print("This is a test message")
+        return "Function executed"
 
 
 def test_log_decorator():
@@ -39,6 +48,28 @@ def test_log_decorator():
         assert f.readline() == to_print + "\n"
     # Cleanup of log file
     os.remove(dummy_path)
+
+
+@pytest.fixture
+def verbose_instance():
+    return DummyClass(verbose=True)
+
+@pytest.fixture
+def non_verbose_instance():
+    return DummyClass(verbose=False)
+
+def test_verbose_wrapper(verbose_instance, non_verbose_instance, capsys):
+    result = verbose_instance.print_message()
+    captured = capsys.readouterr()
+    
+    assert result == "Function executed"
+    assert captured.out == "This is a test message\n"
+
+    result = non_verbose_instance.print_message()
+    captured = capsys.readouterr()
+
+    assert result == "Function executed"
+    assert captured.out == ""
 
 
 @pytest.mark.parametrize(
