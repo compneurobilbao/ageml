@@ -8,7 +8,11 @@
 
 ## Background
 
-Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics. With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age. The mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
+Age Modelling consists of trying to predict the chronological age of an organism with a set of features that capture information about its aging status and dynamics.
+
+With a rich feature set one can accurately predict the chronological age of a normative (healthy) population using relatively simple machine learning models. When the feature set is sufficiently rich and the model can capture the complexity of the data, performing inference on non-normative populations leads to prediction errors in their chronological age.
+
+The mismatch between the chronological vs. predicted age (known as _age delta_) is a proxy of aberrant aging trajectories, often having high correlations with factors that condition ageing. Furthermore, classification of different clinical groups (e.g.: stable vs progressive) can also be done using the trained models.
 
 ## Our mission
 
@@ -29,30 +33,33 @@ There are 4 main pipelines:
 
 - `clinical_classify`: Using the features file and the age deltas, classification of two clinical groups is performed. A Receiver Operating Curve (ROC) is plotted for each model used in the classifications.
 
-Important: The last 3 pipelines depend on the output of the `model_age` pipeline, so this one should be run first.
+**(!) Important**: The last 3 pipelines depend on the output of the `model_age` pipeline, so this one should be run first.
 
 ## How to install `ageml`
 
 #### Using `pip` (recommended)
 
-From your terminal, for basic installation, run: `pip install ageml`
+To install the latest version in PyPI, run: `pip install ageml`
 
 #### Cloning from Github
 
-Note that `ageml` is under active development, but still not continuously deployed, so the latest version might not be available in PyPI. If you want to use the latest version, you can clone the repository and install it locally. 
+If you want to use the latest cutting-edge version, you can clone the repository and install it locally.
 
 1. From your terminal, run: `git clone https://github.com/compneurobilbao/ageml.git` 
 2. `cd` into the `ageml` folder, and install with pip:`pip install .`
 
-#### Docker
-There are two Dockerfiles available for `ageml`.
-- One that installs `ageml` from pip -> `./Dockerfile`
-- Another one for the latest version of `ageml`, which installs it from the GitHub repo `main` branch -> `./Dockerfile_latest`
+Note that `ageml` is under active development, but still not continuously deployed, so the latest version might not be available in PyPI.
 
-To build the pip image, run:
+#### Docker
+There are two Dockerfiles available for `ageml`:
+- `./Dockerfile` -> installs `ageml` from PyPI.
+  - To build it:
 `docker build -t ageml:pip -f Dockerfile <path_to_directory_containing_Dockerfile>`
-To build the `latest` image, run:
+
+- `./Dockerfile_latest` -> installs the latest version of `ageml` from the `main` branch of the repository.
+  - To build it:
 `docker build -t ageml:latest -f Dockerfile <path_to_directory_containing_Dockerfile_latest>`
+
 
 To run the container, run:
 `docker run -it ageml:<tag_of_your_image>`
@@ -87,12 +94,9 @@ We welcome scientists and developers who want to standardize the procedures of a
 
 So, if you want to contribute, please read first the [contribution guidelines](./docs/CONTRIBUTING.md).
 
-## How to use `ageml`
+## Contact Information
 
-A comprehensive, step by step tutorial of the tool can be found [in this markdown file](./docs/TUTORIAL.md).
-
-You can also tinker around with our [getting started Colab notebook](https://colab.research.google.com/drive/1FtHbIghXLswG8IcOgFZBHJ07wKnLuzbG) if you want a more interactive experience. We recommend you trying this one first.
-
+You can email our team at [ageml.py@gmail.com](mailto:ageml.py@gmail.com). We will try to get back at you ASAP!
 
 ## License
 
