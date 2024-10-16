@@ -108,8 +108,8 @@ poly_feature_extension_description = (
 
 hyperparameter_grid_description = (
     "Number of points for which the hyperparameter optimization Grid Search will train\n"
-    "a model. The parameter ranges are predefined. An integer is required.\n"
-    "(e.g.   -ht 100   /   --hyperparameter_tuning 100)"
+    "a model, and parameter ranges to sample from. An integer is required, followed \n"
+    "by the parameters to optimize. (e.g.   -ht 100  C=1,2,3  kernel=linear,rbf)"
 )
 
 thr_long_description = "Threshold for classification. Default: 0.5 \n" "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"

@@ -26,6 +26,7 @@ from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
 from ageml.modelling import AgeML, Classifier
 from ageml.processing import find_correlations, covariate_correction, cohen_d
+from ageml.datasets.synthetic_data import rng
 
 
 class Interface:
@@ -233,6 +234,7 @@ class Interface:
             self.args.model_cv_split,
             self.args.model_seed,
             self.args.hyperparameter_tuning,
+            self.args.hyperparameter_params,
             self.args.feature_extension,
         )
         return model
@@ -801,11 +803,12 @@ class Interface:
 
         # Fit model and plot results
         y_pred, y_corrected = model.fit_age(X, y)
-        self.visualizer.true_vs_pred_age(y, y_pred, tag)
-        self.visualizer.age_bias_correction(y, y_pred, y_corrected, tag)
+        self.visualizer.true_vs_pred_age(y[model.test_indices], y_pred[model.test_indices], tag)
+        self.visualizer.age_bias_correction(y[model.test_indices], y_pred[model.test_indices], y_corrected[model.test_indices], tag)
 
         # Calculate deltas
-        deltas = y_corrected - y
+        deltas = np.full(np.shape(y), np.nan)
+        deltas[model.test_indices] = y_corrected[model.test_indices] - y[model.test_indices]
 
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
@@ -816,29 +819,49 @@ class Interface:
 
     def model_all(self):
         """Model age for each system and covariate on controls."""
-
+        # Get the test indices for the models
         # Iterate over covariate and system
         for covar in self.covars:
             for system in self.systems:
+                train_indices, test_indices = self.__get_test_indices(covar, system)
                 covar_tag = self.args.covar_name + "_" + str(covar) if self.flags["covarname"] else covar
                 tag = NameTag(covar=covar_tag, system=system)
                 # Generate model
                 ageml_model = self.generate_model()
-                self.models[covar][system], df_pred, self.betas[covar][system] = self.model_age(
-                    self.dfs["cn"][covar][system], ageml_model, tag=tag
-                )
+                data = self.dfs["cn"][covar][system]
+                ageml_model.train_indices = train_indices
+                ageml_model.test_indices = test_indices
+                model, df_pred, betas = self.model_age(data, ageml_model, tag=tag)
+                self.models[covar][system] = model
+                self.betas[covar][system] = betas
                 # Save predictions
                 df_pred = df_pred.drop(columns=["age"])
                 df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
                 self.preds["cn"][covar][system] = df_pred
 
-    def predict_age(
-        self,
-        df,
-        model,
-        tag: NameTag,
-        beta: np.ndarray = None,
-    ):
+    def __get_test_indices(self, covar, system):
+        """Gets and sets the train and test indices to keep track of them when running
+        the model_age pipeline. Necessary to inform the user that when hyperopt was
+        selected as the model, no CV was used, and instead a train test split was done.
+        """
+        data = self.dfs["cn"][covar][system]
+        X, y, _ = feature_extractor(data)
+
+        if self.args.model_type == "hyperopt":
+            # Split the data in training and test sets
+            # TODO: Substitute 0.2 factor by the user CLI argument
+            test_size = int(0.2 * y.shape[0])
+            indices = rng.permutation(X.shape[0])
+            train_indices = indices[:-test_size]
+            test_indices = indices[-test_size:]
+
+        else:
+            train_indices = list(range(X.shape[0]))
+            test_indices = list(range(X.shape[0]))
+
+        return train_indices, test_indices
+
+    def predict_age(self, df, model, tag: NameTag, beta: np.ndarray = None):
         """Use AgeML to predict age with data."""
 
         # Show prediction pipeline
@@ -897,7 +920,7 @@ class Interface:
                 stack.append(df_systems)
         df_ages = pd.concat(stack, axis=0)
 
-        # Drop duplicates keep first (some subjects may be in more than one subejct type)
+        # Drop duplicates keep first (some subjects may be in more than one subject type)
         df_ages = df_ages[~df_ages.index.duplicated(keep="first")]
 
         # Add age information
@@ -909,6 +932,22 @@ class Interface:
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.command_dir, filename))
+
+        # Save test indices if available
+        if self.args.model_type == "hyperopt":
+            for covar in self.covars:
+                for system in self.systems:
+                    filename = f"test_indices_{self.args.covar_name}_{covar}_system_{system}" + ".csv"
+                    indices_path = os.path.abspath(os.path.join(self.command_dir, filename))
+                    indices = self.models[covar][system].test_indices
+                    df_indices = pd.DataFrame(indices, columns=["test_indices"])
+                    df_indices.to_csv(indices_path, index=False)
+
+            msg = (
+                f"Saved test indices to {os.path.abspath(self.command_dir)} because a train test "
+                "split was used forced by the election of the 'hyperopt' model."
+            )
+            print(msg)
 
     def factors_vs_deltas(self, dict_ages, df_factors, tag, covars=None, beta=None, significance=0.05):
         """Calculate correlations between factors and deltas.
@@ -1761,7 +1800,9 @@ class CLI(Interface):
         print("Hyperparameter tuning. Number of points in grid search: (Default: 0)")
         print("Example: 100")
         self.force_command(self.hyperparameter_grid_command)
-
+        print("Hyperparameters to tune. Leave blank if not desired (Default: None)")
+        print("Example (in the case of a 'ridge' model): alpha=-3,3")
+        self.force_command(self.hyperparameter_parameters_command)
         # Run modelling capture any error raised and print
         try:
             self.run_wrapper(self.run_age)
@@ -1940,3 +1981,27 @@ class CLI(Interface):
         # Set CV parameters
         self.args.hyperparameter_tuning = int(self.line[0])
         return error
+
+    def hyperparameter_parameters_command(self):
+        """Specify hyperparameters to tune."""
+
+        hyperparameter_params = {}
+        # Split into items and remove command
+        self.line = self.line.split(" ")
+        error = None
+
+        if self.line == ["", "None"]:
+            self.args.hyperparameter_params = {}
+        else:
+            for item in self.line[1:]:
+                if item.count("=") != 1:
+                    error = (
+                        "Hyperparameter tuning parameters must be in the format "
+                        "param1=value1_low,value1_high param2=value2_low, value2_high..."
+                    )
+                    return error
+                key, value = item.split("=")
+                low, high = value.split(",")
+                hyperparameter_params[key] = [convert(low), convert(high)]
+            # Add attribute to args
+            self.args.hyperparameter_params = hyperparameter_params

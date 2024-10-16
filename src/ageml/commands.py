@@ -100,7 +100,7 @@ class ModelAge(Interface):
         self.parser.add_argument(
             "-ht",
             "--hyperparameter_tuning",
-            nargs=1,
+            nargs="+",
             default=["0"],
             help=messages.hyperparameter_grid_description,
         )
@@ -164,12 +164,28 @@ class ModelAge(Interface):
         else:
             args.model_params = {}
 
-        # Set hyperparameter grid search value
-        if len(args.hyperparameter_tuning) > 1 or not args.hyperparameter_tuning[0].isdigit():
+        # Parse hyperparameter_tuning values
+        hyperparam_tuning = args.hyperparameter_tuning
+        if not hyperparam_tuning[0].isdigit():
             raise ValueError("Hyperparameter grid points must be a non negative integer.")
         else:
-            args.hyperparameter_tuning = args.hyperparameter_tuning[0]
-            args.hyperparameter_tuning = int(convert(args.hyperparameter_tuning))
+            args.hyperparameter_tuning = int(convert(hyperparam_tuning[0]))
+
+        hyperparameter_params = {}
+        if len(hyperparam_tuning) > 1:
+            for item in hyperparam_tuning[1:]:
+                if item.count("=") != 1:
+                    err_msg = (
+                        "Hyperparameter tuning parameters must be in the format "
+                        "param1=value1_low,value1_high param2=value2_low, value2_high..."
+                    )
+                    raise ValueError(err_msg)
+                key, value = item.split("=")
+                low, high = value.split(",")
+                hyperparameter_params[key] = [convert(low), convert(high)]
+        # Add attribute to args
+        args.hyperparameter_params = hyperparameter_params
+
         # Set polynomial feature extension value
         if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
             raise ValueError("Polynomial feature extension degree must be a non negative integer.")
@@ -227,13 +243,11 @@ class FactorCorrelation(Interface):
             help=messages.factors_long_description,
         )
 
-        self.parser.add_argument("--covariates", metavar="FILE", required=False,
-                                 help=messages.covar_long_description)
-        self.parser.add_argument("--clinical", metavar="FILE", required=False,
-                                 help=messages.clinical_long_description)
-        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
-                                 choices=["cn", "each", "all"],
-                                 help=messages.covcorr_mode_long_description)
+        self.parser.add_argument("--covariates", metavar="FILE", required=False, help=messages.covar_long_description)
+        self.parser.add_argument("--clinical", metavar="FILE", required=False, help=messages.clinical_long_description)
+        self.parser.add_argument(
+            "--covcorr_mode", metavar="MODE", required=False, choices=["cn", "each", "all"], help=messages.covcorr_mode_long_description
+        )
 
 
 class ClinicalGroups(Interface):
@@ -284,11 +298,10 @@ class ClinicalGroups(Interface):
         )
 
         # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE", required=False,
-                                 help=messages.covar_long_description)
-        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
-                                 choices=["cn", "each", "all"],
-                                 help=messages.covcorr_mode_long_description)
+        self.parser.add_argument("--covariates", metavar="FILE", required=False, help=messages.covar_long_description)
+        self.parser.add_argument(
+            "--covcorr_mode", metavar="MODE", required=False, choices=["cn", "each", "all"], help=messages.covcorr_mode_long_description
+        )
 
 
 class ClinicalClassification(Interface):
@@ -372,12 +385,11 @@ class ClinicalClassification(Interface):
         )
 
         # Optional arguments
-        self.parser.add_argument("--covariates", metavar="FILE", required=False,
-                                 help=messages.covar_long_description)
-        self.parser.add_argument("--covcorr_mode", metavar="MODE", required=False,
-                                 choices=["cn", "each", "all"],
-                                 help=messages.covcorr_mode_long_description)
-        
+        self.parser.add_argument("--covariates", metavar="FILE", required=False, help=messages.covar_long_description)
+        self.parser.add_argument(
+            "--covcorr_mode", metavar="MODE", required=False, choices=["cn", "each", "all"], help=messages.covcorr_mode_long_description
+        )
+
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 

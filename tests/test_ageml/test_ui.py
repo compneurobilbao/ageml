@@ -10,8 +10,6 @@ import numpy as np
 import ageml.messages as messages
 from ageml.ui import Interface, CLI, AgeML
 
-
-# RNG for reproducibility
 seed = 107146869338163146621163044826586732901
 rng = np.random.default_rng(seed)
 
@@ -20,7 +18,7 @@ class ExampleArguments(object):
     def __init__(self):
         self.scaler_type = "standard"
         self.scaler_params = {"with_mean": True}
-        self.model_type = "linear_reg"
+        self.model_type = "ridge"
         self.model_params = {"fit_intercept": True}
         self.model_cv_split = 2
         self.model_seed = 0
@@ -40,6 +38,7 @@ class ExampleArguments(object):
         self.group1 = None
         self.group2 = None
         self.hyperparameter_tuning = 0
+        self.hyperparameter_params = "alpha=-3,3"
         self.feature_extension = 0
 
 
@@ -1461,7 +1460,7 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     features_path = create_csv(features, tempDir.name)
 
     # Test command
-    responses = ["model_age", features_path, "", "", "", "", "", "", "", "", "", "q"]
+    responses = ["model_age", features_path, "", "", "", "", "", "", "", "", "", "", "q"]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
     dummy_cli.command_interface()
     captured = capsys.readouterr().out.split("\n")[:-1]
@@ -1481,6 +1480,7 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
         "",
         "",
         "",
+        "",
         "q",
     ]
     monkeypatch.setattr("builtins.input", lambda _: responses.pop(0))
@@ -1493,15 +1493,16 @@ def test_model_age_command_CLI(dummy_cli, features, monkeypatch, capsys):
     responses = [
         "model_age",
         features_path,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "linear_svr",
-        "",
-        "2",
-        "3",
+        "",  # covariates
+        "",  # covariate name
+        "",  # clinical
+        "",  # systems
+        "",  # scaler
+        "linear_svr",  # model
+        "",  # CrossVal params
+        "2",  # Polynomial feature extension
+        "3",  # Hyperparameter tuning
+        "epsilon=-3,3",
         "",
         "q",
     ]
