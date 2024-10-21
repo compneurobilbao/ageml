@@ -1055,8 +1055,9 @@ class Interface:
         _ = self.classifier.fit_model(deltas, labels)
 
         # Calculate AUC
-        auc = np.mean(self.classifier.aucs)
-        auc_std = np.std(self.classifier.aucs)
+        summary_metrics = self.classifier.metrics.get_summary()
+        auc = summary_metrics['test']['auc']['mean']
+        auc_std = summary_metrics['test']['auc']['std']
 
         return mae, mae_std, auc, auc_std, deltas_group1, deltas_group2
 
@@ -1077,8 +1078,9 @@ class Interface:
         _ = self.classifier.fit_model(X, y, scale=True)
 
         # Calculate AUC
-        auc = np.mean(self.classifier.aucs)
-        auc_std = np.std(self.classifier.aucs)
+        summary_metrics = self.classifier.metrics.get_summary()
+        auc = summary_metrics['test']['auc']['mean']
+        auc_std = summary_metrics['test']['auc']['std']
 
         return auc, auc_std
 

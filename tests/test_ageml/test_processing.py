@@ -104,56 +104,63 @@ def test_covariate_correction():
     assert np.allclose(beta, beta_expected)
 
 
+# TODO do again for classification
+def test_handler_wrong_task_type():
+    with pytest.raises(ValueError) as exc_info:
+        processing.CVMetricsHandler(task_type='asdf')
+        assert exc_info.type == ValueError
+    assert str(exc_info.value) == 'task_type must be either "regression" or "classification"'
+
 @pytest.fixture
-def handler():
-    return processing.CVMetricsHandler()
+def regressionhandler():
+    return processing.CVMetricsHandler(task_type='regression')
 
 @pytest.fixture
 def sample_metrics():
     return (
-        processing.FoldMetrics(mae=1.0, rmse=1.5, r2=0.8, p=0.05),
-        processing.FoldMetrics(mae=1.2, rmse=1.7, r2=0.75, p=0.06)
+        processing.RegressionFoldMetrics(mae=1.0, rmse=1.5, r2=0.8, p=0.05),
+        processing.RegressionFoldMetrics(mae=1.2, rmse=1.7, r2=0.75, p=0.06)
     )
 
-def test_add_fold_metrics(handler, sample_metrics):
+def test_add_fold_metrics(regressionhandler, sample_metrics):
     train_fold, test_fold = sample_metrics
-    handler.add_fold_metrics(train_fold, test_fold)
+    regressionhandler.add_fold_metrics(train_fold, test_fold)
     
-    assert len(handler.train_metrics) == 1
-    assert len(handler.test_metrics) == 1
-    assert handler.train_metrics[0] == train_fold
-    assert handler.test_metrics[0] == test_fold
+    assert len(regressionhandler.train_metrics) == 1
+    assert len(regressionhandler.test_metrics) == 1
+    assert regressionhandler.train_metrics[0] == train_fold
+    assert regressionhandler.test_metrics[0] == test_fold
 
-def test_calculate_summary(handler, sample_metrics):
-    summary = handler._calculate_summary(list(sample_metrics))
+def test_calculate_summary(regressionhandler, sample_metrics):
+    summary = regressionhandler._calculate_summary(list(sample_metrics))
 
     assert set(summary.keys()) == {'mae', 'rmse', 'r2', 'p'}
     for metric in summary.values():
-        assert set(metric.keys()) == {'mean', 'std', 'min', 'max'}
+        assert set(metric.keys()) == {'mean', 'std', 'min', 'max', '95ci'}
 
     assert pytest.approx(summary['mae']['mean']) == 1.1
     assert pytest.approx(summary['rmse']['mean']) == 1.6
 
-def test_get_summary(handler, sample_metrics):
+def test_get_summary(regressionhandler, sample_metrics):
     train_fold, test_fold = sample_metrics
-    handler.add_fold_metrics(train_fold, test_fold)
-    summary = handler.get_summary()
+    regressionhandler.add_fold_metrics(train_fold, test_fold)
+    summary = regressionhandler.get_summary()
 
     assert set(summary.keys()) == {'train', 'test'}
     for split in summary.values():
         assert set(split.keys()) == {'mae', 'rmse', 'r2', 'p'}
         for metric in split.values():
-            assert set(metric.keys()) == {'mean', 'std', 'min', 'max'}
+            assert set(metric.keys()) == {'mean', 'std', 'min', 'max', '95ci'}
 
-def test_get_summary_dataframe(handler, sample_metrics):
+def test_get_summary_dataframe(regressionhandler, sample_metrics):
     train_fold, test_fold = sample_metrics
-    handler.add_fold_metrics(train_fold, test_fold)
-    df = handler.get_summary_dataframe()
+    regressionhandler.add_fold_metrics(train_fold, test_fold)
+    df = regressionhandler.get_summary_dataframe()
 
     assert isinstance(df, pd.DataFrame)
     assert set(df.columns) == {'split', 'metric', 'statistic', 'value'}
-    assert len(df) == 32  # 2 splits * 4 metrics * 4 statistics
+    assert len(df) == 40  # 2 splits * 4 metrics * 5 statistics
 
     assert set(df['split'].unique()) == {'train', 'test'}
     assert set(df['metric'].unique()) == {'mae', 'rmse', 'r2', 'p'}
-    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max'}
+    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max', '95ci'}
