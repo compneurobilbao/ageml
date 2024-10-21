@@ -9,7 +9,6 @@ Classifier - classifier of class labels based on deltas.
 """
 
 import numpy as np
-import scipy.stats as st
 from xgboost import XGBRegressor
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
@@ -34,7 +33,7 @@ from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
 from hyperopt import tpe
 
 from ageml.utils import verbose_wrapper
-from ageml.processing import FoldMetrics, CVMetricsHandler
+from ageml.processing import RegressionFoldMetrics, ClassificationFoldMetrics, CVMetricsHandler
 
 
 class AgeML:
@@ -204,7 +203,7 @@ class AgeML:
         self.verbose = verbose
 
         # Initialize metrics storage
-        self.metrics = CVMetricsHandler()
+        self.metrics = CVMetricsHandler(task_type='regression')
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -437,10 +436,10 @@ class AgeML:
             # Metrics
             print("Fold N: %d" % (i + 1))
             mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
-            train_fold = FoldMetrics(mae_train, rmse_train, r2_train, p_train)
+            train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
             print("Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % (mae_train, rmse_train, r2_train, p_train))
             mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
-            test_fold = FoldMetrics(mae_test, rmse_test, r2_test, p_test)
+            test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
             print("Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % (mae_test, rmse_test, r2_test, p_test))
             self.metrics.add_fold_metrics(train_fold, test_fold)
 
@@ -555,6 +554,9 @@ class Classifier:
         self.modelFit = False
         self.verbose = verbose
 
+        # Initialize metrics storage
+        self.metrics = CVMetricsHandler(task_type='classification')
+
     def set_model(self):
         """Sets the model to use in the pipeline."""
 
@@ -587,7 +589,20 @@ class Classifier:
         ----------
         ci_val: confidence interval value"""
 
+        # TODO ci value used to set in CV handler
         self.ci_val = ci_val
+
+    def _calculate_metrics(self, y_pred, y_true):
+        """Calculate metrics for classification."""
+
+        # Calculate auc, accuracy, sensistiivyt and specificity 
+        auc = metrics.roc_auc_score(y_true, y_pred)
+        acc = metrics.accuracy_score(y_true, y_pred > self.thr)
+        tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred > self.thr).ravel()
+        specificity = tn / (tn + fp)
+        sensitivity = tp / (tp + fn)
+
+        return auc, acc, sensitivity, specificity
 
     @verbose_wrapper
     def fit_model(self, X, y, scale=False):
@@ -599,7 +614,6 @@ class Classifier:
         y: 1D-Array with labbels; shape=n"""
 
         # Arrays to store  values
-        accs, self.aucs, spes, sens = [], [], [], []
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
 
@@ -621,31 +635,30 @@ class Classifier:
             y_pred = self.model.predict_proba(X_test)[::, 1]
             y_preds[test_index] = y_pred
 
-            # Calculate AUC of model
-            auc = metrics.roc_auc_score(y_test, y_pred)
-            self.aucs.append(auc)
+            # Calculate metrics
+            auc_train, acc_train, sensitivity_train, specificity_train = self._calculate_metrics(self.model.predict_proba(X_train)[::, 1], y_train)
+            auc, acc, sensitivity, specificity = self._calculate_metrics(y_pred, y_test)
+            test_metrics = ClassificationFoldMetrics(auc, acc, sensitivity, specificity)
+            train_metrics = ClassificationFoldMetrics(auc_train, acc_train, sensitivity_train, specificity_train)
+            self.metrics.add_fold_metrics(train_metrics, test_metrics)
 
-            # Calculate relevant metrics
-            acc = metrics.accuracy_score(y_test, y_pred > self.thr)
-            tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
-            specificity = tn / (tn + fp)
-            sensitivity = tp / (tp + fn)
-            accs.append(acc)
-            sens.append(sensitivity)
-            spes.append(specificity)
-
-        # Compute confidence intervals
-        ci_accs = st.t.interval(confidence=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
-        ci_aucs = st.t.interval(confidence=self.ci_val, df=len(self.aucs) - 1, loc=np.mean(self.aucs), scale=st.sem(self.aucs))
-        ci_sens = st.t.interval(confidence=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
-        ci_spes = st.t.interval(confidence=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
+        # Get summary statitics
+        summary_dict = self.metrics.get_summary()
 
         # Print results
         print("Summary metrics over all CV splits (%s CI)" % (self.ci_val))
-        print("AUC: %.3f [%.3f-%.3f]" % (np.mean(self.aucs), ci_aucs[0], ci_aucs[1]))
-        print("Accuracy: %.3f [%.3f-%.3f]" % (np.mean(accs), ci_accs[0], ci_accs[1]))
-        print("Sensitivity: %.3f [%.3f-%.3f]" % (np.mean(sens), ci_sens[0], ci_sens[1]))
-        print("Specificity: %.3f [%.3f-%.3f]" % (np.mean(spes), ci_spes[0], ci_spes[1]))
+        print("AUC: %.3f [%.3f-%.3f]" % (summary_dict['test']['auc']['mean'],
+                                         summary_dict['test']['auc']['95ci'][0],
+                                         summary_dict['test']['auc']['95ci'][1]))
+        print("Accuracy: %.3f [%.3f-%.3f]" % (summary_dict['test']['accuracy']['mean'],
+                                             summary_dict['test']['accuracy']['95ci'][0],
+                                             summary_dict['test']['accuracy']['95ci'][1]))
+        print("Sensitivity: %.3f [%.3f-%.3f]" % (summary_dict['test']['sensitivity']['mean'],
+                                               summary_dict['test']['sensitivity']['95ci'][0],
+                                               summary_dict['test']['sensitivity']['95ci'][1]))
+        print("Specificity: %.3f [%.3f-%.3f]" % (summary_dict['test']['specificity']['mean'],
+                                               summary_dict['test']['specificity']['95ci'][0],
+                                               summary_dict['test']['specificity']['95ci'][1]))
 
         # Final model trained on all data
         if scale:
