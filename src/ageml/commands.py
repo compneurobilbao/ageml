@@ -101,7 +101,7 @@ class ModelAge(Interface):
             "-ht",
             "--hyperparameter_tuning",
             nargs="+",
-            default=["0"],
+            default=["2"],
             help=messages.hyperparameter_grid_description,
         )
 
@@ -166,8 +166,8 @@ class ModelAge(Interface):
 
         # Parse hyperparameter_tuning values
         hyperparam_tuning = args.hyperparameter_tuning
-        if not hyperparam_tuning[0].isdigit():
-            raise ValueError("Hyperparameter grid points must be a non negative integer.")
+        if not hyperparam_tuning[0].isdigit() or int(convert(hyperparam_tuning[0])) < 2:
+            raise ValueError("Hyperparameter grid points must be an integer greater than 1.")
         else:
             args.hyperparameter_tuning = int(convert(hyperparam_tuning[0]))
 
@@ -177,12 +177,24 @@ class ModelAge(Interface):
                 if item.count("=") != 1:
                     err_msg = (
                         "Hyperparameter tuning parameters must be in the format "
-                        "param1=value1_low,value1_high param2=value2_low, value2_high..."
+                        "param1=value1_low,value1_high param2=kernel_A,kernel_B,kernel_C..."
                     )
                     raise ValueError(err_msg)
-                key, value = item.split("=")
-                low, high = value.split(",")
-                hyperparameter_params[key] = [convert(low), convert(high)]
+                key, values = item.split("=")
+                values = [convert(value) for value in values.split(",")]
+
+                vals_are_str = all([isinstance(value, str) for value in values])
+                vals_are_num = all([isinstance(value, (int, float)) for value in values])
+                # If not 2 values provided in numerical hyperparams, raise error
+                if vals_are_num and len(values) != 2:
+                    err_msg = "Numerical hyperparameter values must be exactly two numbers (e.g.: param1=2,3)."
+                    raise ValueError(err_msg)
+                # If no value provided in categorical hyperparams, raise error
+                elif vals_are_str and len(values) < 1:
+                    err_msg = "Categorical hyperparameter values must be at least one string (e.g.: param1=kernel_A)."
+                    raise ValueError(err_msg)
+                hyperparameter_params[key] = values
+
         # Add attribute to args
         args.hyperparameter_params = hyperparameter_params
 

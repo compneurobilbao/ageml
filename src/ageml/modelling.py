@@ -209,7 +209,12 @@ class AgeML:
             dict: dictionary with the hyperparameter grid
         """
         param_grid = {}
-        conditions = [self.model_type in AgeML.model_dict.keys(), self.hyperparameter_tuning > 0, self.model_type != "hyperopt"]
+        conditions = [
+            self.model_type in AgeML.model_dict.keys(),
+            self.hyperparameter_tuning > 0,
+            self.model_type != "hyperopt",
+            self.model_type != "linear_reg",
+        ]
         if all(conditions):
             hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
             invalid_hyperparams = [param for param in self.hyperparameter_params.keys() if param not in hyperparam_types.keys()]
@@ -369,7 +374,7 @@ class AgeML:
 
         if self.model_type != "hyperopt":
             # Optimize hyperparameters if required
-            if self.hyperparameter_tuning > 0:
+            if self.hyperparameter_tuning > 1:
                 print("Running Hyperparameter optimization...")
             else:
                 print("No hyperparameter optimization will be done.")
@@ -382,12 +387,15 @@ class AgeML:
                 point_pipeline = original_pipeline.set_params(**grid_point)
                 pipelines.append(point_pipeline)
             # Variables of interest
-            pred_age = np.zeros([y.shape[0], len(pipelines)])
-            corrected_age = np.zeros([y.shape[0], len(pipelines)])
+            pred_age = np.zeros(y.shape[0])
+            corrected_age = np.zeros(y.shape[0])
+            best_split_mae = 1e10
             mae_means_test = []
             # Loop through the pipelines, and then loop through the CV splits
-            for i_p, cv_pipeline in enumerate(pipelines):
+            for cv_pipeline in pipelines:
                 print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
+                temp_pred_age = np.zeros(y.shape[0])
+                temp_corr_age = np.zeros(y.shape[0])
                 split_metrics_train = []
                 split_metrics_test = []
                 kf_hyperopt = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
@@ -416,12 +424,18 @@ class AgeML:
                     y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
 
                     # Save results of hold out
-                    pred_age[test, i_p] = y_pred_test
-                    corrected_age[test, i_p] = y_pred_test_no_bias
+                    temp_pred_age[test] = y_pred_test
+                    temp_corr_age[test] = y_pred_test_no_bias
 
                 # Compute the mean of scores over all CV splits
                 mean_score_test = np.mean(split_metrics_test, axis=0)[0]  # Mean of MAE
                 mae_means_test.append(mean_score_test)
+
+                # If the mean MAE is better than the previous best, save the results
+                if mean_score_test < best_split_mae:
+                    best_split_mae = mean_score_test
+                    pred_age = copy.deepcopy(temp_pred_age)
+                    corrected_age = copy.deepcopy(temp_corr_age)
 
                 # CV Summary of the selected hyperparameters
                 print("\nSummary metrics over all CV splits:")
@@ -433,10 +447,6 @@ class AgeML:
             # Select the best pipeline based on the mean scores
             best_hyperparam_index = np.argmin(mae_means_test)
             self.pipeline = pipelines[best_hyperparam_index]
-
-            # Get the predicted and corrected age of the best pipeline
-            pred_age = pred_age[:, best_hyperparam_index]
-            corrected_age = corrected_age[:, best_hyperparam_index]
 
             if self.hyperparameter_tuning > 0:
                 print(f"\nHyperoptimization best parameters: {hyperparameter_grid[best_hyperparam_index]}")

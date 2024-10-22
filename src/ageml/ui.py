@@ -1797,7 +1797,7 @@ class CLI(Interface):
         print("Polynomial feature extension degree. Leave blank if not desired (Default: 0, max. 3)")
         print("Example: 3")
         self.force_command(self.feature_extension_command)
-        print("Hyperparameter tuning. Number of points in grid search: (Default: 0)")
+        print("Hyperparameter tuning. Number of points in grid search: (Default: 2)")
         print("Example: 100")
         self.force_command(self.hyperparameter_grid_command)
         print("Hyperparameters to tune. Leave blank if not desired (Default: None)")
@@ -1997,11 +1997,21 @@ class CLI(Interface):
                 if item.count("=") != 1:
                     error = (
                         "Hyperparameter tuning parameters must be in the format "
-                        "param1=value1_low,value1_high param2=value2_low, value2_high..."
+                        "param1=value1_low,value1_high param2=kernel_A,kernel_B,kernel_C..."
                     )
                     return error
-                key, value = item.split("=")
-                low, high = value.split(",")
-                hyperparameter_params[key] = [convert(low), convert(high)]
+                key, values = item.split("=")
+                values = [convert(value) for value in values.split(",")]
+                vals_are_str = all([isinstance(value, str) for value in values])
+                vals_are_num = all([isinstance(value, (int, float)) for value in values])
+                # If not 2 values provided in numerical hyperparams, raise error
+                if vals_are_num and len(values) != 2:
+                    err_msg = "Numerical hyperparameter values must be exactly two numbers (e.g.: param1=2,3)."
+                    raise ValueError(err_msg)
+                # If no value provided in categorical hyperparams, raise error
+                elif vals_are_str and len(values) < 1:
+                    err_msg = "Categorical hyperparameter values must be at least one string (e.g.: param1=kernel_A)."
+                    raise ValueError(err_msg)
+                hyperparameter_params[key] = values
             # Add attribute to args
             self.args.hyperparameter_params = hyperparameter_params
