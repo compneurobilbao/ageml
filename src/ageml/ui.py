@@ -1096,10 +1096,11 @@ class Interface:
 
         # For each order iterate over all sets of features in order
         order_type = ['age', 'discrimination']
+        values = {o_type: {} for o_type in order_type}
 
-        for order, type in zip([order_age, order_discrimination], order_type):
+        for order, o_type in zip([order_age, order_discrimination], order_type):
 
-            print("Ordering by: %s" % type)
+            print("Ordering by: %s" % o_type)
             print("Feature added: MAE ± std, AUC ± std")
 
             # Metrics
@@ -1126,9 +1127,15 @@ class Interface:
 
             # Convert maes, aucs to numpy arrays
             maes, maes_std, aucs, auc_std  = np.array(maes), np.array(maes_std), np.array(aucs), np.array(aucs_std)
+            values[o_type] = {'mae': maes, 'mae_std': maes_std, 'auc': aucs, 'auc_std': aucs_std}
             
             # Visualize results
-            self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, aucs_std, type)
+            title = f'{o_type}_{self.args.group1}_{self.args.group2}'
+            self.visualizer.metrics_vs_num_features(maes, maes_std, aucs, aucs_std, title)
+
+        # Visualize all results together
+        title = f'{self.args.group1}_{self.args.group2}'
+        self.visualizer.multiple_metrics_vs_num_features(values['age'], values['discrimination'], title)
 
     def classification_feature_analysis(self, order, tag):
         """Train classifiers with different number of features and deltas from different models."""

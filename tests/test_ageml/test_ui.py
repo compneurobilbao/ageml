@@ -931,7 +931,8 @@ def test_run_model_feature_influence(dummy_interface, features, clinical):
     assert os.path.exists(log_path)
 
     # Check existance of figures
-    figs = ["metrics_vs_num_features_age.png", "metrics_vs_num_features_discrimination.png"]
+    figs = ["metrics_vs_num_features_age_cn_group1.png", "metrics_vs_num_features_discrimination_cn_group1.png",
+            "metrics_vs_num_features_cn_group1.png"]
     png_paths = [os.path.join(dummy_interface.dir_path, f"model_feature_influence/figures/{fig}") for fig in figs]
     assert all([os.path.exists(png_path) for png_path in png_paths])
 

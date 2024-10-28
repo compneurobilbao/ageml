@@ -251,7 +251,7 @@ class Visualizer:
         
         # Set labels and title for the primary y-axis
         ax.set_xlabel('Number of Features Used')
-        ax.set_ylabel('mae', color='blue')
+        ax.set_ylabel('MAE (Years)', color='blue')
         ax.tick_params(axis='y', labelcolor='blue')
         ax.set_title(title)
 
@@ -262,11 +262,80 @@ class Visualizer:
         ax2.set_ylabel('AUC', color='green')
         ax2.tick_params(axis='y', labelcolor='green')
 
+        # Set y-axis limit for AUC
+        ax2.set_ylim(0.5, 1)
+
         # Save figure 
         plt.tight_layout()
         filename = f"metrics_vs_num_features_{title}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
-        plt.close() 
+        plt.close()
+
+    def multiple_metrics_vs_num_features(self, metrics_age, metrics_discrimination, title):
+
+        # Create a combined figure and axis
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        for o_type, metrics in zip(['age', 'discr'], [metrics_age, metrics_discrimination]):
+            mae = metrics['mae']
+            mae_std = metrics['mae_std']
+            auc = metrics['auc']
+            auc_std = metrics['auc_std']
+
+            # Change linestyle for discrimination
+            if o_type == 'discr':
+                linestyle = '-'
+            else:
+                linestyle = ':'
+
+            # Determine the number of features
+            num_features= np.arange(len(mae)) + 1
+    
+            # Plot the selected metric 
+            line1, = ax.plot(num_features, mae, color='blue', linestyle=linestyle)
+            ax.fill_between(num_features, mae - mae_std, mae + mae_std, color='blue', alpha=0.2)
+        
+            # Set labels and title for the primary y-axis
+            ax.set_xlabel('Number of Features Used')
+            ax.set_ylabel('MAE (Years)', color='blue')
+            ax.tick_params(axis='y', labelcolor='blue')
+            ax.set_title(title)
+
+            # Create a twin y-axis for AUC
+            ax2 = ax.twinx()
+            line2, = ax2.plot(num_features, auc, color='green', linestyle=linestyle)
+            ax2.fill_between(num_features, auc - auc_std, auc + auc_std, color='green', alpha=0.2)
+            ax2.set_ylabel('AUC', color='green')
+            ax2.tick_params(axis='y', labelcolor='green')
+
+            # Set y-axis limit for AUC
+            ax2.set_ylim(0.5, 1)
+
+            # Save lines
+            if o_type == 'age':
+                line_discri_mae = line1
+                line_corr_mae = line2
+            else:
+                line_discri_auc = line1
+                line_corr_auc = line2
+
+        # Combine legends for both discrimination and correlation
+        combined_legend_lines = [line_discri_mae, line_corr_mae, line_discri_auc, line_corr_auc]
+        combined_legend_labels = ['MAE - Discrimination', 'MAE - Correlation', 'AUC - Discrimination', 'AUC - Correlation']
+    
+        # Add the combined legend to the plot
+        ax.legend(combined_legend_lines, combined_legend_labels, loc='lower left', title="Metrics")
+
+        # Set axis labels and title
+        groups = title.split('_')
+        ax.set_title(f'MAE and AUC vs Number of Features Used \n{groups[0].upper()} vs {groups[1].upper()}')
+
+        # Save figure 
+        plt.tight_layout()
+        filename = f"metrics_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
     
     def auc_vs_num_features(self, aucs, aucs_std, title):
         """Plot AUCs with standard deviation against the number of features used for each model.
