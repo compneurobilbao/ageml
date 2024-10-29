@@ -354,13 +354,22 @@ class Visualizer:
             num_features = np.arange(len(aucs[model])) + 1
 
             # Plot the AUC values
-            plt.errorbar(num_features, aucs[model], yerr=aucs_std[model], label=model)
+            if model == 'logistic_regression':
+                label = "Non-BrainAge Model"
+            else:
+                label = f"BrainAge Model: {model}"
+            plt.errorbar(num_features, aucs[model], yerr=aucs_std[model], label=label)
 
         # Add titles and labels
-        plt.title(title)
+        if '_' in title:
+            name = title.split('_')
+            plt.title(f'Ordering: {name[0].upper()} Classification: {name[1].upper()} vs {name[2].upper()}')
+        else:
+            plt.title(f'{title}')
         plt.xlabel('Number of Features Used')
         plt.ylabel('Mean AUC')
-        plt.legend(title='Model', loc='lower right')
+        plt.legend(title='Model', loc='upper left')
+        plt.ylim(0.5, 1)
         plt.grid(True)
 
         # Save figure 

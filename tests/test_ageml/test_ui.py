@@ -957,7 +957,7 @@ def test_run_age_models_vs_logistic_regression(dummy_interface, features, clinic
     assert os.path.exists(log_path)
 
     # Check for the existence of the output figures
-    figs = ["auc_vs_num_features_linear_reg.png"]
+    figs = ["auc_vs_num_features_age_cn_group1.png", "auc_vs_num_features_discrimination_cn_group1.png",]
     png_paths = [os.path.join(dummy_interface.dir_path, f"age_model_vs_logistic_regression/figures/{fig}") for fig in figs]
     assert all([os.path.exists(png_path) for png_path in png_paths])
 

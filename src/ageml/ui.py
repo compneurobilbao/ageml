@@ -1137,18 +1137,18 @@ class Interface:
         title = f'{self.args.group1}_{self.args.group2}'
         self.visualizer.multiple_metrics_vs_num_features(values['age'], values['discrimination'], title)
 
-    def classification_feature_analysis(self, order, tag):
+    def classification_feature_analysis(self, order, tag, o_type):
         """Train classifiers with different number of features and deltas from different models."""
 
         print("-----------------------------------")
-        print("Training different models with different number of features")
+        print("Training different models with different number of features ordered by %s" % o_type)
         print('Using groups: "%s" and "%s"' % (self.args.group1, self.args.group2))
 
         # Obtain features of controls
         _, _, feature_names = feature_extractor(self.dfs["cn"][tag.covar][tag.system]) 
 
         # Models to train
-        models = ['linear_reg', 'ridge', 'logistic_regression']
+        models = ['linear_reg', 'ridge', 'linear_svr', 'logistic_regression']
 
         # Metrics
         aucs, aucs_std = {}, {}
@@ -1188,7 +1188,8 @@ class Interface:
         # TODO print resutls
 
         # Visualize results
-        self.visualizer.auc_vs_num_features(aucs, aucs_std, 'linear_reg')
+        title = f'{o_type}_{self.args.group1}_{self.args.group2}'
+        self.visualizer.auc_vs_num_features(aucs, aucs_std, title)
 
     def classifcication_analysis(self, tag):
         """Train classifiers with different sets of features."""
@@ -1581,7 +1582,8 @@ class Interface:
             for covar in self.covars:
                 tag = NameTag(covar=covar, system=system)
                 order_age, order_discrimination = self.feature_ordering(tag)
-                self.classification_feature_analysis(order_age, tag)
+                self.classification_feature_analysis(order_age, tag, 'age')
+                self.classification_feature_analysis(order_discrimination, tag, 'discrimination')
                 self.classifcication_analysis(tag)
 
 
