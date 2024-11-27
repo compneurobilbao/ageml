@@ -610,7 +610,8 @@ class Interface:
                 print(warn_message)
                 warnings.warn(warn_message, category=UserWarning)
                 with open(os.path.join(self.command_dir, f"{label}_subjects_with_missing_data.txt"), "w") as f:
-                    f.write("\n".join(missing_subjects))
+                    f.write("\n".join(map(str, missing_subjects)))
+                    pass
                 dfs[label] = df.drop(missing_subjects)
 
         # Compute the intersection of the indices of the dataframes
@@ -627,7 +628,7 @@ class Interface:
                 warnings.warn(warn_message, category=UserWarning)
                 # Save removed subjects in a txt file
                 with open(os.path.join(self.command_dir, f"{label}_nonshared_subjects.txt"), "w") as f:
-                    f.write("\n".join(removed_subjects))
+                    f.write("\n".join(map(str, removed_subjects)))
             setattr(self, f"df_{label}", dfs[label])
             msg = (
                 f"Final number of subjects in dataframe {label}: {len(shared_idx)} "
