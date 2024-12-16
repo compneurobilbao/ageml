@@ -543,37 +543,61 @@ def test_load_data_clinical_empty_row(dummy_interface, clinical):
 
 def test_load_data_nan_values_warning(dummy_interface, features):
     # Remove from features a few values
-    features.loc[2, "feature1"] = np.nan
-    features.loc[3, "feature2"] = np.nan
+    missing_subjects = sorted([2,3])
+    features.loc[missing_subjects[0], "feature1"] = np.nan
+    features.loc[missing_subjects[1], "feature2"] = np.nan
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
+    dummy_interface.command_dir = tempfile.mkdtemp()
 
+    # Check correct information displayed
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = f"Subjects with missing data in features: {[2, 3]}"
+    expected = f"Number of subjects with missing data in features dataframe: {len(missing_subjects)}"
     assert warn_record.list[0].message.args[0] == expected
+
+    # Check that .txt file was created with correct subjects
+    nan_path = os.path.join(dummy_interface.command_dir, "features_subjects_with_missing_data.txt")
+    assert os.path.exists(nan_path)
+    with open(nan_path, "r") as f:
+        nan_subjects = f.read()
+    assert nan_subjects == "\n".join([str(sub) for sub in missing_subjects])
 
 
 def test_load_data_different_indexes_warning(dummy_interface, features, clinical):
     # Drop subjects 2 and 3 from features
-    drop_features = [2, 3]
-    drop_clinical = [4]
+    drop_features = sorted([2, 3])
+    drop_clinical = sorted([4])
     features.drop(drop_features, axis=0, inplace=True)
     clinical.drop(drop_clinical, axis=0, inplace=True)
     features_path = create_csv(features, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
     dummy_interface.args.clinical = clinical_path
+    dummy_interface.command_dir = tempfile.mkdtemp()
 
+    # Check correct information displayed
     with pytest.warns(UserWarning) as warn_record:
         dummy_interface.load_data()
     assert isinstance(warn_record.list[0].message, UserWarning)
-    expected = f"1 subjects removed from features dataframe: {set(drop_clinical)}"
+    expected = f"{len(drop_clinical)} subjects removed from features dataframe."
     assert warn_record.list[0].message.args[0] == expected
     assert isinstance(warn_record.list[1].message, UserWarning)
-    expected = f"2 subjects removed from clinical dataframe: {set(drop_features)}"
+    expected = f"{len(drop_features)} subjects removed from clinical dataframe."
     assert warn_record.list[1].message.args[0] == expected
+
+    # Check that .txt file was created with correct subjects
+    features_drop_path = os.path.join(dummy_interface.command_dir, "features_nonshared_subjects.txt")
+    clinical_drop_path = os.path.join(dummy_interface.command_dir, "clinical_nonshared_subjects.txt")
+    assert os.path.exists(features_drop_path)
+    assert os.path.exists(clinical_drop_path)
+    with open(features_drop_path, "r") as f:
+        features_drop = f.read()
+    with open(clinical_drop_path, "r") as f:
+        clinical_drop = f.read()
+    assert features_drop == "\n".join([str(sub) for sub in drop_clinical])
+    assert clinical_drop == "\n".join([str(sub) for sub in drop_features])
 
 
 def test_age_distribution_warning(dummy_interface):

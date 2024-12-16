@@ -606,9 +606,12 @@ class Interface:
         for label, df in dfs.items():
             missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
             if missing_subjects.__len__() != 0:
-                warn_message = "Subjects with missing data in %s: %s" % (label, missing_subjects)
+                warn_message = "Number of subjects with missing data in %s dataframe: %s" % (label, len(missing_subjects))
                 print(warn_message)
                 warnings.warn(warn_message, category=UserWarning)
+                with open(os.path.join(self.command_dir, f"{label}_subjects_with_missing_data.txt"), "w") as f:
+                    f.write("\n".join(map(str, missing_subjects)))
+                    pass
                 dfs[label] = df.drop(missing_subjects)
 
         # Compute the intersection of the indices of the dataframes
@@ -618,10 +621,14 @@ class Interface:
         print("Removing subjects not shared among dataframes...")
         for label in dfs.keys():
             removed_subjects = set(dfs[label].index) - set(shared_idx)
-            warn_message = f"{len(removed_subjects)} subjects removed from {label} dataframe: {removed_subjects}"
-            dfs[label] = dfs[label].loc[shared_idx]
-            print(warn_message)
-            warnings.warn(warn_message, category=UserWarning)
+            if removed_subjects.__len__() != 0:
+                warn_message = f"{len(removed_subjects)} subjects removed from {label} dataframe."
+                dfs[label] = dfs[label].loc[shared_idx]
+                print(warn_message)
+                warnings.warn(warn_message, category=UserWarning)
+                # Save removed subjects in a txt file
+                with open(os.path.join(self.command_dir, f"{label}_nonshared_subjects.txt"), "w") as f:
+                    f.write("\n".join(map(str, removed_subjects)))
             setattr(self, f"df_{label}", dfs[label])
             msg = (
                 f"Final number of subjects in dataframe {label}: {len(shared_idx)} "
