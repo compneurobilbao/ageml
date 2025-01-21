@@ -246,7 +246,11 @@ class Visualizer:
                 ax.text(bar.get_x() + bar.get_width() / 2, height, m, ha="center", va=position, color="red", fontsize=12)
             # Add labels
             ax.set_xlabel("Factor")
-            ax.set_ylabel("Correlation with delta")
+            ax.set_ylabel("Correlation with age delta")
+            # Set limits to y-axis from -1 to 1, and rotate x-axis labels
+            ax.set_ylim([-1, 1])
+            ax.tick_params(axis="x", labelrotation=30)
+
             ax.set_title("%s" % group)
 
             return ax
