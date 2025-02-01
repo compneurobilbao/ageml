@@ -292,6 +292,8 @@ class Visualizer:
             x = rng.normal(i + 1, 0.04, size=len(vals))
             plt.scatter(x, vals, color=self.cmap(clevel))
         plt.xlabel("Group")
+        # Add a horizontal line at y=0
+        plt.axhline(y=0, color="r", linestyle="--")
         plt.ylabel("Delta")
 
         # Save file
