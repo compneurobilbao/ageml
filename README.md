@@ -59,15 +59,20 @@ If you use `ageml` in your work, please cite the all-time:
 J. Garcia Condado, I. Tellaetxe Elorriaga, J. M. Cortes, and A. Erramuzpe, ‘AgeML: Age modelling with Machine Learning’. BioRxiv. May 05, 2024. doi: 10.1101/2024.05.02.592130.
 
 ```
-
-@article{ageml_2024,
-    title = {AgeML: Age modelling with Machine Learning},
-    author = {Garcia Condado, Jorge and Tellaetxe Elorriaga, Iñigo  and Cortes, Jesus M. and Erramuzpe, Asier},
-    url = {http://biorxiv.org/lookup/doi/10.1101/2024.05.02.592130},
-    doi = {10.1101/2024.05.02.592130},
-    month = may,
-    year = {2024},
+@article{condadoAgeMLAgeModeling2025,
+  title = {{{AgeML}}: {{Age}} Modeling with {{Machine Learning}}},
+  shorttitle = {{{AgeML}}},
+  author = {Condado, Jorge Garcia and Elorriaga, Iñigo Tellaetxe and Cortes, Jesus M. and Erramuzpe, Asier},
+  date = {2025},
+  journaltitle = {IEEE Journal of Biomedical and Health Informatics},
+  shortjournal = {IEEE J. Biomed. Health Inform.},
+  pages = {1--11},
+  issn = {2168-2194, 2168-2208},
+  doi = {10.1109/JBHI.2025.3531017},
+  url = {https://ieeexplore.ieee.org/document/10844538/},
+  urldate = {2025-01-29}
 }
+
 ```
 
 ## How to Contribute to the project
