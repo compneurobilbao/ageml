@@ -835,7 +835,11 @@ class Interface:
         # Print results
         for idx, order_element in enumerate(order_discrimination):
             print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_discrimination[order_element]))
-        
+
+        title = f'{self.args.group1}_{self.args.group2}'
+        self.visualizer.ordering(mi_scores_age, mi_scores_discrimination, feature_names, title)
+
+        return order_age, order_discrimination
 
     def model_age(self, df, model, tag):
         """Use AgeML to fit age model with data.

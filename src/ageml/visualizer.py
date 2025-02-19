@@ -221,6 +221,28 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
+    def ordering(self, mi_age, mi_discr, feature_names, title):
+        """Plot in the ssame figure the mutual information for age and discrimination."""
+
+        plt.figure(figsize=(10, 5))
+        # Name each point with each feature name
+        plt.scatter(mi_age, mi_discr)
+        plt.xlabel("Mutual Information with Age")
+        plt.ylabel("Mutual Information with Discrimination")
+        plt.title(title)
+        plt.legend()
+
+        # Add labels for each point
+        for i, feature in enumerate(feature_names):
+                plt.annotate(feature, (mi_age[i], mi_discr[i]), 
+                xytext=(5, 0),  textcoords='offset points')
+
+        # Save figure
+        filename = f"ordering_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
+
     def metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title):
         """
         Plots MAE and AUC against the number of features used.
