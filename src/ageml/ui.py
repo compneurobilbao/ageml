@@ -837,7 +837,15 @@ class Interface:
             print("%d. %s: %.2f" % (idx + 1, feature_names[order_element], mi_scores_discrimination[order_element]))
 
         title = f'{self.args.group1}_{self.args.group2}'
-        self.visualizer.ordering(mi_scores_age, mi_scores_discrimination, feature_names, title)
+
+        # Check if systems provided to create labelling
+        if self.flags["systems"]:
+            systems_dict = self.dict_systems
+            systems_dict.pop("all", None)
+        else:
+            systems_dict = {"all": feature_names}
+
+        self.visualizer.ordering(mi_scores_age, mi_scores_discrimination, feature_names, systems_dict, title)
 
         return order_age, order_discrimination
 
@@ -1539,6 +1547,10 @@ class Interface:
 
         # Load data
         self.load_data(required=["features", "clinical"])
+
+        # We are only interested in self.systems being all although we can use system for colouring graphs
+        self.systems = ["all"]
+        self.dict_systems["all"] = self.df_features.columns.drop("age").to_list()
 
         # Initialize dictionaries
         self.set_dict()

@@ -291,6 +291,9 @@ class ModelFeatureInfluence(Interface):
             help=messages.ci_long_description,
         )
 
+        # Optional naming of systems
+        self.parser.add_argument("--systems", metavar="FILE", help=messages.systems_long_description)
+
     def configure_args(self, args):
         """Configure argumens with required fromatting for modelling.
 

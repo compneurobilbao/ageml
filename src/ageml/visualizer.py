@@ -221,21 +221,42 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def ordering(self, mi_age, mi_discr, feature_names, title):
+    def ordering(self, mi_age, mi_discr, feature_names, system_dict, title):
         """Plot in the ssame figure the mutual information for age and discrimination."""
 
         plt.figure(figsize=(10, 5))
         # Name each point with each feature name
-        plt.scatter(mi_age, mi_discr)
         plt.xlabel("Mutual Information with Age")
         plt.ylabel("Mutual Information with Discrimination")
         plt.title(title)
-        plt.legend()
+        
+        reversed_dict = {}
+    
+        for key, value_list in system_dict.items():
+            for value in value_list:
+                reversed_dict[value] = key
 
-        # Add labels for each point
+        # Create a dictionary to group points by their category
+        categories = {}
         for i, feature in enumerate(feature_names):
-                plt.annotate(feature, (mi_age[i], mi_discr[i]), 
-                xytext=(5, 0),  textcoords='offset points')
+            category = reversed_dict.get(feature, "Unknown")
+            if category not in categories:
+                categories[category] = {"x": [], "y": [], "labels": []}
+            categories[category]["x"].append(mi_age[i])
+            categories[category]["y"].append(mi_discr[i])
+            categories[category]["labels"].append(feature)
+    
+        # Plot each category with a single label
+        for category, data in categories.items():
+            plt.scatter(data["x"], data["y"], label=category)
+        
+            # Add annotations for each point
+            for i in range(len(data["x"])):
+                plt.annotate(data["labels"][i], 
+                            (data["x"][i], data["y"][i]),
+                            xytext=(5, 0), 
+                            textcoords='offset points')
+        plt.legend()
 
         # Save figure
         filename = f"ordering_{title}.png"
