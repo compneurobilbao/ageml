@@ -228,7 +228,8 @@ class Visualizer:
         # Name each point with each feature name
         plt.xlabel("Mutual Information with Age")
         plt.ylabel("Mutual Information with Discrimination")
-        plt.title(title)
+        groups = title.split('_')
+        plt.title(f'{groups[0].upper()} vs {groups[1].upper()}')
         
         reversed_dict = {}
     
@@ -343,6 +344,7 @@ class Visualizer:
             ax.set_ylabel('MAE (Years)', color='blue')
             ax.tick_params(axis='y', labelcolor='blue')
             ax.set_title(title)
+            ax.set_ylim(3.75, 6)
 
             # Create a twin y-axis for AUC
             ax2 = ax.twinx()
@@ -364,10 +366,10 @@ class Visualizer:
 
         # Combine legends for both discrimination and correlation
         combined_legend_lines = [line_discri_mae, line_corr_mae, line_discri_auc, line_corr_auc]
-        combined_legend_labels = ['MAE - Discrimination', 'MAE - Correlation', 'AUC - Discrimination', 'AUC - Correlation']
+        combined_legend_labels = ['MAE - Age Order', 'AUC - Age Order', 'MAE - Discrimination', 'AUC - Discrimiantion']
     
         # Add the combined legend to the plot
-        ax.legend(combined_legend_lines, combined_legend_labels, loc='lower left', title="Metrics")
+        ax.legend(combined_legend_lines, combined_legend_labels, loc='upper right', title="Metrics")
 
         # Set axis labels and title
         groups = title.split('_')
@@ -411,11 +413,12 @@ class Visualizer:
             plt.title(f'{title}')
         plt.xlabel('Number of Features Used')
         plt.ylabel('Mean AUC')
-        plt.legend(title='Model', loc='upper left')
+        plt.legend(title='Model', loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2)
         plt.ylim(0.5, 1)
         plt.grid(True)
 
         # Save figure 
+        plt.subplots_adjust(bottom=0.2)  # Adjust this value as needed
         plt.tight_layout()
         filename = f"auc_vs_num_features_{title}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
