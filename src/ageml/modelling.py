@@ -443,7 +443,7 @@ class AgeML:
                 print(f"Best pipeline:\n{self.pipeline}")
 
             # CV Summary of the selected hyperparameters
-            print("\nSummary metrics of the best CV split for the best hyperparameters:")
+            print("\nSummary metrics of the CV splits for the best hyperparameters:")
             summary_train = self.summary_metrics(best_split_metrics_train)
             print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
             summary_test = self.summary_metrics(best_split_metrics_test)
