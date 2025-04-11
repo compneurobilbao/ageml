@@ -1,6 +1,6 @@
 # Available Models in ageml
 
-This document contains a list of all the models available in the _ageml_ package, with a list of the hyperparameters that are optimized in _ageml_ (if specified to do so) and a link to their corresponding documentation. The majority of them come from the [scikit-learn](https://scikit-learn.org/stable/) package.
+This document contains a list of all the models available in the _ageml_ package, with a list of the hyperparameters that are optimized in _ageml_ (if specified to do so) and a link to their corresponding documentation. Hyperparameter optimization is done respect to the Mean Absolute Error (MAE). The majority of them come from the [scikit-learn](https://scikit-learn.org/stable/) package.
 
 ## Model List
 

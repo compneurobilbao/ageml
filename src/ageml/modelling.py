@@ -414,11 +414,6 @@ class AgeML:
                     split_metrics_train.append(self.calculate_metrics(y_train, y_pred_train))
                     split_metrics_test.append(self.calculate_metrics(y_test, y_pred_test))
 
-                    # Print metrics
-                    print("\nFold N: %d" % (i + 1))
-                    print("Train: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % split_metrics_train[i])
-                    print("Test: MAE %.2f, RMSE %.2f, R2 %.3f, p %.3f" % split_metrics_test[i])
-
                     # Fit and apply age-bias correction
                     self.fit_age_bias(y_train, y_pred_train)
                     y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
@@ -436,13 +431,8 @@ class AgeML:
                     best_split_mae = mean_score_test
                     pred_age = copy.deepcopy(temp_pred_age)
                     corrected_age = copy.deepcopy(temp_corr_age)
-
-                # CV Summary of the selected hyperparameters
-                print("\nSummary metrics over all CV splits:")
-                summary_train = self.summary_metrics(split_metrics_train)
-                print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
-                summary_test = self.summary_metrics(split_metrics_test)
-                print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
+                    best_split_metrics_train = copy.deepcopy(split_metrics_train)
+                    best_split_metrics_test = copy.deepcopy(split_metrics_test)
 
             # Select the best pipeline based on the mean scores
             best_hyperparam_index = np.argmin(mae_means_test)
@@ -451,6 +441,13 @@ class AgeML:
             if self.hyperparameter_tuning > 0:
                 print(f"\nHyperoptimization best parameters: {hyperparameter_grid[best_hyperparam_index]}")
                 print(f"Best pipeline:\n{self.pipeline}")
+
+            # CV Summary of the selected hyperparameters
+            print("\nSummary metrics of the best CV split for the best hyperparameters:")
+            summary_train = self.summary_metrics(best_split_metrics_train)
+            print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
+            summary_test = self.summary_metrics(best_split_metrics_test)
+            print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
 
         elif self.model_type == "hyperopt":
             print("Running Hyperparameter optimization with 'hyperopt' model option...")
