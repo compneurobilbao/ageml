@@ -119,6 +119,7 @@ def test_classification_predict_error(dummy_classifier):
     assert str(exc_info.value) == error_message
 
 def test_classifier_predict_scale(dummy_classifier):
+    """Test that the predict method raises an error if the model was not fitted with scaling and scale=True is passed."""
 
     # Data
         # Create data

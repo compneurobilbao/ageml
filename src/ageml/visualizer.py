@@ -222,7 +222,16 @@ class Visualizer:
         plt.close()
 
     def ordering(self, mi_age, mi_discr, feature_names, system_dict, title):
-        """Plot in the ssame figure the mutual information for age and discrimination."""
+        """Plot in the ssame figure the mutual information for age and discrimination.
+
+        Parameters
+        ----------
+        mi_age: 1D-Array with mutual information with age; shape=n
+        mi_discr: 1D-Array with mutual information with discrimination; shape=n
+        feature_names: list of names of features; shape=n
+        system_dict: dictionary with the system names and their features; shape=(n, m)
+        title: Title of the plot.
+        """
 
         plt.figure(figsize=(10, 5))
         # Name each point with each feature name
@@ -316,6 +325,17 @@ class Visualizer:
         plt.close()
 
     def multiple_metrics_vs_num_features(self, metrics_age, metrics_discrimination, title):
+        """Plot MAE and AUC against the number of features used for both age and discrimination.
+
+        Parameters
+        ----------
+        metrics_age: dict
+            Dictionary containing the MAE and AUC values for age.
+        metrics_discrimination: dict
+            Dictionary containing the MAE and AUC values for discrimination.
+        title: str
+            Title of the plot.
+        """
 
         # Create a combined figure and axis
         fig, ax = plt.subplots(figsize=(10, 8))

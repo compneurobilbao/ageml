@@ -3,8 +3,9 @@
 import numpy as np
 import pandas as pd
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Union
+from typing import List, Dict
 from scipy import stats
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
 
@@ -131,20 +132,37 @@ def cohen_d(group1, group2):
     d = (mean1 - mean2) / pooled_std
     return d
 
+class FoldMetrics(ABC):
+    """Abstract base class for fold metrics"""
+    @classmethod
+    @abstractmethod
+    def get_metric_names(cls) -> List[str]:
+        """Return the list of metric names for this metric type"""
+        pass
 
 @dataclass
-class RegressionFoldMetrics:
+class RegressionFoldMetrics(FoldMetrics):
     mae: float
     rmse: float
     r2: float
     p: float
+    
+    @classmethod
+    def get_metric_names(cls) -> List[str]:
+        return ['mae', 'rmse', 'r2', 'p']
+
 
 @dataclass
-class ClassificationFoldMetrics:
+class ClassificationFoldMetrics(FoldMetrics):
     auc: float
     accuracy: float
     sensitivity: float
     specificity: float
+    
+    @classmethod
+    def get_metric_names(cls) -> List[str]:
+        return ['auc', 'accuracy', 'sensitivity', 'specificity']
+
 
 class CVMetricsHandler:
     def __init__(self, task_type: str):
@@ -152,30 +170,29 @@ class CVMetricsHandler:
             raise ValueError('task_type must be either "regression" or "classification"')
         else:
             self.task_type = task_type
-        self.train_metrics: List[Union[RegressionFoldMetrics, ClassificationFoldMetrics]] = []
-        self.test_metrics: List[Union[RegressionFoldMetrics, ClassificationFoldMetrics]] = []
+        self.train_metrics: List[FoldMetrics] = []
+        self.test_metrics: List[FoldMetrics] = []
     
-    def add_fold_metrics(self, fold_train: Union[RegressionFoldMetrics, ClassificationFoldMetrics], 
-                         fold_test: Union[RegressionFoldMetrics, ClassificationFoldMetrics]):
+    def add_fold_metrics(self, fold_train: FoldMetrics, fold_test: FoldMetrics):
+        # Validate the input types match the task type
+        expected_class = RegressionFoldMetrics if self.task_type == 'regression' else ClassificationFoldMetrics
+        
+        if not isinstance(fold_train, expected_class) or not isinstance(fold_test, expected_class):
+            raise TypeError(f"Metrics should be of type {expected_class.__name__} for task_type '{self.task_type}'")
+        
         self.train_metrics.append(fold_train)
         self.test_metrics.append(fold_test)
     
-    def _calculate_summary(self, metrics_list: List[Union[RegressionFoldMetrics, ClassificationFoldMetrics]]) -> Dict[str, Dict[str, float]]:
-        # TODO - Automatically infer instead of using Union to have both types
-        if self.task_type == 'regression':
-            all_metrics = {
-                'mae': [m.mae for m in metrics_list],
-                'rmse': [m.rmse for m in metrics_list],
-                'r2': [m.r2 for m in metrics_list],
-                'p': [m.p for m in metrics_list]
-            }
-        elif self.task_type == 'classification':  # classification
-            all_metrics = {
-                'auc': [m.auc for m in metrics_list],
-                'accuracy': [m.accuracy for m in metrics_list],
-                'sensitivity': [m.sensitivity for m in metrics_list],
-                'specificity': [m.specificity for m in metrics_list]
-            }
+    def _calculate_summary(self, metrics_list: List[FoldMetrics]) -> Dict[str, Dict[str, float]]:
+        if not metrics_list:
+            return {}
+        
+        # Get metric names from the class of the first metrics object
+        metric_names = metrics_list[0].__class__.get_metric_names()
+        
+        all_metrics = {}
+        for metric_name in metric_names:
+            all_metrics[metric_name] = [getattr(m, metric_name) for m in metrics_list]
         
         summary = {}
         for metric_name, values in all_metrics.items():
@@ -184,7 +201,7 @@ class CVMetricsHandler:
                 'std': np.std(values),
                 'min': np.min(values),
                 'max': np.max(values),
-                '95ci': stats.t.interval(0.95, len(values) - 1, loc=np.mean(values), scale=stats.sem(values))
+                '95ci': tuple(stats.t.interval(0.95, len(values) - 1, loc=np.mean(values), scale=stats.sem(values)))
             }
         return summary
     
@@ -198,10 +215,9 @@ class CVMetricsHandler:
         summary = self.get_summary()
         data = []
         
-        if self.task_type == 'regression':
-            metrics = ['mae', 'rmse', 'r2', 'p'] 
-        elif self.task_type == 'classification':
-            metrics = ['auc', 'accuracy', 'sensitivity', 'specificity']
+        # Get metric names from the actual metrics objects
+        metrics_class = RegressionFoldMetrics if self.task_type == 'regression' else ClassificationFoldMetrics
+        metrics = metrics_class.get_metric_names()
         
         for split in ['train', 'test']:
             for metric in metrics:

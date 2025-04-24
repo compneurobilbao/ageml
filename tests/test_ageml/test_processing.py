@@ -164,3 +164,60 @@ def test_get_summary_dataframe(regressionhandler, sample_metrics):
     assert set(df['split'].unique()) == {'train', 'test'}
     assert set(df['metric'].unique()) == {'mae', 'rmse', 'r2', 'p'}
     assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max', '95ci'}
+
+
+@pytest.fixture
+def classificationhandler():
+    return processing.CVMetricsHandler(task_type='classification')
+
+@pytest.fixture
+def classification_metrics():
+    return (
+        processing.ClassificationFoldMetrics(auc=0.95, accuracy=0.9, sensitivity=0.85, specificity=0.88),
+        processing.ClassificationFoldMetrics(auc=0.97, accuracy=0.92, sensitivity=0.88, specificity=0.9)
+    )
+
+def test_add_fold_metrics_classification(classificationhandler, classification_metrics):
+    train_fold, test_fold = classification_metrics
+    classificationhandler.add_fold_metrics(train_fold, test_fold)
+    
+    assert len(classificationhandler.train_metrics) == 1
+    assert len(classificationhandler.test_metrics) == 1
+    assert classificationhandler.train_metrics[0] == train_fold
+    assert classificationhandler.test_metrics[0] == test_fold
+
+def test_calculate_summary_classification(classificationhandler, classification_metrics):
+    summary = classificationhandler._calculate_summary(list(classification_metrics))
+
+    assert set(summary.keys()) == {'auc', 'accuracy', 'sensitivity', 'specificity'}
+    for metric in summary.values():
+        assert set(metric.keys()) == {'mean', 'std', 'min', 'max', '95ci'}
+
+    assert pytest.approx(summary['auc']['mean']) == 0.96
+    assert pytest.approx(summary['accuracy']['mean']) == 0.91
+    assert pytest.approx(summary['sensitivity']['mean']) == 0.865
+    assert pytest.approx(summary['specificity']['mean']) == 0.89
+    
+def test_get_summary_classification(classificationhandler, classification_metrics):
+    train_fold, test_fold = classification_metrics
+    classificationhandler.add_fold_metrics(train_fold, test_fold)
+    summary = classificationhandler.get_summary()
+
+    assert set(summary.keys()) == {'train', 'test'}
+    for split in summary.values():
+        assert set(split.keys()) == {'auc', 'accuracy', 'sensitivity', 'specificity'}
+        for metric in split.values():
+            assert set(metric.keys()) == {'mean', 'std', 'min', 'max', '95ci'}
+
+def test_get_summary_dataframe_classification(classificationhandler, classification_metrics):
+    train_fold, test_fold = classification_metrics
+    classificationhandler.add_fold_metrics(train_fold, test_fold)
+    df = classificationhandler.get_summary_dataframe()
+
+    assert isinstance(df, pd.DataFrame)
+    assert set(df.columns) == {'split', 'metric', 'statistic', 'value'}
+    assert len(df) == 40  # 2 splits * 4 metrics * 5 statistics
+
+    assert set(df['split'].unique()) == {'train', 'test'}
+    assert set(df['metric'].unique()) == {'auc', 'accuracy', 'sensitivity', 'specificity'}
+    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max', '95ci'}
