@@ -367,6 +367,7 @@ class AgeML:
         if self.model_type != "hyperopt":
             # Optimize hyperparameters if required
             if self.hyperparameter_tuning > 1:
+                print(self.hyperparameter_tuning)
                 print("Running Hyperparameter optimization...")
             else:
                 print("No hyperparameter optimization will be done.")
@@ -388,7 +389,7 @@ class AgeML:
                 print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
                 temp_pred_age = np.zeros(y.shape[0])
                 temp_corr_age = np.zeros(y.shape[0])
-                split_metrics = CVMetricsHandler()
+                split_metrics = CVMetricsHandler(task_type='regression')
                 kf_hyperopt = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
                 for i, (train, test) in enumerate(kf_hyperopt.split(X)):
                     X_train, X_test = X[train], X[test]
@@ -406,7 +407,7 @@ class AgeML:
                     train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
                     mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
                     test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
-                    split_metrics.add_fold(train_fold, test_fold)
+                    split_metrics.add_fold_metrics(train_fold, test_fold)
 
                     # Fit and apply age-bias correction
                     self.fit_age_bias(y_train, y_pred_train)
@@ -419,6 +420,7 @@ class AgeML:
                 # Compute the mean of scores over all CV splits
                 split_summary = split_metrics.get_summary()
                 mean_score_test = split_summary['test']['mae']['mean']
+                mae_means_test.append(mean_score_test)
 
                 # If the mean MAE is better than the previous best, save the results
                 if mean_score_test < best_split_mae:
@@ -470,7 +472,7 @@ class AgeML:
             train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
             mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
             test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
-            self.metrics.add_fold(train_fold, test_fold)
+            self.metrics.add_fold_metrics(train_fold, test_fold)
             best_model = self.model.best_model()["learner"]
             best_preprocessing = self.model.best_model()["preprocs"]
             # Evaluate on test set

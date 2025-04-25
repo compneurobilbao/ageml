@@ -1568,7 +1568,8 @@ class Interface:
         for system in self.systems:
             for covar in self.covars:
                 tag = NameTag(covar=covar, system=system)
-                self.feature_ordering(tag)
+                order_age, order_discrimination = self.feature_ordering(tag)
+                self.model_feature_analysis(order_age, order_discrimination, tag)
 
     def run_age_model_vs_logistic_regression(self):
         """Run age model vs logistic regression for classification."""

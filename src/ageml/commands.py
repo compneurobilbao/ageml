@@ -101,7 +101,7 @@ class ModelAge(Interface):
             "-ht",
             "--hyperparameter_tuning",
             nargs="+",
-            default=["2"],
+            default=["0"],
             help=messages.hyperparameter_grid_description,
         )
 
@@ -166,7 +166,9 @@ class ModelAge(Interface):
 
         # Parse hyperparameter_tuning values
         hyperparam_tuning = args.hyperparameter_tuning
-        if not hyperparam_tuning[0].isdigit() or int(convert(hyperparam_tuning[0])) < 2:
+        if hyperparam_tuning[0] == '0':
+            args.hyperparameter_tuning = 0
+        elif not hyperparam_tuning[0].isdigit() or int(convert(hyperparam_tuning[0])) < 2:
             raise ValueError("Hyperparameter grid points must be an integer greater than 1.")
         else:
             args.hyperparameter_tuning = int(convert(hyperparam_tuning[0]))
@@ -261,21 +263,42 @@ class ModelFeatureInfluence(Interface):
             help=messages.groups_long_description,
         ) 
 
+         # Parameter arguments with defaults
         self.parser.add_argument(
-            "--thr",
-            nargs=1,
-            type=float,
-            default=[0.5],
-            help=messages.thr_long_description,
+            "-m",
+            "--model",
+            nargs="*",
+            default=["linear_reg"],
+            help=messages.model_long_description,
         )
         self.parser.add_argument(
-            "--ci",
-            nargs=1,
-            type=float,
-            default=[0.95],
-            help=messages.ci_long_description,
+            "-s",
+            "--scaler",
+            nargs="*",
+            default=["standard"],
+            help=messages.scaler_long_description,
         )
-
+        self.parser.add_argument(
+            "--cv",
+            nargs="+",
+            type=int,
+            default=[5, 0],
+            help=messages.cv_long_description,
+        )
+        self.parser.add_argument(
+            "-fext",
+            "--feature_extension",
+            nargs=1,
+            default=["0"],
+            help=messages.poly_feature_extension_description,
+        )
+        self.parser.add_argument(
+            "-ht",
+            "--hyperparameter_tuning",
+            nargs="+",
+            default=["0"],
+            help=messages.hyperparameter_grid_description,
+        )
         self.parser.add_argument(
             "--thr",
             nargs=1,
@@ -351,12 +374,41 @@ class ModelFeatureInfluence(Interface):
         else:
             args.model_params = {}
 
-                # Set hyperparameter grid search value
-        if len(args.hyperparameter_tuning) > 1 or not args.hyperparameter_tuning[0].isdigit():
-            raise ValueError("Hyperparameter grid points must be a non negative integer.")
+        # Parse hyperparameter_tuning values
+        hyperparam_tuning = args.hyperparameter_tuning
+        if hyperparam_tuning[0] == '0':
+            args.hyperparameter_tuning = 0
+        elif not hyperparam_tuning[0].isdigit() or int(convert(hyperparam_tuning[0])) < 2:
+            raise ValueError("Hyperparameter grid points must be an integer greater than 1.")
         else:
-            args.hyperparameter_tuning = args.hyperparameter_tuning[0]
-            args.hyperparameter_tuning = int(convert(args.hyperparameter_tuning))
+            args.hyperparameter_tuning = int(convert(hyperparam_tuning[0]))
+
+        hyperparameter_params = {}
+        if len(hyperparam_tuning) > 1:
+            for item in hyperparam_tuning[1:]:
+                if item.count("=") != 1:
+                    err_msg = (
+                        "Hyperparameter tuning parameters must be in the format "
+                        "param1=value1_low,value1_high param2=kernel_A,kernel_B,kernel_C..."
+                    )
+                    raise ValueError(err_msg)
+                key, values = item.split("=")
+                values = [convert(value) for value in values.split(",")]
+
+                vals_are_str = all([isinstance(value, str) for value in values])
+                vals_are_num = all([isinstance(value, (int, float)) for value in values])
+                # If not 2 values provided in numerical hyperparams, raise error
+                if vals_are_num and len(values) != 2:
+                    err_msg = "Numerical hyperparameter values must be exactly two numbers (e.g.: param1=2,3)."
+                    raise ValueError(err_msg)
+                # If no value provided in categorical hyperparams, raise error
+                elif vals_are_str and len(values) < 1:
+                    err_msg = "Categorical hyperparameter values must be at least one string (e.g.: param1=kernel_A)."
+                    raise ValueError(err_msg)
+                hyperparameter_params[key] = values
+
+        # Add attribute to args
+        args.hyperparameter_params = hyperparameter_params
 
         # Set polynomial feature extension value
         if len(args.feature_extension) > 1 or not args.feature_extension[0].isdigit():
