@@ -8,6 +8,8 @@ import tempfile
 
 from ageml.commands import (
     model_age,
+    model_feature_influence,
+    age_model_vs_logistic_regression,
     factor_correlation,
     clinical_groups,
     clinical_classify,
@@ -266,6 +268,52 @@ def test_model_age(temp_dir, features):
     # Run function
     model_age()
 
+def test_model_feature_influence(temp_dir, features, clinical):
+    """Test model_feature_influence function."""
+
+    # Create features file
+    features_data_path = create_csv(features, temp_dir.name)
+    clinical_data_path = create_csv(clinical, temp_dir.name)
+
+    # Create systems arguments
+    sys.argv = [
+        "",
+        "-o",
+        temp_dir.name,
+        "-f",
+        features_data_path,
+        "--clinical",
+        clinical_data_path,
+        "--groups",
+        "CN",
+        "group1",
+    ]
+
+    # Run function
+    model_feature_influence()
+
+def test_age_model_vs_logistic_regression(temp_dir, features, clinical):
+
+    # Create features file
+    features_data_path = create_csv(features, temp_dir.name)
+    clinical_data_path = create_csv(clinical, temp_dir.name)
+
+    # Create systems arguments
+    sys.argv = [
+        "",
+        "-o",
+        temp_dir.name,
+        "-f",
+        features_data_path,
+        "--clinical",
+        clinical_data_path,
+        "--groups",
+        "CN",
+        "group1",
+    ]
+
+    # Run function
+    age_model_vs_logistic_regression()
 
 def test_factor_correlation(temp_dir, ages, factors):
     """Test factor_correlation function."""

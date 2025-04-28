@@ -47,6 +47,10 @@ class Visualizer:
 
     age_bias_correction(self, y_true, y_pred, y_corrected): Plot before and after age bias correction procedure.
 
+    metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title): Plots MAE and AUC against the number of features used.
+
+    auc_vs_num_features(self, aucs, aucs_std, title): Plot AUCs with standard deviation against the number of features used for each model.
+
     factors_vs_deltas(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
 
     deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
@@ -216,6 +220,229 @@ class Visualizer:
         plt.suptitle(f"[Covariate: {tag.covar}, System: {tag.system}]\n", y=1.00)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
+
+    def ordering(self, mi_age, mi_discr, feature_names, system_dict, title):
+        """Plot in the ssame figure the mutual information for age and discrimination.
+
+        Parameters
+        ----------
+        mi_age: 1D-Array with mutual information with age; shape=n
+        mi_discr: 1D-Array with mutual information with discrimination; shape=n
+        feature_names: list of names of features; shape=n
+        system_dict: dictionary with the system names and their features; shape=(n, m)
+        title: Title of the plot.
+        """
+
+        plt.figure(figsize=(10, 5))
+        # Name each point with each feature name
+        plt.xlabel("Mutual Information with Age")
+        plt.ylabel("Mutual Information with Discrimination")
+        groups = title.split('_')
+        plt.title(f'{groups[0].upper()} vs {groups[1].upper()}')
+        
+        reversed_dict = {}
+    
+        for key, value_list in system_dict.items():
+            for value in value_list:
+                reversed_dict[value] = key
+
+        # Create a dictionary to group points by their category
+        categories = {}
+        for i, feature in enumerate(feature_names):
+            category = reversed_dict.get(feature, "Unknown")
+            if category not in categories:
+                categories[category] = {"x": [], "y": [], "labels": []}
+            categories[category]["x"].append(mi_age[i])
+            categories[category]["y"].append(mi_discr[i])
+            categories[category]["labels"].append(feature)
+    
+        # Plot each category with a single label
+        for category, data in categories.items():
+            plt.scatter(data["x"], data["y"], label=category)
+        
+            # Add annotations for each point
+            for i in range(len(data["x"])):
+                plt.annotate(data["labels"][i], 
+                            (data["x"][i], data["y"][i]),
+                            xytext=(5, 0), 
+                            textcoords='offset points')
+        plt.legend()
+
+        # Save figure
+        filename = f"ordering_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
+
+    def metrics_vs_num_features(self, mae, mae_std, auc, auc_std, title):
+        """
+        Plots MAE and AUC against the number of features used.
+    
+        Parameters:
+        -----------
+        mae: numpy array
+            Array containing the mean absolute errors.
+        mae_std: numpy array
+            Array containing the standard deviation of the MAE.
+        auc_std: numpy array
+            Array containing the standard deviation of the AUC.
+        auc_data: numpy array
+            Array containing the AUC values.
+        title: str
+            Title of the plot.
+    """
+        
+        # Create a figure and axis
+        fig, ax = plt.subplots()
+
+        # Determine the number of features
+        num_features= np.arange(len(mae)) + 1
+    
+        # Plot the selected metric 
+        line1, = ax.plot(num_features, mae, color='blue', linestyle='-')
+        ax.fill_between(num_features, mae - mae_std, mae + mae_std, color='blue', alpha=0.2)
+        
+        # Set labels and title for the primary y-axis
+        ax.set_xlabel('Number of Features Used')
+        ax.set_ylabel('MAE (Years)', color='blue')
+        ax.tick_params(axis='y', labelcolor='blue')
+        ax.set_title(title)
+
+        # Create a twin y-axis for AUC
+        ax2 = ax.twinx()
+        line2, = ax2.plot(num_features, auc, color='green', linestyle='-')
+        ax2.fill_between(num_features, auc - auc_std, auc + auc_std, color='green', alpha=0.2)
+        ax2.set_ylabel('AUC', color='green')
+        ax2.tick_params(axis='y', labelcolor='green')
+
+        # Set y-axis limit for AUC
+        ax2.set_ylim(0.5, 1)
+
+        # Save figure 
+        plt.tight_layout()
+        filename = f"metrics_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
+    def multiple_metrics_vs_num_features(self, metrics_age, metrics_discrimination, title):
+        """Plot MAE and AUC against the number of features used for both age and discrimination.
+
+        Parameters
+        ----------
+        metrics_age: dict
+            Dictionary containing the MAE and AUC values for age.
+        metrics_discrimination: dict
+            Dictionary containing the MAE and AUC values for discrimination.
+        title: str
+            Title of the plot.
+        """
+
+        # Create a combined figure and axis
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        for o_type, metrics in zip(['age', 'discr'], [metrics_age, metrics_discrimination]):
+            mae = metrics['mae']
+            mae_std = metrics['mae_std']
+            auc = metrics['auc']
+            auc_std = metrics['auc_std']
+
+            # Change linestyle for discrimination
+            if o_type == 'discr':
+                linestyle = '-'
+            else:
+                linestyle = ':'
+
+            # Determine the number of features
+            num_features= np.arange(len(mae)) + 1
+    
+            # Plot the selected metric 
+            line1, = ax.plot(num_features, mae, color='blue', linestyle=linestyle)
+            ax.fill_between(num_features, mae - mae_std, mae + mae_std, color='blue', alpha=0.2)
+        
+            # Set labels and title for the primary y-axis
+            ax.set_xlabel('Number of Features Used')
+            ax.set_ylabel('MAE (Years)', color='blue')
+            ax.tick_params(axis='y', labelcolor='blue')
+            ax.set_title(title)
+            ax.set_ylim(3.75, 6)
+
+            # Create a twin y-axis for AUC
+            ax2 = ax.twinx()
+            line2, = ax2.plot(num_features, auc, color='green', linestyle=linestyle)
+            ax2.fill_between(num_features, auc - auc_std, auc + auc_std, color='green', alpha=0.2)
+            ax2.set_ylabel('AUC', color='green')
+            ax2.tick_params(axis='y', labelcolor='green')
+
+            # Set y-axis limit for AUC
+            ax2.set_ylim(0.5, 1)
+
+            # Save lines
+            if o_type == 'age':
+                line_discri_mae = line1
+                line_corr_mae = line2
+            else:
+                line_discri_auc = line1
+                line_corr_auc = line2
+
+        # Combine legends for both discrimination and correlation
+        combined_legend_lines = [line_discri_mae, line_corr_mae, line_discri_auc, line_corr_auc]
+        combined_legend_labels = ['MAE - Age Order', 'AUC - Age Order', 'MAE - Discrimination', 'AUC - Discrimiantion']
+    
+        # Add the combined legend to the plot
+        ax.legend(combined_legend_lines, combined_legend_labels, loc='upper right', title="Metrics")
+
+        # Set axis labels and title
+        groups = title.split('_')
+        ax.set_title(f'MAE and AUC vs Number of Features Used \n{groups[0].upper()} vs {groups[1].upper()}')
+
+        # Save figure 
+        plt.tight_layout()
+        filename = f"metrics_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
+    
+    def auc_vs_num_features(self, aucs, aucs_std, title):
+        """Plot AUCs with standard deviation against the number of features used for each model.
+        
+        Parameters
+        ----------
+        auc: dict
+            Dictionary containing the AUC values for each model
+        auc_std: dict
+            Dictionary containing the standard deviation of the AUC values for each model
+        title: str
+            Title of the plot"""
+
+        for model in aucs.keys():
+            # Determine the number of features
+            num_features = np.arange(len(aucs[model])) + 1
+
+            # Plot the AUC values
+            if model == 'logistic_regression':
+                label = "Non-BrainAge Model"
+            else:
+                label = f"BrainAge Model: {model}"
+            plt.errorbar(num_features, aucs[model], yerr=aucs_std[model], label=label)
+
+        # Add titles and labels
+        if '_' in title:
+            name = title.split('_')
+            plt.title(f'Ordering: {name[0].upper()} Classification: {name[1].upper()} vs {name[2].upper()}')
+        else:
+            plt.title(f'{title}')
+        plt.xlabel('Number of Features Used')
+        plt.ylabel('Mean AUC')
+        plt.legend(title='Model', loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2)
+        plt.ylim(0.5, 1)
+        plt.grid(True)
+
+        # Save figure 
+        plt.subplots_adjust(bottom=0.2)  # Adjust this value as needed
+        plt.tight_layout()
+        filename = f"auc_vs_num_features_{title}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()         
 
     def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.

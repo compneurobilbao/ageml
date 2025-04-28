@@ -11,7 +11,6 @@ Classifier - classifier of class labels based on deltas.
 import copy
 
 import numpy as np
-import scipy.stats as st
 from xgboost import XGBRegressor
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
@@ -34,6 +33,9 @@ from sklearn.preprocessing import (
 )
 from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
 from hyperopt import tpe
+
+from ageml.utils import verbose_wrapper
+from ageml.processing import RegressionFoldMetrics, ClassificationFoldMetrics, CVMetricsHandler
 
 
 class AgeML:
@@ -63,8 +65,6 @@ class AgeML:
     set_CV_params(self, CV_split, seed): Set the parameters of the Cross Validation scheme.
 
     calculate_metrics(self, y_true, y_pred): Calculates MAE, RMSE, R2 and p (Pearson's corelation)
-
-    summary_metrics(self, array): Calculates mean and standard deviations of metrics.
 
     fit_age_bias(self, y_true, y_pred): Fit a linear age bias correction model.
 
@@ -176,6 +176,7 @@ class AgeML:
         hyperparameter_tuning: int = 0,
         hyperparameter_params: dict = {},
         feature_extension: int = 0,
+        verbose: bool = False,
     ):
         """Initialise variables."""
 
@@ -186,6 +187,7 @@ class AgeML:
         # Model dictionary
         self.model_type = model_type
         self.model_dict = AgeML.model_dict
+
         # Hyperparameters and feature extension
         self.hyperparameter_tuning = hyperparameter_tuning
         self.hyperparameter_params = hyperparameter_params
@@ -201,6 +203,10 @@ class AgeML:
         # Initialise flags
         self.pipelineFit = False
         self.age_biasFit = False
+        self.verbose = verbose
+
+        # Initialize metrics storage
+        self.metrics = CVMetricsHandler(task_type='regression')
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -315,21 +321,6 @@ class AgeML:
         p, _ = stats.pearsonr(y_true, y_pred)
         return mae, rmse, r2, p
 
-    def summary_metrics(self, array):
-        """Calculates mean and standard deviations of metrics.
-
-        Parameters:
-        -----------
-        array: 2D-array with metrics in axis=0; shape=(n, 4)"""
-
-        means = np.mean(array, axis=0)
-        stds = np.std(array, axis=0)
-        summary = []
-        for mean, std in zip(means, stds):
-            summary.append(mean)
-            summary.append(std)
-        return summary
-
     def fit_age_bias(self, y_true, y_pred):
         """Fit a linear age bias correction model.
 
@@ -360,6 +351,7 @@ class AgeML:
 
         return y_corrected
 
+    @verbose_wrapper
     def fit_age(self, X, y):
         """Fit the age model.
 
@@ -375,6 +367,7 @@ class AgeML:
         if self.model_type != "hyperopt":
             # Optimize hyperparameters if required
             if self.hyperparameter_tuning > 1:
+                print(self.hyperparameter_tuning)
                 print("Running Hyperparameter optimization...")
             else:
                 print("No hyperparameter optimization will be done.")
@@ -396,8 +389,7 @@ class AgeML:
                 print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
                 temp_pred_age = np.zeros(y.shape[0])
                 temp_corr_age = np.zeros(y.shape[0])
-                split_metrics_train = []
-                split_metrics_test = []
+                split_metrics = CVMetricsHandler(task_type='regression')
                 kf_hyperopt = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
                 for i, (train, test) in enumerate(kf_hyperopt.split(X)):
                     X_train, X_test = X[train], X[test]
@@ -411,8 +403,11 @@ class AgeML:
                     y_pred_test = cv_pipeline.predict(X_test)
 
                     # Metrics in Train and Test sets
-                    split_metrics_train.append(self.calculate_metrics(y_train, y_pred_train))
-                    split_metrics_test.append(self.calculate_metrics(y_test, y_pred_test))
+                    mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
+                    train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
+                    mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
+                    test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
+                    split_metrics.add_fold_metrics(train_fold, test_fold)
 
                     # Fit and apply age-bias correction
                     self.fit_age_bias(y_train, y_pred_train)
@@ -423,7 +418,8 @@ class AgeML:
                     temp_corr_age[test] = y_pred_test_no_bias
 
                 # Compute the mean of scores over all CV splits
-                mean_score_test = np.mean(split_metrics_test, axis=0)[0]  # Mean of MAE
+                split_summary = split_metrics.get_summary()
+                mean_score_test = split_summary['test']['mae']['mean']
                 mae_means_test.append(mean_score_test)
 
                 # If the mean MAE is better than the previous best, save the results
@@ -431,8 +427,7 @@ class AgeML:
                     best_split_mae = mean_score_test
                     pred_age = copy.deepcopy(temp_pred_age)
                     corrected_age = copy.deepcopy(temp_corr_age)
-                    best_split_metrics_train = copy.deepcopy(split_metrics_train)
-                    best_split_metrics_test = copy.deepcopy(split_metrics_test)
+                    self.metrics = copy.deepcopy(split_metrics)
 
             # Select the best pipeline based on the mean scores
             best_hyperparam_index = np.argmin(mae_means_test)
@@ -442,12 +437,19 @@ class AgeML:
                 print(f"\nHyperoptimization best parameters: {hyperparameter_grid[best_hyperparam_index]}")
                 print(f"Best pipeline:\n{self.pipeline}")
 
-            # CV Summary of the selected hyperparameters
-            print("\nSummary metrics of the CV splits for the best hyperparameters:")
-            summary_train = self.summary_metrics(best_split_metrics_train)
-            print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_train))
-            summary_test = self.summary_metrics(best_split_metrics_test)
-            print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f" % tuple(summary_test))
+            # Calculate metrics over all splits
+            summary_dict = self.metrics.get_summary()
+            print("Summary metrics over all CV splits")
+            print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+              % (summary_dict['train']['mae']['mean'], summary_dict['train']['mae']['std'],
+                 summary_dict['train']['rmse']['mean'], summary_dict['train']['rmse']['std'],
+                 summary_dict['train']['r2']['mean'], summary_dict['train']['r2']['std'],
+                 summary_dict['train']['p']['mean'], summary_dict['train']['p']['std']))
+            print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+              % (summary_dict['test']['mae']['mean'], summary_dict['test']['mae']['std'],
+                 summary_dict['test']['rmse']['mean'], summary_dict['test']['rmse']['std'],
+                 summary_dict['test']['r2']['mean'], summary_dict['test']['r2']['std'],
+                 summary_dict['test']['p']['mean'], summary_dict['test']['p']['std']))
 
         elif self.model_type == "hyperopt":
             print("Running Hyperparameter optimization with 'hyperopt' model option...")
@@ -467,7 +469,10 @@ class AgeML:
             y_pred_train = self.model.predict(X_train)
             y_pred_test = self.model.predict(X_test)
             mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
+            train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
             mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
+            test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
+            self.metrics.add_fold_metrics(train_fold, test_fold)
             best_model = self.model.best_model()["learner"]
             best_preprocessing = self.model.best_model()["preprocs"]
             # Evaluate on test set
@@ -561,7 +566,7 @@ class Classifier:
     predict(self, X): Predict class labels with fitted model.
     """
 
-    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95):
+    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95, verbose: bool = False):
         """Initialise variables."""
 
         # Set required modelling parts
@@ -576,6 +581,10 @@ class Classifier:
 
         # Initialise flags
         self.modelFit = False
+        self.verbose = verbose
+
+        # Initialize metrics storage
+        self.metrics = CVMetricsHandler(task_type='classification')
 
     def set_model(self):
         """Sets the model to use in the pipeline."""
@@ -609,9 +618,23 @@ class Classifier:
         ----------
         ci_val: confidence interval value"""
 
+        # TODO ci value used to set in CV handler
         self.ci_val = ci_val
 
-    def fit_model(self, X, y):
+    def _calculate_metrics(self, y_pred, y_true):
+        """Calculate metrics for classification."""
+
+        # Calculate auc, accuracy, sensistiivyt and specificity 
+        auc = metrics.roc_auc_score(y_true, y_pred)
+        acc = metrics.accuracy_score(y_true, y_pred > self.thr)
+        tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred > self.thr).ravel()
+        specificity = tn / (tn + fp)
+        sensitivity = tp / (tp + fn)
+
+        return auc, acc, sensitivity, specificity
+
+    @verbose_wrapper
+    def fit_model(self, X, y, scale=False):
         """Fit the model.
 
         Parameters
@@ -620,7 +643,6 @@ class Classifier:
         y: 1D-Array with labbels; shape=n"""
 
         # Arrays to store  values
-        accs, aucs, spes, sens = [], [], [], []
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
 
@@ -629,6 +651,12 @@ class Classifier:
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
+            # Scale data
+            if scale:
+                self.scaler = StandardScaler()
+                X_train = self.scaler.fit_transform(X_train)
+                X_test = self.scaler.transform(X_test)
+
             # Fit the model using the training data
             self.model.fit(X_train, y_train)
 
@@ -636,33 +664,34 @@ class Classifier:
             y_pred = self.model.predict_proba(X_test)[::, 1]
             y_preds[test_index] = y_pred
 
-            # Calculate AUC of model
-            auc = metrics.roc_auc_score(y_test, y_pred)
-            aucs.append(auc)
+            # Calculate metrics
+            auc_train, acc_train, sensitivity_train, specificity_train = self._calculate_metrics(self.model.predict_proba(X_train)[::, 1], y_train)
+            auc, acc, sensitivity, specificity = self._calculate_metrics(y_pred, y_test)
+            test_metrics = ClassificationFoldMetrics(auc, acc, sensitivity, specificity)
+            train_metrics = ClassificationFoldMetrics(auc_train, acc_train, sensitivity_train, specificity_train)
+            self.metrics.add_fold_metrics(train_metrics, test_metrics)
 
-            # Calculate relevant metrics
-            acc = metrics.accuracy_score(y_test, y_pred > self.thr)
-            tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred > self.thr).ravel()
-            specificity = tn / (tn + fp)
-            sensitivity = tp / (tp + fn)
-            accs.append(acc)
-            sens.append(sensitivity)
-            spes.append(specificity)
-
-        # Compute confidence intervals
-        ci_accs = st.t.interval(confidence=self.ci_val, df=len(accs) - 1, loc=np.mean(accs), scale=st.sem(accs))
-        ci_aucs = st.t.interval(confidence=self.ci_val, df=len(aucs) - 1, loc=np.mean(aucs), scale=st.sem(aucs))
-        ci_sens = st.t.interval(confidence=self.ci_val, df=len(sens) - 1, loc=np.mean(sens), scale=st.sem(sens))
-        ci_spes = st.t.interval(confidence=self.ci_val, df=len(spes) - 1, loc=np.mean(spes), scale=st.sem(spes))
+        # Get summary statitics
+        summary_dict = self.metrics.get_summary()
 
         # Print results
         print("Summary metrics over all CV splits (%s CI)" % (self.ci_val))
-        print("AUC: %.3f [%.3f-%.3f]" % (np.mean(aucs), ci_aucs[0], ci_aucs[1]))
-        print("Accuracy: %.3f [%.3f-%.3f]" % (np.mean(accs), ci_accs[0], ci_accs[1]))
-        print("Sensitivity: %.3f [%.3f-%.3f]" % (np.mean(sens), ci_sens[0], ci_sens[1]))
-        print("Specificity: %.3f [%.3f-%.3f]" % (np.mean(spes), ci_spes[0], ci_spes[1]))
+        print("AUC: %.3f [%.3f-%.3f]" % (summary_dict['test']['auc']['mean'],
+                                         summary_dict['test']['auc']['95ci'][0],
+                                         summary_dict['test']['auc']['95ci'][1]))
+        print("Accuracy: %.3f [%.3f-%.3f]" % (summary_dict['test']['accuracy']['mean'],
+                                             summary_dict['test']['accuracy']['95ci'][0],
+                                             summary_dict['test']['accuracy']['95ci'][1]))
+        print("Sensitivity: %.3f [%.3f-%.3f]" % (summary_dict['test']['sensitivity']['mean'],
+                                               summary_dict['test']['sensitivity']['95ci'][0],
+                                               summary_dict['test']['sensitivity']['95ci'][1]))
+        print("Specificity: %.3f [%.3f-%.3f]" % (summary_dict['test']['specificity']['mean'],
+                                               summary_dict['test']['specificity']['95ci'][0],
+                                               summary_dict['test']['specificity']['95ci'][1]))
 
         # Final model trained on all data
+        if scale:
+            X = self.scaler.fit_transform(X)
         self.model.fit(X, y)
 
         # Set flag
@@ -670,7 +699,7 @@ class Classifier:
 
         return y_preds
 
-    def predict(self, X):
+    def predict(self, X, scale=False):
         """Predict class labels with fitted model.
 
         Parameters:
@@ -680,6 +709,12 @@ class Classifier:
         # Check that model has previously been fit
         if not self.modelFit:
             raise ValueError("Must fit the classifier before calling predict.")
+        
+        # Scale data
+        if scale and hasattr(self, 'scaler'):
+            X = self.scaler.transform(X)
+        elif scale and not hasattr(self, 'scaler'):
+            raise ValueError("Must fit the model with scaling before calling predict with scaling.")
 
         # Predict class labels
         y_pred = self.model.predict_proba(X)[::, 1]

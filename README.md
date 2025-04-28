@@ -16,6 +16,13 @@ There are 4 main CLIs:
 - __clinical_groups__: Generates boxplots and age distribution plots to visualize age delta differences across clinical groups.
 - __clinical_classify__: Performs classification between two clinical groups using features and age deltas, outputting ROC curves for each model.
 
+![pipeline2_figure](./resources/figs/ageml_pipeline_2.png)
+
+There are also 2 extra CLIs:
+
+- __model_feature_influence__ : Analyzes the effect of different feature selection methods when creating deltas that will be used as input in classification tasks.
+- __age_model_vs_logistic_regression__: Compares the use of deltas for classification to using the features directly in a logistic regressor. 
+
 ## How to use `ageml`
 
 A comprehensive, step by step tutorial of the tool can be found [here](./docs/TUTORIAL.md).
@@ -30,10 +37,10 @@ If you use `ageml` in your work, please cite the all-time:
 J. Garcia Condado, I. Tellaetxe Elorriaga, J. M. Cortes and A. Erramuzpe, "AgeML: Age modeling with Machine Learning," in *IEEE Journal of Biomedical and Health Informatics*, doi: 10.1109/JBHI.2025.3531017.
 
 ```
-@article{condadoAgeMLAgeModeling2025,
+@article{AgeML,
   title = {{{AgeML}}: {{Age}} Modeling with {{Machine Learning}}},
   shorttitle = {{{AgeML}}},
-  author = {Condado, Jorge Garcia and Elorriaga, Iñigo Tellaetxe and Cortes, Jesus M. and Erramuzpe, Asier},
+  author = {Garcia Condado, Jorge and Tellaetxe Elorriaga, Iñigo and Cortes, Jesus M. and Erramuzpe, Asier},
   date = {2025},
   journaltitle = {IEEE Journal of Biomedical and Health Informatics},
   shortjournal = {IEEE J. Biomed. Health Inform.},
@@ -44,6 +51,20 @@ J. Garcia Condado, I. Tellaetxe Elorriaga, J. M. Cortes and A. Erramuzpe, "AgeML
   urldate = {2025-01-29}
 }
 
+```
+
+If you also used __model_feature_influence__ or __age_model_vs_logistic_regression__ please cite:
+
+J. Garcia Condado, I. Verdugo Recuero, I. Tellaetxe Elorriaga, C. Birkhenbihl, M. Carrigan, R. Buckley, A. Erramuzpe and J. M. Cortes, "Aging as an active player in Alzheimer's Disease Classification: Insights from feature selection in BrainAge Models," in *MedrXiv*, doi: 10.1101/2025.04.16.25325953
+
+```
+@article {AgeingBrainAgeAlzheimer,
+	title = {Aging as an active player in Alzheimer's Disease Classification: Insights from feature selection in BrainAge Models},
+	author = {Garcia Condado, Jorge and Verdugo Recuero, Ines and Elorriaga Tellaetxe, Iñigo and Birkhenbil, Colin and Carrigan, Maria and Diez, Ibai and Buckley, Rachel F and Erramuzpe, Asier and Cortes, Jesus M and the Alzheimer's Disease Neuroimaging Initiative},
+	year = {2025},
+	doi = {10.1101/2025.04.16.25325953},
+	journal = {medRxiv}
+}
 ```
 
 ## How to install `ageml`

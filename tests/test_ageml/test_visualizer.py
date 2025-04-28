@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 import os
 import shutil
 from statsmodels.stats.multitest import multipletests
@@ -89,6 +90,36 @@ def test_age_bias_correction(dummy_viz, np_test_data, dummy_ml):
     dummy_viz.age_bias_correction(Y, Y_pred, Y_corrected, tag=NameTag())
     # Check file existence
     svg_path = os.path.join(dummy_viz.dir, "figures/age_bias_correction.png")
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
+
+
+def test_metrics_vs_num_features(dummy_viz):
+    # Create dummy data
+    mae= np.array([0.5, 0.6, 0.7, 0.8, 0.9])
+    mae_std = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    auc = np.array([0.6, 0.7, 0.8, 0.9, 1.0])
+    auc_std = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+
+    # Plot
+    dummy_viz.metrics_vs_num_features(mae, mae_std, auc, auc_std, 'test')
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir, "figures/metrics_vs_num_features_test.png")
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
+
+
+def test_auc_vs_num_features(dummy_viz):
+    # Create dummy data
+    auc = {'model': np.array([0.6, 0.7, 0.8, 0.9, 1.0])}
+    auc_std = {'model': np.array([0.1, 0.2, 0.3, 0.4, 0.5])}
+
+    # Plot
+    dummy_viz.auc_vs_num_features(auc, auc_std, 'test')
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir, "figures/auc_vs_num_features_test.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
