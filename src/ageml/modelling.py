@@ -206,7 +206,7 @@ class AgeML:
         self.verbose = verbose
 
         # Initialize metrics storage
-        self.metrics = CVMetricsHandler(task_type='regression')
+        self.metrics = CVMetricsHandler(task_type="regression")
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -389,7 +389,7 @@ class AgeML:
                 print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
                 temp_pred_age = np.zeros(y.shape[0])
                 temp_corr_age = np.zeros(y.shape[0])
-                split_metrics = CVMetricsHandler(task_type='regression')
+                split_metrics = CVMetricsHandler(task_type="regression")
                 kf_hyperopt = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
                 for i, (train, test) in enumerate(kf_hyperopt.split(X)):
                     X_train, X_test = X[train], X[test]
@@ -419,7 +419,7 @@ class AgeML:
 
                 # Compute the mean of scores over all CV splits
                 split_summary = split_metrics.get_summary()
-                mean_score_test = split_summary['test']['mae']['mean']
+                mean_score_test = split_summary["test"]["mae"]["mean"]
                 mae_means_test.append(mean_score_test)
 
                 # If the mean MAE is better than the previous best, save the results
@@ -440,16 +440,32 @@ class AgeML:
             # Calculate metrics over all splits
             summary_dict = self.metrics.get_summary()
             print("Summary metrics over all CV splits")
-            print("Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
-              % (summary_dict['train']['mae']['mean'], summary_dict['train']['mae']['std'],
-                 summary_dict['train']['rmse']['mean'], summary_dict['train']['rmse']['std'],
-                 summary_dict['train']['r2']['mean'], summary_dict['train']['r2']['std'],
-                 summary_dict['train']['p']['mean'], summary_dict['train']['p']['std']))
-            print("Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
-              % (summary_dict['test']['mae']['mean'], summary_dict['test']['mae']['std'],
-                 summary_dict['test']['rmse']['mean'], summary_dict['test']['rmse']['std'],
-                 summary_dict['test']['r2']['mean'], summary_dict['test']['r2']['std'],
-                 summary_dict['test']['p']['mean'], summary_dict['test']['p']['std']))
+            print(
+                "Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+                % (
+                    summary_dict["train"]["mae"]["mean"],
+                    summary_dict["train"]["mae"]["std"],
+                    summary_dict["train"]["rmse"]["mean"],
+                    summary_dict["train"]["rmse"]["std"],
+                    summary_dict["train"]["r2"]["mean"],
+                    summary_dict["train"]["r2"]["std"],
+                    summary_dict["train"]["p"]["mean"],
+                    summary_dict["train"]["p"]["std"],
+                )
+            )
+            print(
+                "Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+                % (
+                    summary_dict["test"]["mae"]["mean"],
+                    summary_dict["test"]["mae"]["std"],
+                    summary_dict["test"]["rmse"]["mean"],
+                    summary_dict["test"]["rmse"]["std"],
+                    summary_dict["test"]["r2"]["mean"],
+                    summary_dict["test"]["r2"]["std"],
+                    summary_dict["test"]["p"]["mean"],
+                    summary_dict["test"]["p"]["std"],
+                )
+            )
 
         elif self.model_type == "hyperopt":
             print("Running Hyperparameter optimization with 'hyperopt' model option...")
@@ -566,7 +582,7 @@ class Classifier:
     predict(self, X): Predict class labels with fitted model.
     """
 
-    def __init__(self, CV_split: int = 5, seed=None, thr: float = 0.5, ci_val: float = 0.95, verbose: bool = False):
+    def __init__(self, CV_split: int = 5, seed: int = 1102, thr: float = 0.5, ci_val: float = 0.95, verbose: bool = False):
         """Initialise variables."""
 
         # Set required modelling parts
@@ -584,7 +600,7 @@ class Classifier:
         self.verbose = verbose
 
         # Initialize metrics storage
-        self.metrics = CVMetricsHandler(task_type='classification')
+        self.metrics = CVMetricsHandler(task_type="classification")
 
     def set_model(self):
         """Sets the model to use in the pipeline."""
@@ -624,7 +640,7 @@ class Classifier:
     def _calculate_metrics(self, y_pred, y_true):
         """Calculate metrics for classification."""
 
-        # Calculate auc, accuracy, sensistiivyt and specificity 
+        # Calculate auc, accuracy, sensistiivyt and specificity
         auc = metrics.roc_auc_score(y_true, y_pred)
         acc = metrics.accuracy_score(y_true, y_pred > self.thr)
         tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred > self.thr).ravel()
@@ -634,22 +650,39 @@ class Classifier:
         return auc, acc, sensitivity, specificity
 
     @verbose_wrapper
-    def fit_model(self, X, y, scale=False):
+    def fit_model(self, X, y, subsample: bool = False, scale=False):
         """Fit the model.
 
         Parameters
         ----------
         X: 2D-Array with features; shape=(n,m)
-        y: 1D-Array with labbels; shape=n"""
+        y: 1D-Array with labels; shape=n
+        subsample: bool to indicate if we subsample the bigger group in the CV"""
 
         # Arrays to store  values
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
 
+        # If subsampling needed, find which is the majority class
+        if subsample:
+            print("Class imbalance in classification greater than 2:1," " subsampling bigger group during CV.")
+            unique, counts = np.unique(y, return_counts=True)
+            maj_class = unique[np.argmax(counts)]
+
         kf = model_selection.KFold(n_splits=self.CV_split, shuffle=True, random_state=self.seed)
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
+
+            # inside CV split, subsample majority class if indicated by flag
+            if subsample:
+                maj_class_indices = np.where(y_train == maj_class)[0]
+                min_class_indices = np.where(y_train != maj_class)[0]
+                n_min = len(min_class_indices)
+                subsampled_maj_indices = np.random.choice(maj_class_indices, size=n_min, replace=False)
+                selected_indices = np.concatenate((subsampled_maj_indices, min_class_indices))
+                X_train = X_train[selected_indices]
+                y_train = y_train[selected_indices]
 
             # Scale data
             if scale:
@@ -665,7 +698,9 @@ class Classifier:
             y_preds[test_index] = y_pred
 
             # Calculate metrics
-            auc_train, acc_train, sensitivity_train, specificity_train = self._calculate_metrics(self.model.predict_proba(X_train)[::, 1], y_train)
+            auc_train, acc_train, sensitivity_train, specificity_train = self._calculate_metrics(
+                self.model.predict_proba(X_train)[::, 1], y_train
+            )
             auc, acc, sensitivity, specificity = self._calculate_metrics(y_pred, y_test)
             test_metrics = ClassificationFoldMetrics(auc, acc, sensitivity, specificity)
             train_metrics = ClassificationFoldMetrics(auc_train, acc_train, sensitivity_train, specificity_train)
@@ -676,18 +711,34 @@ class Classifier:
 
         # Print results
         print("Summary metrics over all CV splits (%s CI)" % (self.ci_val))
-        print("AUC: %.3f [%.3f-%.3f]" % (summary_dict['test']['auc']['mean'],
-                                         summary_dict['test']['auc']['95ci'][0],
-                                         summary_dict['test']['auc']['95ci'][1]))
-        print("Accuracy: %.3f [%.3f-%.3f]" % (summary_dict['test']['accuracy']['mean'],
-                                             summary_dict['test']['accuracy']['95ci'][0],
-                                             summary_dict['test']['accuracy']['95ci'][1]))
-        print("Sensitivity: %.3f [%.3f-%.3f]" % (summary_dict['test']['sensitivity']['mean'],
-                                               summary_dict['test']['sensitivity']['95ci'][0],
-                                               summary_dict['test']['sensitivity']['95ci'][1]))
-        print("Specificity: %.3f [%.3f-%.3f]" % (summary_dict['test']['specificity']['mean'],
-                                               summary_dict['test']['specificity']['95ci'][0],
-                                               summary_dict['test']['specificity']['95ci'][1]))
+        print(
+            "AUC: %.3f [%.3f-%.3f]"
+            % (summary_dict["test"]["auc"]["mean"], summary_dict["test"]["auc"]["95ci"][0], summary_dict["test"]["auc"]["95ci"][1])
+        )
+        print(
+            "Accuracy: %.3f [%.3f-%.3f]"
+            % (
+                summary_dict["test"]["accuracy"]["mean"],
+                summary_dict["test"]["accuracy"]["95ci"][0],
+                summary_dict["test"]["accuracy"]["95ci"][1],
+            )
+        )
+        print(
+            "Sensitivity: %.3f [%.3f-%.3f]"
+            % (
+                summary_dict["test"]["sensitivity"]["mean"],
+                summary_dict["test"]["sensitivity"]["95ci"][0],
+                summary_dict["test"]["sensitivity"]["95ci"][1],
+            )
+        )
+        print(
+            "Specificity: %.3f [%.3f-%.3f]"
+            % (
+                summary_dict["test"]["specificity"]["mean"],
+                summary_dict["test"]["specificity"]["95ci"][0],
+                summary_dict["test"]["specificity"]["95ci"][1],
+            )
+        )
 
         # Final model trained on all data
         if scale:
@@ -709,11 +760,11 @@ class Classifier:
         # Check that model has previously been fit
         if not self.modelFit:
             raise ValueError("Must fit the classifier before calling predict.")
-        
+
         # Scale data
-        if scale and hasattr(self, 'scaler'):
+        if scale and hasattr(self, "scaler"):
             X = self.scaler.transform(X)
-        elif scale and not hasattr(self, 'scaler'):
+        elif scale and not hasattr(self, "scaler"):
             raise ValueError("Must fit the model with scaling before calling predict with scaling.")
 
         # Predict class labels

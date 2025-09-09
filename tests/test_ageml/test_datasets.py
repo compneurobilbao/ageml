@@ -1,12 +1,12 @@
 import os
-import importlib.resources as pkg_resources
+import importlib.resources as resources
 
 import ageml.datasets as datasets
 import ageml.datasets.synthetic_data as data_generator
 from ageml.datasets import SyntheticData
 
 # Expected paths
-datasets_path = str(pkg_resources.files(datasets))
+datasets_path = str(resources.files(datasets))
 expected_paths = {
     "features": os.path.join(datasets_path, "toy_features.csv"),
     "clinical": os.path.join(datasets_path, "toy_clinical.csv"),
