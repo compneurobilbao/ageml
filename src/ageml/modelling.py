@@ -650,7 +650,7 @@ class Classifier:
         return auc, acc, sensitivity, specificity
 
     @verbose_wrapper
-    def fit_model(self, X, y, subsample: bool = True, scale=False):
+    def fit_model(self, X, y, subsample: bool = False, scale=False):
         """Fit the model.
 
         Parameters
@@ -677,7 +677,8 @@ class Classifier:
             y_train, y_test = y[train_index], y[test_index]
 
             # Inside CV split, subsample majority class if indicated by flag
-            if subsample:
+            # If both classes are of same size, no subsampling is done
+            if subsample and (counts[0] != counts[1]):
                 maj_class_indices = np.where(y_train == maj_class)[0]
                 min_class_indices = np.where(y_train != maj_class)[0]
                 n_min = len(min_class_indices)
