@@ -650,7 +650,7 @@ class Classifier:
         return auc, acc, sensitivity, specificity
 
     @verbose_wrapper
-    def fit_model(self, X, y, subsample: bool = False, scale=False):
+    def fit_model(self, X, y, subsample: bool = True, scale=False):
         """Fit the model.
 
         Parameters
@@ -663,18 +663,20 @@ class Classifier:
         y = y.ravel()
         y_preds = np.empty(shape=y.shape)
 
-        # If subsampling needed, find which is the majority class
+        # Find which is the majority class when subsampling is indicated
         if subsample:
-            print("Class imbalance in classification greater than 2:1," " subsampling bigger group during CV.")
+            print("Subsampling majority class inside CV folds.")
             unique, counts = np.unique(y, return_counts=True)
             maj_class = unique[np.argmax(counts)]
 
+        # To avoid data underutilization and biases, first split data into CV splits,
+        # then subsample majority class inside each split if indicated by flag.
         kf = model_selection.KFold(n_splits=self.CV_split, shuffle=True, random_state=self.seed)
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            # inside CV split, subsample majority class if indicated by flag
+            # Inside CV split, subsample majority class if indicated by flag
             if subsample:
                 maj_class_indices = np.where(y_train == maj_class)[0]
                 min_class_indices = np.where(y_train != maj_class)[0]
@@ -684,7 +686,7 @@ class Classifier:
                 X_train = X_train[selected_indices]
                 y_train = y_train[selected_indices]
 
-            # Scale data
+            # Scale data if indicated by flag
             if scale:
                 self.scaler = StandardScaler()
                 X_train = self.scaler.fit_transform(X_train)

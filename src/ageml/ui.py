@@ -1060,16 +1060,11 @@ class Interface:
         else:
             deltas_group2 = y_corrected_cn - y_cn
 
-        # Subsampling bigger group in CV if ratio between classes is <= 0.5
-        min_samples = min(len(deltas_group1), len(deltas_group2))
-        max_samples = max(len(deltas_group1), len(deltas_group2))
-        subsample = True if (min_samples / max_samples) <= 0.5 else False
-
         # Classify between groups using deltas
         deltas = np.concatenate((deltas_group1, deltas_group2)).reshape(-1, 1)
         labels = np.concatenate((np.zeros(deltas_group1.shape), np.ones(deltas_group2.shape)))
         self.classifier = self.generate_classifier()
-        _ = self.classifier.fit_model(deltas, labels, subsample)
+        _ = self.classifier.fit_model(deltas, labels, subsample=True)
 
         # Calculate AUC
         summary_metrics = self.classifier.metrics.get_summary()
@@ -1081,18 +1076,13 @@ class Interface:
     def classify_with_features(self, X_group1, X_group2):
         """Classify between groups using features."""
 
-        # Subsampling bigger group in CV if ratio between classes is <= 0.5
-        min_samples = min(len(X_group1), len(X_group2))
-        max_samples = max(len(X_group1), len(X_group2))
-        subsample = True if (min_samples / max_samples) <= 0.5 else False
-
         # Concatenate features
         X = np.concatenate((X_group1, X_group2))
         y = np.concatenate((np.zeros(X_group1.shape[0]), np.ones(X_group2.shape[0])))
 
         # Classify between groups using features
         self.classifier = self.generate_classifier()
-        _ = self.classifier.fit_model(X, y, subsample=subsample, scale=True)
+        _ = self.classifier.fit_model(X, y, subsample=True, scale=True)
 
         # Calculate AUC
         summary_metrics = self.classifier.metrics.get_summary()
