@@ -31,8 +31,8 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
-from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
-from hyperopt import tpe
+# from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
+# from hyperopt import tpe
 
 from ageml.utils import verbose_wrapper
 from ageml.processing import RegressionFoldMetrics, ClassificationFoldMetrics, CVMetricsHandler
@@ -106,7 +106,7 @@ class AgeML:
         "linear_svr": svm.SVR,
         "xgboost": XGBRegressor,  # XGBoost
         "rf": RandomForestRegressor,
-        "hyperopt": HyperoptEstimator,
+        # "hyperopt": HyperoptEstimator,
     }
     model_hyperparameter_ranges = {
         "ridge": {"alpha": [-3, 3]},
@@ -266,11 +266,12 @@ class AgeML:
         if model_type not in self.model_dict.keys():
             raise ValueError(f"Must select an available model type. Available: {list(self.model_dict.keys())}")
         elif model_type == "hyperopt":
-            self.model = HyperoptEstimator(
-                regressor=any_regressor("age_regressor"),
-                preprocessing=any_preprocessing("age_preprocessing"),
-                algo=tpe.suggest,
-            )
+            exit("Hyperopt model currently disabled. Please select another model.")
+            # self.model = HyperoptEstimator(
+            #     regressor=any_regressor("age_regressor"),
+            #     preprocessing=any_preprocessing("age_preprocessing"),
+            #     algo=tpe.suggest,
+            # )
         else:
             self.model = self.model_dict[model_type](**kwargs)
 
