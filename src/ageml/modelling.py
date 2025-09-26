@@ -317,7 +317,7 @@ class AgeML:
         y_pred: 1D-Array with predicted ages; shape=n"""
 
         mae = metrics.mean_absolute_error(y_true, y_pred)
-        rmse = metrics.mean_squared_error(y_true, y_pred, squared=False)
+        rmse = metrics.root_mean_squared_error(y_true, y_pred)
         r2 = metrics.r2_score(y_true, y_pred)
         p, _ = stats.pearsonr(y_true, y_pred)
         return mae, rmse, r2, p
@@ -682,6 +682,13 @@ class Classifier:
             if subsample and (counts[0] != counts[1]):
                 maj_class_indices = np.where(y_train == maj_class)[0]
                 min_class_indices = np.where(y_train != maj_class)[0]
+                
+                # In certain folds, majority class might be minority, so we can swap
+                # them to always subsample majority class of fold. This is not the
+                # typical case, but can happen.
+                if len(maj_class_indices) < len(min_class_indices):
+                    maj_class_indices, min_class_indices = min_class_indices, maj_class_indices
+
                 n_min = len(min_class_indices)
                 subsampled_maj_indices = np.random.choice(maj_class_indices, size=n_min, replace=False)
                 selected_indices = np.concatenate((subsampled_maj_indices, min_class_indices))
