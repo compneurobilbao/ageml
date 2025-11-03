@@ -58,13 +58,21 @@ If you also used __model_feature_influence__ or __age_model_vs_logistic_regressi
 J. Garcia Condado, I. Verdugo Recuero, I. Tellaetxe Elorriaga, C. Birkhenbihl, M. Carrigan, R. Buckley, A. Erramuzpe and J. M. Cortes, "Aging as an active player in Alzheimer's Disease Classification: Insights from feature selection in BrainAge Models," in *MedrXiv*, doi: 10.1101/2025.04.16.25325953
 
 ```
-@article {AgeingBrainAgeAlzheimer,
-	title = {Aging as an active player in Alzheimer's Disease Classification: Insights from feature selection in BrainAge Models},
-	author = {Garcia Condado, Jorge and Verdugo Recuero, Ines and Elorriaga Tellaetxe, Iñigo and Birkhenbil, Colin and Carrigan, Maria and Diez, Ibai and Buckley, Rachel F and Erramuzpe, Asier and Cortes, Jesus M and the Alzheimer's Disease Neuroimaging Initiative},
-	year = {2025},
-	doi = {10.1101/2025.04.16.25325953},
-	journal = {medRxiv}
+@article{condadoAgingActivePlayer2025,
+  title = {Aging as an Active Player in {{Alzheimer}}’s {{Disease Classification}}: {{Insights}} from Feature Selection in {{BrainAge Models}}},
+  shorttitle = {Aging as an Active Player in {{Alzheimer}}’s {{Disease Classification}}},
+  author = {Condado, Jorge Garcia and Recuero, Ines Verdugo and Elorriaga, Iñigo Tellaetxe and Birkhenbil, Colin and Carrigan, Maria and Diez, Ibai and Buckley, Rachel F and Erramuzpe, Asier and Cortes, Jesus M},
+  date = {2025-10-21},
+  journaltitle = {NeuroImage},
+  shortjournal = {NeuroImage},
+  pages = {121548},
+  issn = {1053-8119},
+  doi = {10.1016/j.neuroimage.2025.121548},
+  url = {https://www.sciencedirect.com/science/article/pii/S1053811925005518},
+  urldate = {2025-10-27},
+  keywords = {Alzheimer’s Disease,Brain Age,Machine Learning,Neuroimaging,Neuropsychology},
 }
+
 ```
 
 ## How to install `ageml`
