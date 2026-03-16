@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import random
 import string
-import pandas as pd
+import polars as pl
 import numpy as np
 
 import ageml.messages as messages
@@ -45,7 +45,7 @@ class ExampleArguments(object):
 
 @pytest.fixture
 def features():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [
                 1,
@@ -137,13 +137,12 @@ def features():
             ],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def factors():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [
                 1,
@@ -213,19 +212,17 @@ def factors():
             ],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def covariates():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "sex": [0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
@@ -236,20 +233,19 @@ def systems():
 
 @pytest.fixture
 def clinical():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "CN": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
             "group1": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def ages():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
@@ -258,13 +254,12 @@ def ages():
             "delta_all": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1, 2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def ages_multisystem():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "age": [50, 55, 60, 65, 70, 75, 80, 85, 90, 57, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89],
@@ -276,7 +271,6 @@ def ages_multisystem():
             "delta_mondongsystem": [1, -2, 3, 0, -1, 2, 1, 0, -3, 1, 2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
@@ -285,8 +279,24 @@ def create_csv(df, path):
     letters = string.ascii_lowercase
     csv_name = "".join(random.choice(letters) for i in range(20)) + ".csv"
     file_path = os.path.join(path, csv_name)
-    df.to_csv(path_or_buf=file_path, index=True)
+    df.write_csv(file_path)
     return file_path
+
+
+def set_cell(df, row_id, col, value, as_string=False):
+    if as_string:
+        return df.with_columns(
+            pl.when(pl.col("id") == row_id)
+            .then(pl.lit(str(value)))
+            .otherwise(pl.col(col).cast(pl.Utf8))
+            .alias(col)
+        )
+    return df.with_columns(
+        pl.when(pl.col("id") == row_id)
+        .then(pl.lit(value))
+        .otherwise(pl.col(col))
+        .alias(col)
+    )
 
 
 def create_txt(txt, path):
@@ -355,8 +365,8 @@ def test_load_csv(dummy_interface, features):
     dummy_interface.args.features = features_path
     data = dummy_interface.load_csv("features")
 
-    # Check that the data is a pandas dataframe
-    assert isinstance(data, pd.core.frame.DataFrame)
+    # Check that the data is a tabular dataframe
+    assert isinstance(data, pl.DataFrame)
     # Check that the column in the dataframe are lowercase
     assert all([col.islower() for col in data.columns])
 
@@ -367,8 +377,8 @@ def test_load_data(dummy_interface, features):
     dummy_interface.args.features = features_path
     dummy_interface.load_data()
 
-    # Check that the data is a pandas dataframe
-    assert isinstance(dummy_interface.df_features, pd.core.frame.DataFrame)
+    # Check that the data is a tabular dataframe
+    assert isinstance(dummy_interface.df_features, pl.DataFrame)
 
     # Check that the column in the dataframe are lowercase
     assert all([col.islower() for col in dummy_interface.df_features.columns])
@@ -376,7 +386,7 @@ def test_load_data(dummy_interface, features):
 
 def test_load_data_age_not_column(dummy_interface, features):
     # Remove age columng from features
-    features.drop("age", axis=1, inplace=True)
+    features = features.drop("age")
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
 
@@ -390,8 +400,8 @@ def test_load_data_age_not_column(dummy_interface, features):
 
 def test_load_data_not_float(dummy_interface, features):
     # Change item to string
-    features.loc[2, "feature1"] = "test"
-    features.loc[3, "feature2"] = "test"
+    features = set_cell(features, 2, "feature1", "test", as_string=True)
+    features = set_cell(features, 3, "feature2", "test", as_string=True)
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
 
@@ -405,8 +415,8 @@ def test_load_data_not_float(dummy_interface, features):
 
 def test_load_factors_not_float(dummy_interface, factors):
     # Change item to string
-    factors.loc[2, "factor1"] = "asdf"
-    factors.loc[3, "factor2"] = "asdf"
+    factors = set_cell(factors, 2, "factor1", "asdf", as_string=True)
+    factors = set_cell(factors, 3, "factor2", "asdf", as_string=True)
     factors_path = create_csv(factors, dummy_interface.dir_path)
     dummy_interface.args.factors = factors_path
 
@@ -420,7 +430,7 @@ def test_load_factors_not_float(dummy_interface, factors):
 
 def test_load_data_covariates_not_float(dummy_interface, covariates):
     # Change item to string
-    covariates.loc[2, "sex"] = "asdf"
+    covariates = set_cell(covariates, 2, "sex", "asdf", as_string=True)
     covariates_path = create_csv(covariates, dummy_interface.dir_path)
     dummy_interface.args.covariates = covariates_path
 
@@ -434,9 +444,9 @@ def test_load_data_covariates_not_float(dummy_interface, covariates):
 
 def test_load_data_ages_not_float(dummy_interface, ages):
     # Change item to string
-    ages.loc[2, "predicted_age_all"] = "asdf"
-    ages.loc[3, "corrected_age_all"] = "asdf"
-    ages.loc[4, "delta_all"] = "asdf"
+    ages = set_cell(ages, 2, "predicted_age_all", "asdf", as_string=True)
+    ages = set_cell(ages, 3, "corrected_age_all", "asdf", as_string=True)
+    ages = set_cell(ages, 4, "delta_all", "asdf", as_string=True)
     ages_path = create_csv(ages, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
 
@@ -450,7 +460,7 @@ def test_load_data_ages_not_float(dummy_interface, ages):
 
 def test_load_data_cn_not_column(dummy_interface, clinical):
     # Test no CN column in clinical
-    clinical.drop("CN", axis=1, inplace=True)
+    clinical = clinical.drop("CN")
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -467,9 +477,9 @@ def test_load_data_ages_missing_column(dummy_interface, ages):
     cols = ["age", "predicted_age", "corrected_age", "delta"]
     for col in cols:
         # Remove column
-        df = ages.copy()
+        df = ages.clone()
         col_drop = [c for c in df.columns if c.startswith(col)]
-        df.drop(col_drop[0], axis=1, inplace=True)
+        df = df.drop(col_drop[0])
         file_path = create_csv(df, dummy_interface.dir_path)
         dummy_interface.args.ages = file_path
 
@@ -503,8 +513,8 @@ def test_load_data_required_file_types(dummy_interface):
 
 def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     # Change booleans to other types
-    clinical.loc[2, "CN"] = 1.3
-    clinical.loc[3, "group1"] = "mondongo"  # excellent placeholder
+    clinical = set_cell(clinical, 2, "CN", 1.3)
+    clinical = set_cell(clinical, 3, "group1", "mondongo", as_string=True)  # excellent placeholder
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -517,7 +527,7 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
 
 def test_load_data_clinical_empty_column(dummy_interface, clinical):
     # Make a column all False
-    clinical.loc[:, "CN"] = 0
+    clinical = clinical.with_columns(pl.lit(0).alias("CN"))
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -530,7 +540,8 @@ def test_load_data_clinical_empty_column(dummy_interface, clinical):
 
 def test_load_data_clinical_empty_row(dummy_interface, clinical):
     # Make a row all False
-    clinical.loc[2, :] = 0
+    for col in [c for c in clinical.columns if c != "id"]:
+        clinical = set_cell(clinical, 2, col, 0)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.clinical = clinical_path
 
@@ -544,8 +555,8 @@ def test_load_data_clinical_empty_row(dummy_interface, clinical):
 def test_load_data_nan_values_warning(dummy_interface, features):
     # Remove from features a few values
     missing_subjects = sorted([2,3])
-    features.loc[missing_subjects[0], "feature1"] = np.nan
-    features.loc[missing_subjects[1], "feature2"] = np.nan
+    features = set_cell(features, missing_subjects[0], "feature1", None)
+    features = set_cell(features, missing_subjects[1], "feature2", None)
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
     dummy_interface.command_dir = tempfile.mkdtemp()
@@ -569,8 +580,8 @@ def test_load_data_different_indexes_warning(dummy_interface, features, clinical
     # Drop subjects 2 and 3 from features
     drop_features = sorted([2, 3])
     drop_clinical = sorted([4])
-    features.drop(drop_features, axis=0, inplace=True)
-    clinical.drop(drop_clinical, axis=0, inplace=True)
+    features = features.filter(~pl.col("id").is_in(drop_features))
+    clinical = clinical.filter(~pl.col("id").is_in(drop_clinical))
     features_path = create_csv(features, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
@@ -645,7 +656,7 @@ def test_run_age(dummy_interface, features):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all([col in df.columns for col in ["age", "predicted_age_all", "corrected_age_all", "delta_all"]])
 
 
@@ -680,7 +691,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all([col in df.columns for col in ["age", "predicted_age_all", "corrected_age_all", "delta_all"]])
 
 
@@ -717,7 +728,7 @@ def test_run_age_cov(dummy_interface, features, covariates):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all([col in df.columns for col in ["age", "predicted_age_all", "corrected_age_all", "delta_all"]])
 
 
@@ -756,7 +767,7 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all([col in df.columns for col in ["age", "predicted_age_all", "corrected_age_all", "delta_all"]])
 
 
@@ -789,7 +800,7 @@ def test_run_age_systems(dummy_interface, systems, features):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
@@ -825,7 +836,7 @@ def test_run_age_systems_clinical(dummy_interface, systems, features, clinical):
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
@@ -865,7 +876,7 @@ def test_run_age_cov_and_systems(dummy_interface, systems, features, covariates)
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
@@ -908,7 +919,7 @@ def test_run_age_cov_and_systems_clinical(dummy_interface, systems, features, co
     assert os.path.exists(csv_path)
 
     # Check that the output CSV has the right columns
-    df = pd.read_csv(csv_path, header=0, index_col=0)
+    df = pl.read_csv(csv_path)
     assert all(any(word in s for s in df.columns) for word in ["age", "predicted_age", "corrected_age", "delta"])
 
 
@@ -1013,7 +1024,7 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
 
 def test_run_age_few_subjects(dummy_interface, features):
     # Run the modelling pipeline
-    features = features.iloc[:2, :]
+    features = features.head(2)
     features_path = create_csv(features, dummy_interface.dir_path)
     dummy_interface.args.features = features_path
 
@@ -1061,7 +1072,7 @@ def test_run_clinical_systems(dummy_interface, ages_multisystem, clinical):
     assert os.path.exists(dummy_interface.dir_path)
 
     # Check for the existence of the output figures
-    system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+    system_names = list({col.split("_")[-1] for col in ages_multisystem.columns if "system" in col})
     figs = ["age_distribution_clinical_groups"]
     for system in system_names:
         figs.append(f"clinical_groups_box_plot_{system}")
@@ -1112,7 +1123,7 @@ def test_run_classification_systems(dummy_interface, ages_multisystem, clinical)
         assert os.path.exists(dummy_interface.dir_path)
 
         # Check for the existence of the output figures
-        system_names = list({col.split("_")[-1] for col in ages_multisystem if "system" in col})
+        system_names = list({col.split("_")[-1] for col in ages_multisystem.columns if "system" in col})
         figs = []
         for system in system_names:
             figs.append(f"roc_curve_{dummy_interface.args.group1}_vs_{dummy_interface.args.group2}_{system}")
@@ -1157,7 +1168,7 @@ def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
 
 def test_classification_few_subjects(dummy_interface, ages, clinical):
     # Run create classification pipeline with no groups
-    ages = ages.iloc[:2, :]
+    ages = ages.head(2)
     ages_path = create_csv(ages, dummy_interface.dir_path)
     clinical_path = create_csv(clinical, dummy_interface.dir_path)
     dummy_interface.args.ages = ages_path
@@ -1426,7 +1437,7 @@ def test_factor_correlation_command_CLI(dummy_cli, ages, factors, monkeypatch, c
     # Create features csv file
     ages_path = create_csv(ages, tempDir.name)
     factors_path = create_csv(factors, tempDir.name)
-    empty_path = create_csv(pd.DataFrame([]), tempDir.name)
+    empty_path = create_csv(pl.DataFrame({"id": []}), tempDir.name)
 
     # Test command
     responses = ["factor_correlation", ages_path, factors_path, "", "", "q"]

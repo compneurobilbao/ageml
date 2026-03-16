@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import pandas as pd
+import polars as pl
 import ageml.processing as processing
 
 def test_find_correlations():
@@ -157,13 +157,13 @@ def test_get_summary_dataframe(regressionhandler, sample_metrics):
     regressionhandler.add_fold_metrics(train_fold, test_fold)
     df = regressionhandler.get_summary_dataframe()
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert set(df.columns) == {'split', 'metric', 'statistic', 'value'}
     assert len(df) == 40  # 2 splits * 4 metrics * 5 statistics
 
-    assert set(df['split'].unique()) == {'train', 'test'}
-    assert set(df['metric'].unique()) == {'mae', 'rmse', 'r2', 'p'}
-    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max', '95ci'}
+    assert set(df['split'].unique().to_list()) == {'train', 'test'}
+    assert set(df['metric'].unique().to_list()) == {'mae', 'rmse', 'r2', 'p'}
+    assert set(df['statistic'].unique().to_list()) == {'mean', 'std', 'min', 'max', '95ci'}
 
 
 @pytest.fixture
@@ -214,10 +214,10 @@ def test_get_summary_dataframe_classification(classificationhandler, classificat
     classificationhandler.add_fold_metrics(train_fold, test_fold)
     df = classificationhandler.get_summary_dataframe()
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert set(df.columns) == {'split', 'metric', 'statistic', 'value'}
     assert len(df) == 40  # 2 splits * 4 metrics * 5 statistics
 
-    assert set(df['split'].unique()) == {'train', 'test'}
-    assert set(df['metric'].unique()) == {'auc', 'accuracy', 'sensitivity', 'specificity'}
-    assert set(df['statistic'].unique()) == {'mean', 'std', 'min', 'max', '95ci'}
+    assert set(df['split'].unique().to_list()) == {'train', 'test'}
+    assert set(df['metric'].unique().to_list()) == {'auc', 'accuracy', 'sensitivity', 'specificity'}
+    assert set(df['statistic'].unique().to_list()) == {'mean', 'std', 'min', 'max', '95ci'}

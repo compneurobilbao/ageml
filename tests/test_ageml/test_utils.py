@@ -1,7 +1,7 @@
 import pytest
 import os
 import shutil
-import pandas as pd
+import polars as pl
 import ageml.utils as utils
 
 class InstanceClass(object):
@@ -107,7 +107,7 @@ def test_insert_newlines_zerospacing():
 
 
 def test_feature_extractor():
-    df = pd.DataFrame({"age": [1, 2, 3], "feature1": [4, 5, 6], "feature2": [7, 8, 9]})
+    df = pl.DataFrame({"age": [1, 2, 3], "feature1": [4, 5, 6], "feature2": [7, 8, 9]})
     X, y, feature_names = utils.feature_extractor(df)
     assert X.shape == (3, 2)
     assert y.shape == (3,)

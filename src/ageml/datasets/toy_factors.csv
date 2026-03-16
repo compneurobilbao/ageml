@@ -1,4 +1,4 @@
-,MOCAScore,HeavyDrinkingScore,PhysicalActivityScore
+index,MOCAScore,HeavyDrinkingScore,PhysicalActivityScore
 0,0.483,-0.780,0.631
 1,-0.587,-0.023,0.983
 2,0.779,-0.353,0.844

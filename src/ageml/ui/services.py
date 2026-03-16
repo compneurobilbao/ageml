@@ -4,9 +4,8 @@ These helpers keep the `Interface` class focused on flow control and I/O,
 while the data shaping and object-construction logic lives in reusable functions.
 """
 
-import pandas as pd
-
 from ageml.modelling import AgeML, Classifier
+import polars as pl
 
 
 def initialize_storage_dicts(subject_types, covars, systems):
@@ -25,15 +24,16 @@ def initialize_storage_dicts(subject_types, covars, systems):
 def populate_feature_dataframes(dfs, df_features, df_clinical, df_covariates, args, flags, subject_types, covars, systems, dict_systems):
     """Populate feature dataframe slices by subject type, covariate and system."""
     for subject_type in subject_types:
-        df_sub = df_features[df_clinical[subject_type]]
+        subject_ids = df_clinical.filter(pl.col(subject_type)).get_column("id").to_list()
+        df_sub = df_features.filter(pl.col("id").is_in(subject_ids))
         for covar in covars:
             if flags["covarname"]:
-                covar_index = set(df_covariates[df_covariates[args.covar_name] == covar].index)
-                df_cov = df_sub[df_sub.index.isin(covar_index)]
+                covar_ids = df_covariates.filter(pl.col(args.covar_name) == covar).get_column("id").to_list()
+                df_cov = df_sub.filter(pl.col("id").is_in(covar_ids))
             else:
                 df_cov = df_sub
             for system in systems:
-                dfs[subject_type][covar][system] = df_cov[["age"] + dict_systems[system]]
+                dfs[subject_type][covar][system] = df_cov.select(["id", "age"] + dict_systems[system])
 
 
 def build_model_from_args(args, verbose=False):
@@ -65,16 +65,18 @@ def update_runtime_params(flags, args, df_clinical, df_covariates, dict_systems,
     updated_systems = systems
 
     if flags["clinical"]:
-        updated_subject_types = df_clinical.columns.to_list()
+        updated_subject_types = [c for c in df_clinical.columns if c != "id"]
     if flags["covarname"]:
-        updated_covars = pd.unique(df_covariates[args.covar_name]).tolist()
+        covar_values = df_covariates[args.covar_name]
+        covar_values = covar_values.to_list() if hasattr(covar_values, "to_list") else list(covar_values)
+        updated_covars = list(dict.fromkeys(covar_values))
         updated_naming += f"_{args.covar_name}"
     if flags["systems"]:
         updated_systems = list(dict_systems.keys())
         updated_naming += "_multisystem"
     elif flags["features"]:
-        dict_systems["all"] = df_features.columns.drop("age").to_list()
+        dict_systems["all"] = [c for c in df_features.columns if c not in {"id", "age"}]
     if flags["ages"]:
-        updated_systems = [col[6:] for col in df_ages.columns if "delta" in col]
+        updated_systems = [col[6:] for col in df_ages.columns if "delta" in col and col != "id"]
 
     return updated_naming, updated_subject_types, updated_covars, updated_systems

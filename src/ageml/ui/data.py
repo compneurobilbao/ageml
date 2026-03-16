@@ -2,7 +2,21 @@
 
 import os
 
-import pandas as pd
+import polars as pl
+
+
+NUMERIC_DTYPES = {
+    pl.Int8,
+    pl.Int16,
+    pl.Int32,
+    pl.Int64,
+    pl.UInt8,
+    pl.UInt16,
+    pl.UInt32,
+    pl.UInt64,
+    pl.Float32,
+    pl.Float64,
+}
 
 
 def check_file_exists(file_path):
@@ -22,8 +36,15 @@ def load_csv_from_args(args, file_type):
     if not check_file_exists(file_path):
         raise FileNotFoundError("File %s not found." % file_path)
 
-    df = pd.read_csv(file_path, header=0, index_col=0)
-    df.columns = df.columns.str.lower()
+    df = pl.read_csv(file_path)
+    rename_map = {col: col.lower() for col in df.columns}
+    df = df.rename(rename_map)
+
+    if df.columns and df.columns[0] in {"", "unnamed: 0", "index"}:
+        df = df.rename({df.columns[0]: "id"})
+    if "id" not in df.columns:
+        df = df.with_row_index("id")
+
     return df
 
 
@@ -31,7 +52,9 @@ def validate_numeric_columns(df, label):
     """Ensure all columns are numeric (float or int)."""
     error_cols = []
     for col in df.columns:
-        if df[col].dtype not in [float, int]:
+        if col == "id":
+            continue
+        if df.schema[col] not in NUMERIC_DTYPES:
             error_cols.append(col)
     if error_cols:
         raise TypeError("%s file columns must be float or int type: %s" % (label, error_cols))
@@ -73,21 +96,27 @@ def validate_clinical_df(df):
 
     error_cols = []
     for column in df.columns:
-        if df[column].isin([0, 1]).all():
-            df[column] = df[column].astype(bool)
+        if column == "id":
+            continue
+        values = set(df[column].drop_nulls().to_list())
+        if values.issubset({0, 1, True, False}):
+            df = df.with_columns(pl.col(column).cast(pl.Boolean))
         else:
             error_cols.append(column)
 
     if error_cols:
         raise TypeError(f"Clinical file columns: {error_cols} contains values other than 0 and 1.")
 
-    for col in df.columns:
+    for col in [c for c in df.columns if c != "id"]:
         if df[col].sum() < 2:
             raise ValueError("Clinical column %s has less than two subjects." % col)
 
-    if not df.any(axis=1).all():
-        rows = df[~df.any(axis=1)].index.to_list()
+    cols = [c for c in df.columns if c != "id"]
+    if cols and not df.select(pl.any_horizontal([pl.col(c) for c in cols]).all()).item():
+        rows = df.filter(~pl.any_horizontal([pl.col(c) for c in cols])).get_column("id").to_list()
         raise ValueError("Clinical file contains rows with all False values. Please check the file. Rows: %s" % rows)
+
+    return df
 
 
 def validate_factors_df(df):
@@ -100,12 +129,14 @@ def validate_ages_df(df):
     validate_numeric_columns(df, "Ages")
 
     req_cols = ["age", "predicted_age", "corrected_age", "delta"]
-    cols = [col.lower() for col in df.columns.to_list()]
+    cols = [col.lower() for col in df.columns]
 
     for col in req_cols:
         if not any(c.startswith(col) for c in cols):
             raise KeyError("Ages file missing the following column %s, or derived names." % col)
 
     for col in cols:
+        if col == "id":
+            continue
         if not any(col.startswith(c) for c in req_cols):
             raise KeyError("Ages file contains unknwon column %s" % col)

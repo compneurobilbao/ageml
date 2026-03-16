@@ -12,7 +12,7 @@ InteractiveCLI - reads and parses user commands via command line via an interact
 
 import argparse
 import numpy as np
-import pandas as pd
+import polars as pl
 import os
 import warnings
 
@@ -228,6 +228,12 @@ class Interface:
 
         self.visualizer = Visualizer(dir)
 
+    def _covariates_for(self, df):
+        """Align covariates to the row order of a dataframe by subject id."""
+        aligned = df.select("id").join(self.df_covariates, on="id", how="left")
+        cols = [c for c in aligned.columns if c != "id"]
+        return aligned.select(cols).to_numpy()
+
     def set_dict(self):
         """Initialise dictionaries for data storage."""
         self.dfs, self.preds, self.models, self.betas = initialize_storage_dicts(self.subject_types, self.covars, self.systems)
@@ -366,7 +372,7 @@ class Interface:
         elif df is None:
             return df
 
-        validate_clinical_df(df)
+        df = validate_clinical_df(df)
 
         # Set clinical flag
         self.flags["clinical"] = True
@@ -437,7 +443,7 @@ class Interface:
         systems = {}
 
         # Load feature names
-        features = {f.lower() for f in self.df_features.columns.to_list()}
+        features = {f.lower() for f in self.df_features.columns if f != "id"}
 
         # Parse file
         for line in open(file, "r"):
@@ -524,7 +530,11 @@ class Interface:
         # Check for missing data
         print("Removing subjects with missing data...")
         for label, df in dfs.items():
-            missing_subjects = df[df.isnull().any(axis=1)].index.to_list()
+            cols = [c for c in df.columns if c != "id"]
+            if cols:
+                missing_subjects = df.filter(pl.any_horizontal([pl.col(c).is_null() for c in cols])).get_column("id").to_list()
+            else:
+                missing_subjects = []
             if missing_subjects.__len__() != 0:
                 warn_message = "Number of subjects with missing data in %s dataframe: %s" % (label, len(missing_subjects))
                 print(warn_message)
@@ -532,18 +542,18 @@ class Interface:
                 with open(os.path.join(self.command_dir, f"{label}_subjects_with_missing_data.txt"), "w") as f:
                     f.write("\n".join(map(str, missing_subjects)))
                     pass
-                dfs[label] = df.drop(missing_subjects)
+                dfs[label] = df.filter(~pl.col("id").is_in(missing_subjects))
 
         # Compute the intersection of the indices of the dataframes
-        indices_collection = [set(df.index) for df in dfs.values()]
+        indices_collection = [set(df.get_column("id").to_list()) for df in dfs.values()]
         shared_idx = list(indices_collection[0].intersection(*indices_collection[1:]))
         # Remove subjects not shared among dataframes, report subjects left for analysis, and set dataframes
         print("Removing subjects not shared among dataframes...")
         for label in dfs.keys():
-            removed_subjects = set(dfs[label].index) - set(shared_idx)
+            removed_subjects = set(dfs[label].get_column("id").to_list()) - set(shared_idx)
             if removed_subjects.__len__() != 0:
                 warn_message = f"{len(removed_subjects)} subjects removed from {label} dataframe."
-                dfs[label] = dfs[label].loc[shared_idx]
+                dfs[label] = dfs[label].filter(pl.col("id").is_in(shared_idx))
                 print(warn_message)
                 warnings.warn(warn_message, category=UserWarning)
                 # Save removed subjects in a txt file
@@ -599,10 +609,10 @@ class Interface:
         else:
             print("No clinical information provided using all subjects as CN.")
             if self.df_features is not None:
-                index = self.df_features.index
+                ids = self.df_features.get_column("id").to_list()
             elif self.df_ages is not None:
-                index = self.df_ages.index
-            self.df_clinical = pd.DataFrame(index=index, columns=["cn"], data=True)
+                ids = self.df_ages.get_column("id").to_list()
+            self.df_clinical = pl.DataFrame({"id": ids, "cn": [True] * len(ids)})
 
         # Update initial parameters after load
         self.update_params()
@@ -670,7 +680,7 @@ class Interface:
             # Covariate correction
             if self.flags["covariates"] and not self.flags["covarname"]:
                 print("Covariate effects will be subtracted from features.")
-                X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
+                X, _ = covariate_correction(X, self._covariates_for(df))
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(X, y)
             # Reject null hypothesis of no correlation
@@ -781,7 +791,7 @@ class Interface:
         # Covariate correction
         if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
-            X, beta = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy())
+            X, beta = covariate_correction(X, self._covariates_for(df))
         else:
             beta = None
 
@@ -797,7 +807,13 @@ class Interface:
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
         cols = ["age", "predicted_age", "corrected_age", "delta"]
-        df_ages = pd.DataFrame(data, index=df.index, columns=cols)
+        df_ages = pl.DataFrame({
+            "id": df.get_column("id").to_list(),
+            cols[0]: data[:, 0],
+            cols[1]: data[:, 1],
+            cols[2]: data[:, 2],
+            cols[3]: data[:, 3],
+        })
 
         return model, df_ages, beta
 
@@ -819,8 +835,9 @@ class Interface:
                 self.models[covar][system] = model
                 self.betas[covar][system] = betas
                 # Save predictions
-                df_pred = df_pred.drop(columns=["age"])
-                df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                df_pred = df_pred.drop("age")
+                rename_map = {col: f"{col}_{system}" for col in df_pred.columns if col != "id"}
+                df_pred = df_pred.rename(rename_map)
                 self.preds["cn"][covar][system] = df_pred
 
     def __get_test_indices(self, covar, system):
@@ -850,7 +867,7 @@ class Interface:
         # Covariate correction
         if self.flags["covariates"] and not self.flags["covarname"]:
             print("Covariate effects will be subtracted from features.")
-            X, _ = covariate_correction(X, self.df_covariates.loc[df.index].to_numpy(), beta)
+            X, _ = covariate_correction(X, self._covariates_for(df), beta)
 
         # Predict age
         y_pred, y_corrected = model.predict_age(X, y)
@@ -861,7 +878,13 @@ class Interface:
         # Save to dataframe and csv
         data = np.stack((y, y_pred, y_corrected, deltas), axis=1)
         cols = ["age", "predicted_age", "corrected_age", "delta"]
-        df_ages = pd.DataFrame(data, index=df.index, columns=cols)
+        df_ages = pl.DataFrame({
+            "id": df.get_column("id").to_list(),
+            cols[0]: data[:, 0],
+            cols[1]: data[:, 1],
+            cols[2]: data[:, 2],
+            cols[3]: data[:, 3],
+        })
 
         return df_ages
 
@@ -879,8 +902,9 @@ class Interface:
                     df_pred = self.predict_age(
                         self.dfs[subject_type][covar][system], self.models[covar][system], tag, self.betas[covar][system]
                     )
-                    df_pred = df_pred.drop(columns=["age"])
-                    df_pred.rename(columns=lambda x: f"{x}_{system}", inplace=True)
+                    df_pred = df_pred.drop("age")
+                    rename_map = {col: f"{col}_{system}" for col in df_pred.columns if col != "id"}
+                    df_pred = df_pred.rename(rename_map)
                     self.preds[subject_type][covar][system] = df_pred
 
     def save_predictions(self):
@@ -890,22 +914,24 @@ class Interface:
         stack = []
         for subject_type in self.subject_types:
             for covar in self.covars:
-                df_systems = pd.concat([self.preds[subject_type][covar][system] for system in self.systems], axis=1)
+                system_frames = [self.preds[subject_type][covar][system] for system in self.systems]
+                df_systems = system_frames[0]
+                for frame in system_frames[1:]:
+                    df_systems = df_systems.join(frame, on="id", how="full")
                 stack.append(df_systems)
-        df_ages = pd.concat(stack, axis=0)
+        df_ages = pl.concat(stack, how="vertical_relaxed")
 
         # Drop duplicates keep first (some subjects may be in more than one subject type)
-        df_ages = df_ages[~df_ages.index.duplicated(keep="first")]
+        df_ages = df_ages.unique(subset=["id"], keep="first")
 
         # Add age information
-        df_ages = pd.concat([self.df_features["age"], df_ages], axis=1)
-
-        # Handle NaNs
-        df_ages = df_ages.fillna("")
+        if "age" in df_ages.columns:
+            df_ages = df_ages.drop("age")
+        df_ages = self.df_features.select(["id", "age"]).join(df_ages, on="id", how="left")
 
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
-        df_ages.to_csv(os.path.join(self.command_dir, filename))
+        df_ages.write_csv(os.path.join(self.command_dir, filename), null_value="")
 
         # CV-based modelling stores predictions directly, no extra test-index files are needed.
 
@@ -1127,8 +1153,8 @@ class Interface:
         corrs, significants = [], []
 
         # Factor information
-        factors = df_factors.to_numpy()
-        factor_names = df_factors.columns.to_list()
+        factor_names = [col for col in df_factors.columns if col != "id"]
+        factors = df_factors.select(factor_names).to_numpy()
 
         # Apply covariate correction
         if self.flags["covariates"]:
@@ -1178,26 +1204,22 @@ class Interface:
             if self.flags["covcorr_mode"] == "cn":
                 print("Correcting for covariates using CN group as reference.")
                 df_group = dfs["cn"]
-                group_idx = df_group.index
-                covars = self.df_covariates.loc[group_idx].to_numpy()
+                covars = self._covariates_for(df_group)
                 deltas = df_group[f"delta_{tag.system}"].to_numpy()
                 _, beta["cn"] = covariate_correction(deltas, covars)
             # When "all" -> Use whole dataset for computing beta
             elif self.flags["covcorr_mode"] == "all":
                 print("Correcting for covariates using whole population as reference.")
                 # Concatenate all groups to get the whole dataset
-                df_group = pd.concat(dfs, axis=0)
-                # Because all indices are used, get them from the covariates dataframe
-                group_idx = self.df_covariates.index
-                covars = self.df_covariates.to_numpy()
+                df_group = pl.concat(list(dfs.values()), how="vertical_relaxed")
+                covars = self._covariates_for(df_group)
                 deltas = df_group[f"delta_{tag.system}"].to_numpy()
                 _, beta["all"] = covariate_correction(deltas, covars)
             # When "each" -> Use each group for computing betas
             elif self.flags["covcorr_mode"] == "each":
                 print("Correcting for covariates of each group separately.")
                 for group, df_group in dfs.items():
-                    group_idx = df_group.index
-                    covars = self.df_covariates.loc[group_idx].to_numpy()
+                    covars = self._covariates_for(df_group)
                     deltas = df_group[f"delta_{tag.system}"].to_numpy()
                     _, beta[group] = covariate_correction(deltas, covars)
 
@@ -1207,7 +1229,7 @@ class Interface:
             vals = df_group[f"delta_{tag.system}"].to_numpy()
             # Apply covariate correction coefficients
             if self.flags["covariates"]:
-                covars = self.df_covariates.loc[df_group.index].to_numpy()
+                covars = self._covariates_for(df_group)
                 # When "cn" or "all" -> Use the same beta for all groups
                 if self.flags["covcorr_mode"] in ["cn", "all"]:
                     vals, _ = covariate_correction(vals, covars, beta[self.flags["covcorr_mode"]])
@@ -1299,26 +1321,27 @@ class Interface:
             beta = {}
             if self.flags["covcorr_mode"] == "cn":
                 print("Applying covariate correction for deltas using CN group as reference.")
-                group_index = self.df_clinical["cn"]
-                df_cn = self.df_ages[group_index]
-                covars = self.df_covariates.loc[group_index].to_numpy()
+                cn_ids = self.df_clinical.filter(pl.col("cn")).get_column("id").to_list()
+                df_cn = self.df_ages.filter(pl.col("id").is_in(cn_ids))
+                covars = self._covariates_for(df_cn)
                 deltas = df_cn[delta_cols].to_numpy()
                 _, beta["cn"] = covariate_correction(deltas, covars)
             elif self.flags["covcorr_mode"] == "all":
                 print("Applying covariate correction for deltas using whole population as reference.")
-                covars = self.df_covariates.to_numpy()
+                covars = self.df_covariates.drop("id").to_numpy()
                 deltas = self.df_ages[delta_cols].to_numpy()
                 _, beta["all"] = covariate_correction(deltas, covars)
             elif self.flags["covcorr_mode"] == "each":
                 print("Applying covariate correction for deltas using each clinical group as reference.")
                 for group in self.subject_types:
-                    group_index = self.df_clinical[group]
-                    deltas = self.df_ages[group_index][delta_cols].to_numpy()
-                    covars = self.df_covariates.loc[group_index].to_numpy()
+                    group_ids = self.df_clinical.filter(pl.col(group)).get_column("id").to_list()
+                    df_group = self.df_ages.filter(pl.col("id").is_in(group_ids))
+                    deltas = df_group[delta_cols].to_numpy()
+                    covars = self._covariates_for(df_group)
                     _, beta[group] = covariate_correction(deltas, covars)
 
-            covars1 = self.df_covariates.loc[df1.index].to_numpy()
-            covars2 = self.df_covariates.loc[df2.index].to_numpy()
+            covars1 = self._covariates_for(df1)
+            covars2 = self._covariates_for(df2)
 
             if self.flags["covcorr_mode"] in ["cn", "all"]:
                 deltas1, _ = covariate_correction(deltas1, covars1, beta[self.flags["covcorr_mode"]])
@@ -1418,7 +1441,7 @@ class Interface:
 
         # We are only interested in self.systems being all although we can use system for colouring graphs
         self.systems = ["all"]
-        self.dict_systems["all"] = self.df_features.columns.drop("age").to_list()
+        self.dict_systems["all"] = [c for c in self.df_features.columns if c not in {"id", "age"}]
 
         # Initialize dictionaries
         self.set_dict()
@@ -1426,8 +1449,9 @@ class Interface:
         # Check that arguments given for each group and that they exist
         if self.args.group1 is None or self.args.group2 is None:
             raise ValueError("Must provide two groups to classify.")
-        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
-            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+        classes = [c for c in self.df_clinical.columns if c != "id"]
+        if self.args.group1 not in classes or self.args.group2 not in classes:
+            raise ValueError("Classes must be one of the following: %s" % classes)
 
         # Set dataframes
         self.set_features_dataframes()
@@ -1456,8 +1480,9 @@ class Interface:
         # Check that arguments given for each group and that they exist
         if self.args.group1 is None or self.args.group2 is None:
             raise ValueError("Must provide two groups to classify.")
-        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
-            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+        classes = [c for c in self.df_clinical.columns if c != "id"]
+        if self.args.group1 not in classes or self.args.group2 not in classes:
+            raise ValueError("Classes must be one of the following: %s" % classes)
 
         # Set dataframes
         self.set_features_dataframes()
@@ -1487,35 +1512,39 @@ class Interface:
             beta = {}
             if self.flags["covcorr_mode"] == "cn":
                 print("Applying covariate correction for factors using CN group as reference.")
-                group_index = self.df_clinical["cn"]
-                factors = self.df_factors.loc[group_index].to_numpy()
-                covars = self.df_covariates.loc[group_index].to_numpy()
+                cn_ids = self.df_clinical.filter(pl.col("cn")).get_column("id").to_list()
+                df_cn = self.df_factors.filter(pl.col("id").is_in(cn_ids))
+                factors = df_cn.drop("id").to_numpy()
+                covars = self._covariates_for(df_cn)
                 _, beta["cn"] = covariate_correction(factors, covars)
             elif self.flags["covcorr_mode"] == "all":
                 print("Applying covariate correction for factors using whole population as reference.")
                 # We take all subjects for covariate correction
-                factors = self.df_factors.to_numpy()
-                covars = self.df_covariates.to_numpy()
+                factors = self.df_factors.drop("id").to_numpy()
+                covars = self.df_covariates.drop("id").to_numpy()
                 _, beta["all"] = covariate_correction(factors, covars)
             elif self.flags["covcorr_mode"] == "each":
                 print("Applying covariate correction for factors using each group as reference.")
                 for group in self.subject_types:
-                    group_index = self.df_clinical[group]
-                    factors = self.df_factors.loc[group_index].to_numpy()
-                    covars = self.df_covariates.loc[group_index].to_numpy()
+                    group_ids = self.df_clinical.filter(pl.col(group)).get_column("id").to_list()
+                    df_group = self.df_factors.filter(pl.col("id").is_in(group_ids))
+                    factors = df_group.drop("id").to_numpy()
+                    covars = self._covariates_for(df_group)
                     _, beta[group] = covariate_correction(factors, covars)
 
         # For each subject type and system run correlation analysis
         for subject_type in self.subject_types:
             tag = NameTag(group=subject_type)
             dfs_systems = {}
-            df_sub = self.df_ages.loc[self.df_clinical[subject_type]]
-            df_factors = self.df_factors.loc[df_sub.index]
+            subject_ids = self.df_clinical.filter(pl.col(subject_type)).get_column("id").to_list()
+            df_sub = self.df_ages.filter(pl.col("id").is_in(subject_ids))
+            df_factors = self.df_factors.filter(pl.col("id").is_in(df_sub.get_column("id").to_list()))
             for system in self.systems:
-                df_sys = df_sub[[col for col in df_sub.columns if system in col]]
+                sys_cols = ["id"] + [col for col in df_sub.columns if system in col]
+                df_sys = df_sub.select(sys_cols)
                 dfs_systems[system] = df_sys
             if self.flags["covariates"]:
-                covars = self.df_covariates.loc[df_sub.index].to_numpy()
+                covars = self._covariates_for(df_sub)
                 if self.flags["covcorr_mode"] in ["cn", "all"]:
                     self.factors_vs_deltas(dfs_systems, df_factors, tag, covars, beta[self.flags["covcorr_mode"]])
                 elif self.flags["covcorr_mode"] == "each":
@@ -1535,15 +1564,21 @@ class Interface:
         self.load_data(required=["ages", "clinical"])
 
         # Obtain dataframes for each group
-        dfs = {g: self.df_ages.loc[self.df_clinical[g]] for g in self.subject_types}
+        dfs = {
+            g: self.df_ages.filter(pl.col("id").is_in(self.df_clinical.filter(pl.col(g)).get_column("id").to_list()))
+            for g in self.subject_types
+        }
 
         # Use visualizer to show age distribution per clinical group
-        ages = {g: dfs[g].iloc[:, 0].to_list() for g in self.subject_types}
+        ages = {g: dfs[g]["age"].to_list() for g in self.subject_types}
         self.age_distribution(ages, name="Clinical Groups")
 
         # Show differences in groups per system
         for system in self.systems:
-            dfs_systems = {g: dfs[g][[col for col in dfs[g].columns if system in col]] for g in self.subject_types}
+            dfs_systems = {
+                g: dfs[g].select(["id"] + [col for col in dfs[g].columns if system in col])
+                for g in self.subject_types
+            }
             self.deltas_by_group(dfs_systems, tag=NameTag(system=system))
 
     def run_classification(self):
@@ -1560,16 +1595,21 @@ class Interface:
         # Check that arguments given for each group and that they exist
         if self.args.group1 is None or self.args.group2 is None:
             raise ValueError("Must provide two groups to classify.")
-        elif self.args.group1 not in self.df_clinical.columns or self.args.group2 not in self.df_clinical.columns:
-            raise ValueError("Classes must be one of the following: %s" % self.df_clinical.columns.to_list())
+        classes = [c for c in self.df_clinical.columns if c != "id"]
+        if self.args.group1 not in classes or self.args.group2 not in classes:
+            raise ValueError("Classes must be one of the following: %s" % classes)
         else:
-            df_group1 = self.df_ages[self.df_clinical[self.args.group1]]
-            df_group2 = self.df_ages[self.df_clinical[self.args.group2]]
+            ids_group1 = self.df_clinical.filter(pl.col(self.args.group1)).get_column("id").to_list()
+            ids_group2 = self.df_clinical.filter(pl.col(self.args.group2)).get_column("id").to_list()
+            df_group1 = self.df_ages.filter(pl.col("id").is_in(ids_group1))
+            df_group2 = self.df_ages.filter(pl.col("id").is_in(ids_group2))
 
         # Create a classifier for each system
         for system in self.systems:
-            df_group1_system = df_group1[[col for col in df_group1.columns if system in col]]
-            df_group2_system = df_group2[[col for col in df_group2.columns if system in col]]
+            system_cols_1 = ["id"] + [col for col in df_group1.columns if system in col]
+            system_cols_2 = ["id"] + [col for col in df_group2.columns if system in col]
+            df_group1_system = df_group1.select(system_cols_1)
+            df_group2_system = df_group2.select(system_cols_2)
             self.classify(df_group1_system, df_group2_system, [self.args.group1, self.args.group2], tag=NameTag(system=system))
 
         # Create a classifier for all systems
