@@ -27,7 +27,7 @@ from ageml.utils import create_directory, feature_extractor, significant_markers
 from ageml.modelling import AgeML, Classifier
 from ageml.registries import ModelRegistry, ScalerRegistry
 from ageml.argument_parsing import parse_named_params, parse_hyperparameter_params
-from ageml.ui_data import (
+from .data import (
     check_file_exists,
     extract_covcorr_mode,
     load_csv_from_args,
@@ -38,7 +38,7 @@ from ageml.ui_data import (
     validate_factors_df,
     validate_features_df,
 )
-from ageml.ui_services import (
+from .services import (
     build_classifier_from_args,
     build_model_from_args,
     initialize_storage_dicts,
