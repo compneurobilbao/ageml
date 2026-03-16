@@ -1,4 +1,4 @@
-from ageml.modelling import ModelRegistry, ScalerRegistry
+from ageml.registries import ModelRegistry, ScalerRegistry
 
 """Messages for the AgeML package."""
 

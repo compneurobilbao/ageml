@@ -24,7 +24,16 @@ import scipy.stats as stats
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
-from ageml.modelling import AgeML, Classifier, ModelRegistry, ScalerRegistry
+from ageml.modelling import AgeML, Classifier
+from ageml.registries import ModelRegistry, ScalerRegistry
+from ageml.argument_parsing import parse_named_params, parse_hyperparameter_params
+from ageml.ui_services import (
+    build_classifier_from_args,
+    build_model_from_args,
+    initialize_storage_dicts,
+    populate_feature_dataframes,
+    update_runtime_params,
+)
 from ageml.processing import find_correlations, features_mutual_info, covariate_correction, cohen_d
 
 
@@ -133,6 +142,12 @@ class Interface:
         # Flags
         self.set_flags()
 
+        # Default runtime dimensions and naming used across commands.
+        self.naming = ""
+        self.subject_types = ["cn"]
+        self.covars = ["all"]
+        self.systems = ["all"]
+
         # Set up directory for storage of results
         self.setup()
 
@@ -204,78 +219,46 @@ class Interface:
 
     def set_dict(self):
         """Initialise dictionaries for data storage."""
-
-        self.dfs = {
-            subject_type: {covar: {system: {} for system in self.systems} for covar in self.covars} for subject_type in self.subject_types
-        }
-        self.preds = {
-            subject_type: {covar: {system: {} for system in self.systems} for covar in self.covars} for subject_type in self.subject_types
-        }
-        self.models = {covar: {system: {} for system in self.systems} for covar in self.covars}
-        self.betas = {covar: {system: {} for system in self.systems} for covar in self.covars}
+        self.dfs, self.preds, self.models, self.betas = initialize_storage_dicts(self.subject_types, self.covars, self.systems)
 
     def set_features_dataframes(self):
         """Set features dataframes for each subject type, covariate and system."""
-
-        # Obtain dataframes for each subject type, covariate and system
-        for subject_type in self.subject_types:
-            # Keep only the subjects of the specified type
-            df_sub = self.df_features[self.df_clinical[subject_type]]
-            for covar in self.covars:
-                # Keep subjects with the specified covariate
-                if self.flags["covarname"]:
-                    covar_index = set(self.df_covariates[self.df_covariates[self.args.covar_name] == covar].index)
-                    df_cov = df_sub[df_sub.index.isin(covar_index)]
-                else:
-                    df_cov = df_sub
-                for system in self.systems:
-                    # Keep only the features of the system
-                    df_sys = df_cov[["age"] + self.dict_systems[system]]
-                    # Save the dataframe
-                    self.dfs[subject_type][covar][system] = df_sys
+        populate_feature_dataframes(
+            self.dfs,
+            self.df_features,
+            self.df_clinical,
+            self.df_covariates,
+            self.args,
+            self.flags,
+            self.subject_types,
+            self.covars,
+            self.systems,
+            self.dict_systems,
+        )
 
     def generate_model(self, verbose=False):
         """Set model with parameters."""
-
-        model = AgeML(
-            self.args.scaler_type,
-            self.args.scaler_params,
-            self.args.model_type,
-            self.args.model_params,
-            self.args.model_cv_split,
-            self.args.model_seed,
-            self.args.hyperparameter_tuning,
-            self.args.hyperparameter_params,
-            self.args.feature_extension,
-            verbose=verbose,
-        )
-        return model
+        return build_model_from_args(self.args, verbose=verbose)
 
     def generate_classifier(self, verbose=False):
         """Set classifier with parameters."""
-
-        classifier = Classifier(
-            self.args.classifier_cv_split, self.args.classifier_seed, self.args.classifier_thr, self.args.classifier_ci, verbose=verbose
-        )
-
-        return classifier
+        return build_classifier_from_args(self.args, verbose=verbose)
 
     def update_params(self):
         """Update initial parameters after load."""
-
-        # Check possible flags of interest
-        if self.flags["clinical"]:
-            self.subject_types = self.df_clinical.columns.to_list()
-        if self.flags["covarname"]:
-            self.covars = pd.unique(self.df_covariates[self.args.covar_name]).tolist()
-            self.naming += f"_{self.args.covar_name}"
-        if self.flags["systems"]:
-            self.systems = list(self.dict_systems.keys())
-            self.naming += "_multisystem"
-        elif self.flags["features"]:
-            self.dict_systems["all"] = self.df_features.columns.drop("age").to_list()
-        if self.flags["ages"]:
-            self.systems = [col[6:] for col in self.df_ages.columns if "delta" in col]
+        self.naming, self.subject_types, self.covars, self.systems = update_runtime_params(
+            self.flags,
+            self.args,
+            self.df_clinical,
+            self.df_covariates,
+            self.dict_systems,
+            self.df_features,
+            getattr(self, "df_ages", None),
+            self.naming,
+            self.subject_types,
+            self.covars,
+            self.systems,
+        )
 
     def check_file(self, file):
         """Check that file exists."""
@@ -2161,16 +2144,14 @@ class CLI(Interface):
 
         # Set model parameters
         if len(self.line) > 1 and model_type != "None":
-            model_params = {}
-            for item in self.line[1:]:
-                # Check that item has one = to split
-                if item.count("=") != 1:
-                    error = "Model parameters must be in the format param1=value1 param2=value2 ..."
-                    return error
-                key, value = item.split("=")
-                value = convert(value)
-                model_params[key] = value
-            self.args.model_params = model_params
+            try:
+                self.args.model_params = parse_named_params(
+                    self.line[1:],
+                    "Model parameters must be in the format param1=value1 param2=value2 ...",
+                )
+            except ValueError as exc:
+                error = str(exc)
+                return error
         else:
             self.args.model_params = {}
 
@@ -2232,15 +2213,14 @@ class CLI(Interface):
 
         # Set scaler parameters
         if len(self.line) > 1 and scaler_type != "None":
-            scaler_params = {}
-            for item in self.line[1:]:
-                if item.count("=") != 1:
-                    error = "Scaler parameters must be in the format param1=value1 param2=value2 ..."
-                    return error
-                key, value = item.split("=")
-                value = convert(value)
-                scaler_params[key] = value
-            self.args.scaler_params = scaler_params
+            try:
+                self.args.scaler_params = parse_named_params(
+                    self.line[1:],
+                    "Scaler parameters must be in the format param1=value1 param2=value2 ...",
+                )
+            except ValueError as exc:
+                error = str(exc)
+                return error
         else:
             self.args.scaler_params = {}
 
@@ -2317,25 +2297,9 @@ class CLI(Interface):
         if self.line == ["", "None"]:
             self.args.hyperparameter_params = {}
         else:
-            for item in self.line[1:]:
-                if item.count("=") != 1:
-                    error = (
-                        "Hyperparameter tuning parameters must be in the format "
-                        "param1=value1_low,value1_high param2=kernel_A,kernel_B,kernel_C..."
-                    )
-                    return error
-                key, values = item.split("=")
-                values = [convert(value) for value in values.split(",")]
-                vals_are_str = all([isinstance(value, str) for value in values])
-                vals_are_num = all([isinstance(value, (int, float)) for value in values])
-                # If not 2 values provided in numerical hyperparams, raise error
-                if vals_are_num and len(values) != 2:
-                    err_msg = "Numerical hyperparameter values must be exactly two numbers (e.g.: param1=2,3)."
-                    raise ValueError(err_msg)
-                # If no value provided in categorical hyperparams, raise error
-                elif vals_are_str and len(values) < 1:
-                    err_msg = "Categorical hyperparameter values must be at least one string (e.g.: param1=kernel_A)."
-                    raise ValueError(err_msg)
-                hyperparameter_params[key] = values
-            # Add attribute to args
+            try:
+                hyperparameter_params = parse_hyperparameter_params(self.line[1:])
+            except ValueError as exc:
+                error = str(exc)
+                return error
             self.args.hyperparameter_params = hyperparameter_params

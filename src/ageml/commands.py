@@ -24,6 +24,7 @@ import ageml.messages as messages
 
 from ageml.ui import Interface
 from ageml.utils import convert
+from ageml.argument_parsing import parse_named_params, parse_hyperparameter_params
 
 
 class ModelAge(Interface):
@@ -136,15 +137,10 @@ class ModelAge(Interface):
         # The rest of the arguments conform a dictionary for **kwargs
         args.scaler_type = args.scaler[0]
         if len(args.scaler) > 1:
-            scaler_params = {}
-            for item in args.scaler[1:]:
-                # Check that item has one = to split
-                if item.count("=") != 1:
-                    raise ValueError("Scaler parameters must be in the format param1=value1 param2=value2 ...")
-                key, value = item.split("=")
-                value = convert(value)
-                scaler_params[key] = value
-            args.scaler_params = scaler_params
+            args.scaler_params = parse_named_params(
+                args.scaler[1:],
+                "Scaler parameters must be in the format param1=value1 param2=value2 ...",
+            )
         else:
             args.scaler_params = {}
 
@@ -152,15 +148,10 @@ class ModelAge(Interface):
         # The rest of the arguments conform a dictionary for **kwargs
         args.model_type = args.model[0]
         if len(args.model) > 1:
-            model_params = {}
-            for item in args.model[1:]:
-                # Check that item has one = to split
-                if item.count("=") != 1:
-                    raise ValueError("Model parameters must be in the format param1=value1 param2=value2 ...")
-                key, value = item.split("=")
-                value = convert(value)
-                model_params[key] = value
-            args.model_params = model_params
+            args.model_params = parse_named_params(
+                args.model[1:],
+                "Model parameters must be in the format param1=value1 param2=value2 ...",
+            )
         else:
             args.model_params = {}
 
@@ -175,27 +166,7 @@ class ModelAge(Interface):
 
         hyperparameter_params = {}
         if len(hyperparam_tuning) > 1:
-            for item in hyperparam_tuning[1:]:
-                if item.count("=") != 1:
-                    err_msg = (
-                        "Hyperparameter tuning parameters must be in the format "
-                        "param1=value1_low,value1_high param2=kernel_A,kernel_B,kernel_C..."
-                    )
-                    raise ValueError(err_msg)
-                key, values = item.split("=")
-                values = [convert(value) for value in values.split(",")]
-
-                vals_are_str = all([isinstance(value, str) for value in values])
-                vals_are_num = all([isinstance(value, (int, float)) for value in values])
-                # If not 2 values provided in numerical hyperparams, raise error
-                if vals_are_num and len(values) != 2:
-                    err_msg = "Numerical hyperparameter values must be exactly two numbers (e.g.: param1=2,3)."
-                    raise ValueError(err_msg)
-                # If no value provided in categorical hyperparams, raise error
-                elif vals_are_str and len(values) < 1:
-                    err_msg = "Categorical hyperparameter values must be at least one string (e.g.: param1=kernel_A)."
-                    raise ValueError(err_msg)
-                hyperparameter_params[key] = values
+            hyperparameter_params = parse_hyperparameter_params(hyperparam_tuning[1:])
 
         # Add attribute to args
         args.hyperparameter_params = hyperparameter_params
