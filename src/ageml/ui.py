@@ -24,8 +24,7 @@ import scipy.stats as stats
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
 from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
-from ageml.modelling import AgeML, Classifier
-from ageml.datasets.synthetic_data import rng
+from ageml.modelling import AgeML, Classifier, ModelRegistry, ScalerRegistry
 from ageml.processing import find_correlations, features_mutual_info, covariate_correction, cohen_d
 
 
@@ -922,23 +921,13 @@ class Interface:
 
     def __get_test_indices(self, covar, system):
         """Gets and sets the train and test indices to keep track of them when running
-        the model_age pipeline. Necessary to inform the user that when hyperopt was
-        selected as the model, no CV was used, and instead a train test split was done.
+        the model_age pipeline.
         """
         data = self.dfs["cn"][covar][system]
         X, y, _ = feature_extractor(data)
 
-        if self.args.model_type == "hyperopt":
-            # Split the data in training and test sets
-            # TODO: Substitute 0.2 factor by the user CLI argument
-            test_size = int(0.2 * y.shape[0])
-            indices = rng.permutation(X.shape[0])
-            train_indices = indices[:-test_size]
-            test_indices = indices[-test_size:]
-
-        else:
-            train_indices = list(range(X.shape[0]))
-            test_indices = list(range(X.shape[0]))
+        train_indices = list(range(X.shape[0]))
+        test_indices = list(range(X.shape[0]))
 
         return train_indices, test_indices
 
@@ -1014,21 +1003,7 @@ class Interface:
         filename = "predicted_age" + self.naming + ".csv"
         df_ages.to_csv(os.path.join(self.command_dir, filename))
 
-        # Save test indices if available
-        if self.args.model_type == "hyperopt":
-            for covar in self.covars:
-                for system in self.systems:
-                    filename = f"test_indices_{self.args.covar_name}_{covar}_system_{system}" + ".csv"
-                    indices_path = os.path.abspath(os.path.join(self.command_dir, filename))
-                    indices = self.models[covar][system].test_indices
-                    df_indices = pd.DataFrame(indices, columns=["test_indices"])
-                    df_indices.to_csv(indices_path, index=False)
-
-            msg = (
-                f"Saved test indices to {os.path.abspath(self.command_dir)} because a train test "
-                "split was used forced by the election of the 'hyperopt' model."
-            )
-            print(msg)
+        # CV-based modelling stores predictions directly, no extra test-index files are needed.
 
     def model_age_and_classify(self, features, model, tag):
         """Train model to predict age and classify between groups using deltas."""
@@ -2131,11 +2106,11 @@ class CLI(Interface):
 
         # Ask for scaler, model, CV parameters, feature extension, and hyperparameter tuning
         print("Scaler type and parameters (Default:standard)")
-        print(f"Available: {list(AgeML.scaler_dict.keys())}")
+        print(f"Available: {ScalerRegistry.list_scalers()}")
         print("Example: standard with_mean=True with_std=False")
         self.force_command(self.scaler_command)
         print("Model type and parameters (Default:linear_reg)")
-        print(f"Available: {list(AgeML.model_dict.keys())}")
+        print(f"Available: {ModelRegistry.list_models()}")
         print("Example: linear_reg fit_intercept=True normalize=False")
         self.force_command(self.model_command)
         print("CV parameters (Default: nº splits=5 and seed=0):")
@@ -2165,7 +2140,7 @@ class CLI(Interface):
 
         # Split into items
         self.line = self.line.split()
-        valid_types = list(AgeML.model_dict.keys())
+        valid_types = ModelRegistry.list_models()
         error = None
 
         # Check that at least one argument input
@@ -2201,7 +2176,8 @@ class CLI(Interface):
 
         # Try to set an instance of the specified scaler with the provided arguments
         try:
-            AgeML.model_dict[self.args.model_type](**self.args.model_params)
+            model_info = ModelRegistry.get(self.args.model_type)
+            model_info['class'](**self.args.model_params)
         except TypeError:  # Raised when invalid parameters are given to sklearn
             error = f"Model parameters are not valid for {self.args.model_type} model. Check them in the sklearn documentation."
 
@@ -2236,7 +2212,7 @@ class CLI(Interface):
         # Split into items
         self.line = self.line.split()
         error = None
-        valid_types = list(AgeML.scaler_dict.keys())
+        valid_types = ScalerRegistry.list_scalers()
 
         # Check that at least one argument input
         if len(self.line) == 0:
@@ -2270,7 +2246,8 @@ class CLI(Interface):
 
         # Try to set an instance of the specified scaler with the provided arguments
         try:
-            AgeML.scaler_dict[self.args.scaler_type](**self.args.scaler_params)
+            scaler_info = ScalerRegistry.get(self.args.scaler_type)
+            scaler_info['class'](**self.args.scaler_params)
         except TypeError:
             error = f"Scaler parameters are not valid for {self.args.scaler_type} scaler. Check them in the sklearn documentation."
             return error

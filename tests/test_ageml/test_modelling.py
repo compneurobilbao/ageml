@@ -41,7 +41,7 @@ def test_set_unavailable_scaler():
         age_ml_dummy = AgeMLTest(scaler="Mondong")
         del age_ml_dummy  # Avoid linting error regarding unused variable
     assert exc_info.type == ValueError
-    assert str(exc_info.value) == f"Must select an available scaler type. Available: {list(AgeMLTest().scaler_dict.keys())}"
+    assert str(exc_info.value) == f"Scaler 'Mondong' not registered. Available: {modelling.ScalerRegistry.list_scalers()}"
 
 
 def test_set_unavailable_model():
@@ -49,7 +49,7 @@ def test_set_unavailable_model():
         age_ml_dummy = AgeMLTest(model="Mondong")
         del age_ml_dummy  # To avoid linting error regarding unused variable
     assert exc_info.type == ValueError
-    assert str(exc_info.value) == f"Must select an available model type. Available: {list(AgeMLTest().model_dict.keys())}"
+    assert str(exc_info.value) == f"Model 'Mondong' not registered. Available: {modelling.ModelRegistry.list_models()}"
 
 
 def test_set_pipeline_none_model():
@@ -75,10 +75,10 @@ def test_set_pipeline_none_model():
     # Check that the pipeline only has one step now
     assert len(age_ml_dummy.pipeline.steps) == 1
 
-    # Set the model to 'hyperopt' to check that the pipeline is none
-    age_ml_dummy.set_model("hyperopt")
+    # Pipeline should stay valid when model is reset to a registered model
+    age_ml_dummy.set_model("ridge")
     age_ml_dummy.set_pipeline()
-    assert age_ml_dummy.pipeline is None
+    assert age_ml_dummy.pipeline is not None
 
 
 # TODO: test: metrics, summary_metrics, fit_age_bias, predict_age_bias, fit_age, predict_age

@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 import ageml.messages as messages
+import ageml.modelling as modelling
 from ageml.ui import Interface, CLI, AgeML
 
 seed = 107146869338163146621163044826586732901
@@ -1607,7 +1608,7 @@ def test_model_command_CLI(dummy_cli):
     # Test passing invalid model type
     dummy_cli.line = "quadratic"
     error = dummy_cli.model_command()
-    assert error == f"Choose a valid model type: {list(AgeML.model_dict.keys())}"
+    assert error == f"Choose a valid model type: {modelling.ModelRegistry.list_models()}"
 
     # Test empty model params if none given
     dummy_cli.line = "linear_reg"
@@ -1687,7 +1688,7 @@ def test_scaler_command_CLI(dummy_cli):
     # Test passing invalid scaler type
     dummy_cli.line = "mofongo"
     error = dummy_cli.scaler_command()
-    assert error == f"Choose a valid scaler type: {list(AgeML.scaler_dict.keys())}"
+    assert error == f"Choose a valid scaler type: {modelling.ScalerRegistry.list_scalers()}"
 
     # Test empty scaler params if none given
     dummy_cli.line = "standard"

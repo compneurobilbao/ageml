@@ -1,4 +1,4 @@
-from ageml.modelling import AgeML
+from ageml.modelling import ModelRegistry, ScalerRegistry
 
 """Messages for the AgeML package."""
 
@@ -25,14 +25,14 @@ model_long_description = (
     "Model type and model parameters to use. First argument is the type and the following \n"
     "arguments are input as keyword arguments into the model. They must be seperated by an '='.\n"
     "Example: -m linear_reg fit_intercept=False normalize=True\n"
-    f"Available Types: {list(AgeML.model_dict.keys())} (Default: linear_reg)"
+    f"Available Types: {ModelRegistry.list_models()} (Default: linear_reg)"
 )
 
 scaler_long_description = (
     "Scaler type and scaler parameters to use. First argument is the type and the following \n"
     "arguments are input as keyword arguments into scaler. They must be seperated by an =.\n"
     "Example: -m standard\n"
-    f"Available Types:{list(AgeML.scaler_dict.keys())} (Default: standard)"
+    f"Available Types:{ScalerRegistry.list_scalers()} (Default: standard)"
 )
 
 cv_long_description = (
