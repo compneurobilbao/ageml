@@ -5,16 +5,16 @@ import ageml.processing as processing
 
 def test_find_correlations():
     # Test a very simple correlation
-    X = np.array([[2, 4, -6], [4, 8, -12], [6, 4, -18]])
+    X = np.array([[2, 4, 6], [4, 4.5, 6.1], [6, 18, 5.9]])
     Y = np.array([1, 2, 3])
     corrs, order, p_values = processing.find_correlations(X, Y)
-    corrs_expected = np.array([1, 0, -1])
-    order_expected = np.array([0, 2, 1])
-    p_values_expected = np.array([0.0, 1.0, 0.0])
+    corrs_expected = np.array([1, 0.8813, -0.5])
+    order_expected = np.array([0, 1, 2])
+    p_values_expected = np.array([0.0, 0.3132, 0.6667])
 
-    assert np.allclose(corrs, corrs_expected, rtol=1e-10) is True
+    assert np.allclose(corrs, corrs_expected, rtol=1e-4) is True
     assert np.array_equal(order, order_expected) is True
-    assert np.allclose(p_values, p_values_expected, atol=1e-7) is True
+    assert np.allclose(p_values, p_values_expected, atol=1e-4) is True
 
 
 @pytest.mark.parametrize(
