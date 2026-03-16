@@ -40,7 +40,7 @@ def test_set_unavailable_scaler():
     with pytest.raises(ValueError) as exc_info:
         age_ml_dummy = AgeMLTest(scaler="Mondong")
         del age_ml_dummy  # Avoid linting error regarding unused variable
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert str(exc_info.value) == f"Scaler 'Mondong' not registered. Available: {modelling.ScalerRegistry.list_scalers()}"
 
 
@@ -48,7 +48,7 @@ def test_set_unavailable_model():
     with pytest.raises(ValueError) as exc_info:
         age_ml_dummy = AgeMLTest(model="Mondong")
         del age_ml_dummy  # To avoid linting error regarding unused variable
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert str(exc_info.value) == f"Model 'Mondong' not registered. Available: {modelling.ModelRegistry.list_models()}"
 
 
@@ -62,7 +62,7 @@ def test_set_pipeline_none_model():
     # Set the pipeline to trigger the ValueError
     with pytest.raises(ValueError) as exc_info:
         age_ml_dummy.set_pipeline()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     error_message = "Must set a valid model before setting pipeline."
     assert str(exc_info.value) == error_message
 
@@ -114,7 +114,7 @@ def test_classification_predict_error(dummy_classifier):
     x = [1, 2, 3]
     with pytest.raises(ValueError) as exc_info:
         dummy_classifier.predict(x)
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     error_message = "Must fit the classifier before calling predict."
     assert str(exc_info.value) == error_message
 
@@ -140,6 +140,6 @@ def test_classifier_predict_scale(dummy_classifier):
     # Assert error risen as not trained with scale
     with pytest.raises(ValueError) as exc_info:
         dummy_classifier.predict(x_new, scale=True)
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     error_message = "Must fit the model with scaling before calling predict with scaling."
     assert str(exc_info.value) == error_message

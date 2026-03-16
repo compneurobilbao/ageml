@@ -45,7 +45,7 @@ def feature_extractor(df):
 
     Parameters:
     -----------
-    df: pandas dataframe with features and target variable"""
+    df: polars/pandas dataframe with features and target variable"""
 
     feature_names = [name for name in df.columns if name not in {"id", "age"}]
     if hasattr(df, "select"):

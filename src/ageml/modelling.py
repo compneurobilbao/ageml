@@ -20,7 +20,7 @@ from sklearn import pipeline
 from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 
-from ageml.registries import BaseModel, MetricRegistry, ModelRegistry, ScalerRegistry
+from ageml.registries import MetricRegistry, ModelRegistry, ScalerRegistry
 from ageml.utils import verbose_wrapper
 from ageml.processing import RegressionFoldMetrics, ClassificationFoldMetrics, CVMetricsHandler
 

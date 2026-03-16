@@ -9,7 +9,7 @@ import numpy as np
 
 import ageml.messages as messages
 import ageml.modelling as modelling
-from ageml.ui import Interface, CLI, AgeML
+from ageml.ui import Interface, CLI
 
 seed = 107146869338163146621163044826586732901
 rng = np.random.default_rng(seed)
@@ -393,7 +393,7 @@ def test_load_data_age_not_column(dummy_interface, features):
     # Test error risen
     with pytest.raises(KeyError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == KeyError
+    assert exc_info.type is KeyError
     error_message = "Features file must contain a column name 'age', or any other case-insensitive variation."
     assert exc_info.value.args[0] == error_message
 
@@ -408,7 +408,7 @@ def test_load_data_not_float(dummy_interface, features):
     # Test error risen
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
+    assert exc_info.type is TypeError
     error_message = "Features file columns must be float or int type: ['feature1', 'feature2']"
     assert exc_info.value.args[0] == error_message
 
@@ -423,7 +423,7 @@ def test_load_factors_not_float(dummy_interface, factors):
     # Test error risen
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
+    assert exc_info.type is TypeError
     error_message = "Factors file columns must be float or int type: ['factor1', 'factor2']"
     assert exc_info.value.args[0] == error_message
 
@@ -437,7 +437,7 @@ def test_load_data_covariates_not_float(dummy_interface, covariates):
     # Test error risen
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
+    assert exc_info.type is TypeError
     error_message = "Covariates file columns must be float or int type: ['sex']"
     assert exc_info.value.args[0] == error_message
 
@@ -453,7 +453,7 @@ def test_load_data_ages_not_float(dummy_interface, ages):
     # Test error risen
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
+    assert exc_info.type is TypeError
     error_message = "Ages file columns must be float or int type: ['predicted_age_all', 'corrected_age_all', 'delta_all']"
     assert exc_info.value.args[0] == error_message
 
@@ -467,7 +467,7 @@ def test_load_data_cn_not_column(dummy_interface, clinical):
     # Test error risen
     with pytest.raises(KeyError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == KeyError
+    assert exc_info.type is KeyError
     error_message = "Clinical file must contain a column name 'CN' or any other case-insensitive variation."
     assert exc_info.value.args[0] == error_message
 
@@ -486,7 +486,7 @@ def test_load_data_ages_missing_column(dummy_interface, ages):
         # Test error risen
         with pytest.raises(KeyError) as exc_info:
             dummy_interface.load_data()
-        assert exc_info.type == KeyError
+        assert exc_info.type is KeyError
         error_message = "Ages file missing the following column %s, or derived names." % col
         assert exc_info.value.args[0] == error_message
 
@@ -495,19 +495,19 @@ def test_load_data_required_file_types(dummy_interface):
     dummy_interface.args.features = None
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data(required=["features"])
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Features file must be provided."
 
     dummy_interface.args.clinical = None
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data(required=["clinical"])
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Clinical file must be provided."
 
     dummy_interface.args.factors = None
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data(required=["factors"])
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Factors file must be provided."
 
 
@@ -521,7 +521,7 @@ def test_load_data_clinical_not_boolean(dummy_interface, clinical):
     # Test error risen
     with pytest.raises(TypeError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == TypeError
+    assert exc_info.type is TypeError
     assert exc_info.value.args[0] == "Clinical file columns: ['cn', 'group1'] contains values other than 0 and 1."
 
 
@@ -534,7 +534,7 @@ def test_load_data_clinical_empty_column(dummy_interface, clinical):
     # Test error risen
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Clinical column cn has less than two subjects."
 
 
@@ -548,7 +548,7 @@ def test_load_data_clinical_empty_row(dummy_interface, clinical):
     # Test error risen
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.load_data()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Clinical file contains rows with all False values. Please check the file. Rows: [2]"
 
 
@@ -1031,7 +1031,7 @@ def test_run_age_few_subjects(dummy_interface, features):
     # Catch error
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.run_age()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Not enough controls for modelling for each CV split."
 
 
@@ -1145,7 +1145,7 @@ def test_classification_group_not_given(dummy_interface, ages, clinical):
     # Run classification and capture error
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.run_classification()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Must provide two groups to classify."
 
 
@@ -1161,7 +1161,7 @@ def test_classifcation_group_not_in_columns(dummy_interface, ages, clinical):
     # Run classification and capture error
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.run_classification()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     error_msg = "Classes must be one of the following: ['%s', '%s']" % ("cn", "group1")
     assert exc_info.value.args[0] == error_msg
 
@@ -1179,7 +1179,7 @@ def test_classification_few_subjects(dummy_interface, ages, clinical):
     # Run classification and capture error
     with pytest.raises(ValueError) as exc_info:
         dummy_interface.run_classification()
-    assert exc_info.type == ValueError
+    assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Not enough subjects for classification for each CV split."
 
 

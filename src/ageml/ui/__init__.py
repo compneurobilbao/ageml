@@ -23,8 +23,8 @@ import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, feature_extractor, significant_markers, convert, log, NameTag
-from ageml.modelling import AgeML, Classifier
+from ageml.utils import create_directory, feature_extractor, significant_markers, log, NameTag
+from ageml.modelling import AgeML
 from ageml.registries import ModelRegistry, ScalerRegistry
 from ageml.argument_parsing import parse_named_params, parse_hyperparameter_params
 from .data import (

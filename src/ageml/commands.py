@@ -1,6 +1,6 @@
 """Command line commands.
 
-Used in the AgeML project with poetry to create command line commands.
+Used in the AgeML project to create command line commands.
 
 Public classes:
 ---------------

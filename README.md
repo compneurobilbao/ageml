@@ -107,6 +107,34 @@ A developer Dockerfile will be available in the future for contributing to the p
 
 The developer installation is described in the [contribution guidelines](./docs/CONTRIBUTING.md).
 
+#### Developer quickstart with uv
+
+From your terminal:
+
+```bash
+git clone https://github.com/compneurobilbao/ageml.git
+cd ageml
+uv sync --group dev
+```
+
+Run tests:
+
+```bash
+uv run pytest -q
+```
+
+Run lint:
+
+```bash
+uv run ruff check
+```
+
+Run a CLI command example:
+
+```bash
+uv run model_age -o ./data -m linear_reg -f ./data/features_cognitive_model_asier.csv
+```
+
 ## How to Contribute to the project
 
 We welcome scientists and developers who want to standardize the procedures of age modelling, share pretrained models or whatever other kind of contribution that can help the project.

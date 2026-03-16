@@ -103,7 +103,7 @@ def test_insert_newlines_zerospacing():
     text = "This will not even be processed."
     with pytest.raises(ValueError) as e:
         utils.insert_newlines(text, 0)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_feature_extractor():

@@ -5,12 +5,12 @@ import ageml.processing as processing
 
 def test_find_correlations():
     # Test a very simple correlation
-    X = np.array([[2, 4, -6], [4, 8, -12], [6, 12, -18]])
+    X = np.array([[2, 4, -6], [4, 8, -12], [6, 4, -18]])
     Y = np.array([1, 2, 3])
     corrs, order, p_values = processing.find_correlations(X, Y)
-    corrs_expected = np.array([1, 1, -1])
-    order_expected = np.array([2, 1, 0])
-    p_values_expected = np.array([0.0, 0.0, 0.0])
+    corrs_expected = np.array([1, 0, -1])
+    order_expected = np.array([0, 2, 1])
+    p_values_expected = np.array([0.0, 1.0, 0.0])
 
     assert np.allclose(corrs, corrs_expected, rtol=1e-10) is True
     assert np.array_equal(order, order_expected) is True
@@ -36,7 +36,7 @@ def test_find_correlations():
 def test_find_correlations_nans(X, Y, exception_msg):
     with pytest.raises(ValueError) as exc_info:
         processing.find_correlations(X, Y)
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
     assert str(exc_info.value) == exception_msg
 
 
@@ -85,18 +85,18 @@ def test_covariate_correction():
     # Check ValueError raies with NaNs
     with pytest.raises(ValueError) as exc_info:
         processing.covariate_correction(X, np.array([1, 2, np.nan]).reshape(-1, 1))
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
     with pytest.raises(ValueError) as exc_info:
         processing.covariate_correction(np.array([2.0, np.nan]), Z)
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
     with pytest.raises(ValueError) as exc_info:
         processing.covariate_correction(X, Z, beta=np.array([2.0, np.nan]).reshape(-1, 1))
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
 
     # Check ValueError raises with incompatible shapes
     with pytest.raises(ValueError) as exc_info:
         processing.covariate_correction(X, np.array([1, 2]))
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
 
     # Test a very simple correlation
     _, beta = processing.covariate_correction(X, Z)
@@ -108,7 +108,7 @@ def test_covariate_correction():
 def test_handler_wrong_task_type():
     with pytest.raises(ValueError) as exc_info:
         processing.CVMetricsHandler(task_type='asdf')
-        assert exc_info.type == ValueError
+        assert exc_info.type is ValueError
     assert str(exc_info.value) == 'task_type must be either "regression" or "classification"'
 
 @pytest.fixture
