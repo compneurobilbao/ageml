@@ -52,7 +52,6 @@ ageml
 ├── .coverage                       # File to measure code coverage, percentage of tested code lines
 ├── README.md
 ├── pyproject.toml                  # Requirements for environment settings, packaging and so on
-├── uv.lock                         # Dependency lockfile for uv-managed environments
 ├── noxfile.py                      # Defines the linting, coverage, pytest sessions
 ├── setup.cfg                       # Defines the linting rules
 ├── LICENSE                         # Apache 2.0 License file

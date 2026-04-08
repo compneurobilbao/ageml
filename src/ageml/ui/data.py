@@ -139,4 +139,4 @@ def validate_ages_df(df):
         if col == "id":
             continue
         if not any(col.startswith(c) for c in req_cols):
-            raise KeyError("Ages file contains unknwon column %s" % col)
+            raise KeyError("Ages file contains unknown column %s" % col)
