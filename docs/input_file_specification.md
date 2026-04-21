@@ -17,7 +17,7 @@ NOTE: Support for categorical variables is on its way.
 Example (units are arbitrary, quantities are not real):
 
 ```csv
-,age,HDL,LDL,hippocampus_volume,thalamus_volume
+id,age,HDL,LDL,hippocampus_volume,thalamus_volume
 0,20,0.5,0.9,142,543
 1,21,0.6,1.1,135,636
 2,22,0.7,0.89,129,737
@@ -35,7 +35,7 @@ Specified with the `--covariates` flag. Contains the __categorical__ covariates 
 Example:
 
 ```csv
-,site,biological_gender,smoker,educ_years
+id,site,biological_gender,smoker,educ_years
 0,1,0,1,10.0
 1,2,1,1,16.0
 2,3,0,0,12.0
@@ -53,7 +53,7 @@ Specified with the `--clinical` flag. Contains the clinical groups to which ever
 Example (in the context of Alzheimer's disease):
 
 ```csv
-,CN,MCI,AD
+id,CN,MCI,AD
 0,1,0,0
 1,1,0,0
 2,0,1,0
@@ -72,7 +72,7 @@ Specified with the `--factors` flag. Contains the factors for exploring the corr
 Example (units and factors are arbitrary, quantities are not real):
 
 ```csv
-,func_score,sedentarism_points,neuro_score,MOCA_SCORE,memory_perf,familiar_support,hygiene_habits
+id,func_score,sedentarism_points,neuro_score,MOCA_SCORE,memory_perf,familiar_support,hygiene_habits
 0,28.0,0.0,6.0,0.0,21.0,0.702,-0.154
 1,30.0,0.0,3.0,1.0,28.0,1.812,2.046
 2,30.0,0.0,8.0,0.0,25.0,0.846,0.812
