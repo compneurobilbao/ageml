@@ -369,7 +369,7 @@ class AgeML:
 
         # Check that model has previously been fit
         if not self.pipelineFit:
-            raise ValueError("Must fit the pipline before calling predict.")
+            raise ValueError("Must fit the pipeline before calling predict.")
         if y is not None and not self.age_biasFit:
             raise ValueError("Must fit the age bias before calling predict with bias correction.")
 

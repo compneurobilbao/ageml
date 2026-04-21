@@ -188,7 +188,7 @@ class Interface:
         # Create directory
         self.command_dir = os.path.join(self.dir_path, dir_path)
         if os.path.exists(self.command_dir):
-            warnings.warn("Directory %s already exists files may be overwritten." % self.command_dir, category=UserWarning)
+            warnings.warn("Directory %s already exists. Files will be overwritten." % self.command_dir, category=UserWarning)
         else:
             create_directory(self.command_dir)
 
@@ -282,7 +282,7 @@ class Interface:
         return check_file_exists(file)
 
     def load_csv(self, file_type):
-        """Use pandas to load csv into dataframe, making all columns lowercase.
+        """Use polars to load csv into dataframe, making all columns lowercase.
 
         Parameters
         ----------
@@ -605,7 +605,8 @@ class Interface:
         # Show number of subjects per clinical category
         if self.flags["clinical"]:
             for col in self.df_clinical.columns:
-                print("Number of %s subjects: %d" % (col, self.df_clinical[col].sum()))
+                if col != "id":
+                    print("Number of %s subjects: %d" % (col, self.df_clinical[col].sum()))
         else:
             print("No clinical information provided using all subjects as CN.")
             if self.df_features is not None:
@@ -641,7 +642,7 @@ class Interface:
         # Check that distributions of ages are similar if more than one
         if len(ages_dict) > 1:
             print("Checking that age distributions are similar using T-test: T-stat (p_value)")
-            print("If p_value > 0.05 distributions are considered simiilar and not displayed...")
+            print("If p_value > 0.05 distributions are considered similar and not displayed...")
             for i in range(len(labels)):
                 for j in range(i + 1, len(labels)):
                     t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
@@ -917,17 +918,17 @@ class Interface:
                 system_frames = [self.preds[subject_type][covar][system] for system in self.systems]
                 df_systems = system_frames[0]
                 for frame in system_frames[1:]:
-                    df_systems = df_systems.join(frame, on="id", how="full")
+                    df_systems = df_systems.join(frame, on="id", how="inner")
                 stack.append(df_systems)
         df_ages = pl.concat(stack, how="vertical_relaxed")
 
         # Drop duplicates keep first (some subjects may be in more than one subject type)
-        df_ages = df_ages.unique(subset=["id"], keep="first")
+        df_ages = df_ages.unique(subset=["id"], keep="first").sort(by=["id"])
 
         # Add age information
         if "age" in df_ages.columns:
             df_ages = df_ages.drop("age")
-        df_ages = self.df_features.select(["id", "age"]).join(df_ages, on="id", how="left")
+        df_ages = self.df_features.select(["id", "age"]).join(df_ages, on="id", how="inner")
 
         # Save dataframe to csv
         filename = "predicted_age" + self.naming + ".csv"
@@ -1164,7 +1165,7 @@ class Interface:
             print(f"System: {system}")
 
             # Select data to visualize
-            deltas = df["delta_%s" % system].to_numpy()
+            deltas = df[f"delta_{system}"].to_numpy()
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
@@ -1394,16 +1395,16 @@ class Interface:
     def run_age(self):
         """Run age modelling."""
 
-        # Run age modelling
+        # Inform about running age modelling
         print("Running age modelling...")
 
-        # Set up directory
+        # Set up output directory
         self.command_setup("model_age")
 
         # Load data
         self.load_data(required=["features"])
 
-        # Initialized dictionaries
+        # Initialize dictionaries
         self.set_dict()
 
         # Set dataframes

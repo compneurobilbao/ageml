@@ -1,3 +1,4 @@
+import argparse
 import os
 import polars as pl
 import pytest
@@ -7,6 +8,7 @@ import sys
 import tempfile
 
 from ageml.commands import (
+    ModelAge,
     model_age,
     model_feature_influence,
     age_model_vs_logistic_regression,
@@ -14,6 +16,7 @@ from ageml.commands import (
     clinical_groups,
     clinical_classify,
 )
+from ageml.ui.services import build_model_from_args
 
 
 # Fake data for testing
@@ -263,6 +266,29 @@ def test_model_age(temp_dir, features):
 
     # Run function
     model_age()
+
+
+def test_model_age_feature_extension_wires_into_pipeline():
+    """Test that model_age forwards the polynomial feature extension to AgeML."""
+
+    cmd = ModelAge.__new__(ModelAge)
+    cmd.parser = argparse.ArgumentParser()
+    cmd.configure_parser()
+
+    args = cmd.parser.parse_args([
+        "-o",
+        "/tmp/out",
+        "-f",
+        "/tmp/features.csv",
+        "-fext",
+        "2",
+    ])
+    args = cmd.configure_args(args)
+
+    model = build_model_from_args(args)
+
+    assert args.feature_extension == 2
+    assert model.pipeline.named_steps["feature_extension"].degree == 2
 
 def test_model_feature_influence(temp_dir, features, clinical):
     """Test model_feature_influence function."""

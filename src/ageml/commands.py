@@ -117,14 +117,14 @@ class ModelAge(Interface):
         self.parser.add_argument("--systems", metavar="FILE", help=messages.systems_long_description)
 
     def configure_args(self, args):
-        """Configure argumens with required fromatting for modelling.
+        """Configure arguments with required formatting for modelling.
 
         Parameters
         ----------
         args: arguments object from parser
         """
 
-        # Set CV params first item is the number of CV splits
+        # Set CV params. First item is the number of CV splits
         if len(args.cv) == 1:
             args.model_cv_split = args.cv[0]
             args.model_seed = self.parser.get_default("cv")[1]
@@ -133,7 +133,7 @@ class ModelAge(Interface):
         else:
             raise ValueError("Too many values to unpack")
 
-        # Set Scaler parameters first item is the scaler type
+        # Set Scaler parameters. First item is the scaler type
         # The rest of the arguments conform a dictionary for **kwargs
         args.scaler_type = args.scaler[0]
         if len(args.scaler) > 1:
@@ -144,7 +144,7 @@ class ModelAge(Interface):
         else:
             args.scaler_params = {}
 
-        # Set Model parameters first item is the model type
+        # Set Model parameters. First item is the model type
         # The rest of the arguments conform a dictionary for **kwargs
         args.model_type = args.model[0]
         if len(args.model) > 1:
