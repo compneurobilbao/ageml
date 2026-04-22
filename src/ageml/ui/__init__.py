@@ -1539,7 +1539,7 @@ class Interface:
             dfs_systems = {}
             subject_ids = self.df_clinical.filter(pl.col(subject_type)).get_column("id").to_list()
             df_sub = self.df_ages.filter(pl.col("id").is_in(subject_ids))
-            df_factors = self.df_factors.filter(pl.col("id").is_in(df_sub.get_column("id").to_list()))
+            df_factors = self.df_factors.join(df_sub, on="id").select(self.df_factors.columns)  # Ensure proper alignment of factors and ages
             for system in self.systems:
                 sys_cols = ["id"] + [col for col in df_sub.columns if system in col]
                 df_sys = df_sub.select(sys_cols)
