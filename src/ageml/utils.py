@@ -5,6 +5,9 @@ import os
 import sys
 
 
+AGEML_VERSION = "0.3.0"
+
+
 def insert_newlines(text, nwords):
     """Function to insert a new line every n words."""
     if nwords == 0:

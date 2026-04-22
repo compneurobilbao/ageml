@@ -24,7 +24,7 @@ import scipy.stats as stats
 
 import ageml.messages as messages
 from ageml.visualizer import Visualizer
-from ageml.utils import create_directory, feature_extractor, significant_markers, log, NameTag
+from ageml.utils import create_directory, feature_extractor, significant_markers, log, NameTag, AGEML_VERSION
 from ageml.modelling import AgeML
 from ageml.registries import ModelRegistry, ScalerRegistry
 from ageml.argument_parsing import parse_named_params, parse_hyperparameter_params
@@ -187,6 +187,7 @@ class Interface:
         dir_path: directory path to create"""
 
         # Inform about the call in the log
+        print(f"AGEML VERSION: {AGEML_VERSION}")
         print(f"Call:\n{' '.join(sys.argv)}")
         # Create directory
         self.command_dir = os.path.join(self.dir_path, dir_path)
