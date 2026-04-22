@@ -1,5 +1,6 @@
+import argparse
 import os
-import pandas as pd
+import polars as pl
 import pytest
 import random
 import string
@@ -7,6 +8,7 @@ import sys
 import tempfile
 
 from ageml.commands import (
+    ModelAge,
     model_age,
     model_feature_influence,
     age_model_vs_logistic_regression,
@@ -14,12 +16,13 @@ from ageml.commands import (
     clinical_groups,
     clinical_classify,
 )
+from ageml.ui.services import build_model_from_args
 
 
 # Fake data for testing
 @pytest.fixture
 def features():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [
                 1,
@@ -111,13 +114,12 @@ def features():
             ],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def factors():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [
                 1,
@@ -187,13 +189,12 @@ def factors():
             ],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def clinical():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
@@ -203,13 +204,12 @@ def clinical():
                        False, True, False, True, False, True, False, True, False, True],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
 @pytest.fixture
 def ages():
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7, 8, 9,
                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
@@ -223,7 +223,6 @@ def ages():
                           2, 1, 0, -1, 2, 1, 0, -3, 1, 2],
         }
     )
-    df.set_index("id", inplace=True)
     return df
 
 
@@ -232,7 +231,7 @@ def create_csv(df, path):
     letters = string.ascii_lowercase
     csv_name = "".join(random.choice(letters) for i in range(20)) + ".csv"
     file_path = os.path.join(path, csv_name)
-    df.to_csv(path_or_buf=file_path, index=True)
+    df.write_csv(file_path)
     return file_path
 
 
@@ -267,6 +266,29 @@ def test_model_age(temp_dir, features):
 
     # Run function
     model_age()
+
+
+def test_model_age_feature_extension_wires_into_pipeline():
+    """Test that model_age forwards the polynomial feature extension to AgeML."""
+
+    cmd = ModelAge.__new__(ModelAge)
+    cmd.parser = argparse.ArgumentParser()
+    cmd.configure_parser()
+
+    args = cmd.parser.parse_args([
+        "-o",
+        "/tmp/out",
+        "-f",
+        "/tmp/features.csv",
+        "-fext",
+        "2",
+    ])
+    args = cmd.configure_args(args)
+
+    model = build_model_from_args(args)
+
+    assert args.feature_extension == 2
+    assert model.pipeline.named_steps["feature_extension"].degree == 2
 
 def test_model_feature_influence(temp_dir, features, clinical):
     """Test model_feature_influence function."""

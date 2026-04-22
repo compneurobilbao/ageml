@@ -1,4 +1,4 @@
-from ageml.modelling import AgeML
+from ageml.registries import ModelRegistry, ScalerRegistry
 
 """Messages for the AgeML package."""
 
@@ -23,16 +23,16 @@ features_long_description = (
 
 model_long_description = (
     "Model type and model parameters to use. First argument is the type and the following \n"
-    "arguments are input as keyword arguments into the model. They must be seperated by an '='.\n"
+    "arguments are input as keyword arguments into the model. They must be separated by an '='.\n"
     "Example: -m linear_reg fit_intercept=False normalize=True\n"
-    f"Available Types: {list(AgeML.model_dict.keys())} (Default: linear_reg)"
+    f"Available Types: {ModelRegistry.list_models()} (Default: linear_reg)"
 )
 
 scaler_long_description = (
     "Scaler type and scaler parameters to use. First argument is the type and the following \n"
-    "arguments are input as keyword arguments into scaler. They must be seperated by an =.\n"
+    "arguments are input as keyword arguments into scaler. They must be separated by an =.\n"
     "Example: -m standard\n"
-    f"Available Types:{list(AgeML.scaler_dict.keys())} (Default: standard)"
+    f"Available Types:{ScalerRegistry.list_scalers()} (Default: standard)"
 )
 
 cv_long_description = (
@@ -85,7 +85,7 @@ systems_long_description = (
     "Path to input .txt file containing the features to use to model each system. \n"
     "Each new line corresponds to a different system. The parser follows a formatting \n"
     "where the first words in the line is the system name followed by a colon and then the \n"
-    "names of the features seperated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
+    "names of the features separated by commas. [SystemName]: [Feature1], [Feature2], ... \n"
     "(e.g. Brain Structure: White Matter Volume, Grey Matter Volume, VCSF Volume)"
     "\nMore info on the file format in:\n"
     "https://github.com/compneurobilbao/ageml/blob/main/docs/input_file_specification.md#systems-file"

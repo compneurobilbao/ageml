@@ -2,7 +2,7 @@ import os
 from typing import List
 import importlib.resources as resources
 
-import pandas as pd
+import polars as pl
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -49,8 +49,8 @@ def generate_correlated_data(Y, n_samples: int, n_features: int, correlation_lev
         X[:, i] = mean_x_i + std_x_i * (correlation * (Y - Y_mean) / Y_std + np.sqrt(1 - correlation**2) * noise)
 
     # Combine the features and target into a DataFrame
-    data = pd.DataFrame(X, columns=[f"X{i+1}" for i in range(n_features)])
-    data["Y"] = Y  # Add the target column (Y)
+    data = pl.DataFrame({f"X{i+1}": X[:, i] for i in range(n_features)})
+    data = data.with_columns(pl.Series("Y", Y))
 
     return data
 
@@ -75,7 +75,7 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
     # Predict age (Y) with linear regressor using X1, X2, ..., X12
 
     # Split the data into training and test sets
-    X = synthetic_controls.drop(columns=["Y"]).to_numpy()
+    X = synthetic_controls.drop("Y").to_numpy()
     Y = synthetic_controls["Y"].to_numpy()
 
     # Train a linear regression model (overfit it)
@@ -90,91 +90,99 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
     # Sample 200 random samples from the synthetic data
     n_samples = 200
     random_indices = rng.integers(0, synthetic_controls.shape[0], n_samples)
-    random_sample = synthetic_controls.iloc[random_indices]
-    random_sample_age = random_sample["Y"]
-    random_sample_vars = random_sample.drop(columns=["Y"])
-    sample_age_copy = random_sample_age.copy().to_numpy()
+    random_sample = synthetic_controls.to_numpy()[random_indices]
+    columns = synthetic_controls.columns
+    y_idx = columns.index("Y")
+    x_cols = [c for c in columns if c != "Y"]
+    x_idx = [columns.index(c) for c in x_cols]
+    random_sample_age = random_sample[:, y_idx]
+    random_sample_vars = random_sample[:, x_idx]
+    sample_age_copy = random_sample_age.copy()
 
     sample_age_copy += 6 * rng.normal(1, 0.5, n_samples)
 
     # Predict the age Y on this group
-    Y_pred_pos_group = model.predict(random_sample_vars.to_numpy())
+    Y_pred_pos_group = model.predict(random_sample_vars)
 
     # Concatenate features and target (age)
-    positive_delta_group = np.concatenate([random_sample_vars.to_numpy(), sample_age_copy[:, np.newaxis]], axis=1)
-    positive_delta_group = pd.DataFrame(positive_delta_group, columns=synthetic_controls.columns)
+    positive_delta_group = np.concatenate([random_sample_vars, sample_age_copy[:, np.newaxis]], axis=1)
+    positive_delta_group = pl.DataFrame(positive_delta_group, schema=synthetic_controls.columns)
 
     ###############################
     # GENERATE NEGATIVE DELTA GROUP
     # Sample 200 random samples from the synthetic data
     n_samples = 200
     random_indices = rng.integers(0, synthetic_controls.shape[0], n_samples)
-    random_sample = synthetic_controls.iloc[random_indices]
-    random_sample_age = random_sample["Y"]
-    random_sample_vars = random_sample.drop(columns=["Y"])
-    sample_age_copy = random_sample_age.copy().to_numpy()
+    random_sample = synthetic_controls.to_numpy()[random_indices]
+    random_sample_age = random_sample[:, y_idx]
+    random_sample_vars = random_sample[:, x_idx]
+    sample_age_copy = random_sample_age.copy()
 
     sample_age_copy += -8 * rng.normal(1, 0.5, n_samples)
 
     # Predict the age Y on this group
-    Y_pred_neg_group = model.predict(random_sample_vars.to_numpy())
+    Y_pred_neg_group = model.predict(random_sample_vars)
 
     # Concatenate features and target (age)
-    negative_delta_group = np.concatenate([random_sample_vars.to_numpy(), sample_age_copy[:, np.newaxis]], axis=1)
-    negative_delta_group = pd.DataFrame(negative_delta_group, columns=synthetic_controls.columns)
+    negative_delta_group = np.concatenate([random_sample_vars, sample_age_copy[:, np.newaxis]], axis=1)
+    negative_delta_group = pl.DataFrame(negative_delta_group, schema=synthetic_controls.columns)
 
     ####################
     # All synthetic data
-    all_synthetic_data = pd.concat([synthetic_controls, positive_delta_group, negative_delta_group])
+    all_synthetic_data = pl.concat([synthetic_controls, positive_delta_group, negative_delta_group], how="vertical")
 
     ###############
     # CLINICAL DATA
-    clinical_data = pd.DataFrame(columns=["CN", "G1", "G2"])
-
-    # CN group is 600 True and 400 false
-    clinical_data["CN"] = [True] * 600 + [False] * 400
-    # G1 group is 600 False, 200 True and 200 False
-    clinical_data["G1"] = [False] * 600 + [True] * 200 + [False] * 200
-    # G2 group is 800 False and 200 True
-    clinical_data["G2"] = [False] * 800 + [True] * 200
+    clinical_data = pl.DataFrame(
+        {
+            "CN": [True] * 600 + [False] * 400,
+            "G1": [False] * 600 + [True] * 200 + [False] * 200,
+            "G2": [False] * 800 + [True] * 200,
+        }
+    )
 
     ##############
     # FACTORS DATA
     # Compute age deltas
-    Y_pred = model.predict(synthetic_controls.drop(columns=["Y"]))
-    age_delta_cn = Y_pred - synthetic_controls["Y"]
+    Y_pred = model.predict(synthetic_controls.drop("Y").to_numpy())
+    age_delta_cn = Y_pred - synthetic_controls["Y"].to_numpy()
 
-    Y_pred_pos_group = model.predict(positive_delta_group.drop(columns=["Y"]))
-    age_delta_pos = Y_pred_pos_group - positive_delta_group["Y"]
+    Y_pred_pos_group = model.predict(positive_delta_group.drop("Y").to_numpy())
+    age_delta_pos = Y_pred_pos_group - positive_delta_group["Y"].to_numpy()
 
-    Y_pred_neg_group = model.predict(negative_delta_group.drop(columns=["Y"]))
-    age_delta_neg = Y_pred_neg_group - negative_delta_group["Y"]
+    Y_pred_neg_group = model.predict(negative_delta_group.drop("Y").to_numpy())
+    age_delta_neg = Y_pred_neg_group - negative_delta_group["Y"].to_numpy()
 
     age_deltas = np.concatenate([age_delta_cn, age_delta_pos, age_delta_neg])
 
     # Create a dataframe with MOCAScore, of Heavy Drinking Score and Physical Activity Score
-    factors_data = pd.DataFrame(columns=["MOCAScore", "HeavyDrinkingScore", "PhysicalActivityScore"])
+    factors_data = pl.DataFrame()
 
     # Normalize the deltas
     standard_deltas = (age_deltas - np.mean(age_deltas)) / np.std(age_deltas)
 
     # MOCAScore -> The more higher MOCAScore, the higher delta. Correlation: 0.7
     corr = 0.6
-    factors_data["MOCAScore"] = corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas))
+    factors_data = factors_data.with_columns(
+        pl.Series("MOCAScore", corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas)))
+    )
 
     # HeavyDrinking -> The more you drank, the higher delta. Correlation: 0.5
     corr = 0.3
-    factors_data["HeavyDrinkingScore"] = corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas))
+    factors_data = factors_data.with_columns(
+        pl.Series("HeavyDrinkingScore", corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas)))
+    )
 
     # PhysicalActivity -> The more you did physical activity, the lower delta. Correlation: -0.4
     corr = -0.4
-    factors_data["PhysicalActivityScore"] = corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas))
+    factors_data = factors_data.with_columns(
+        pl.Series("PhysicalActivityScore", corr * standard_deltas + np.sqrt(1 - corr**2) * rng.normal(0, 1, len(standard_deltas)))
+    )
 
     #################
     # COVARIABLE DATA (Sex, YoE)
     # Generate a sex covariate completely randomly, with no correlation with Y
-    covar_data = pd.DataFrame(columns=["Sex", "YoE"])
-    covar_data["Sex"] = rng.integers(0, 2, all_synthetic_data.shape[0])
+    covar_data = pl.DataFrame({"Sex": rng.integers(0, 2, all_synthetic_data.shape[0])})
 
     # YoE has to be correlated with age
     mean_yoe = 10
@@ -185,7 +193,7 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
 
     yoe = mean_yoe + std_yoe * (corr * standard_deltas + np.sqrt(1 - corr**2) * noise)
 
-    covar_data["YoE"] = yoe
+    covar_data = covar_data.with_columns(pl.Series("YoE", yoe))
 
     ##############
     # SYSTEMS DATA
@@ -195,11 +203,7 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
     systems_data = system_A + "\n" + system_B
 
     # Reset the index of the dataframes
-    all_synthetic_data.rename(columns={"Y": "age"}, inplace=True)
-    all_synthetic_data.reset_index(drop=True, inplace=True)
-    clinical_data.reset_index(drop=True, inplace=True)
-    factors_data.reset_index(drop=True, inplace=True)
-    covar_data.reset_index(drop=True, inplace=True)
+    all_synthetic_data = all_synthetic_data.rename({"Y": "age"})
 
     if save:
         # SAVE THE DATA
@@ -217,10 +221,10 @@ def generate_synthetic_data(save: bool = False, output_dir: str = None):
         covar_data_path = os.path.join(save_path, "toy_covar.csv")
         systems_path = os.path.join(save_path, "toy_systems.txt")
 
-        all_synthetic_data.to_csv(features_path, index=True, header=True, float_format="%.3f")
-        clinical_data.to_csv(clinical_path, index=True, header=True, float_format="%.3f")
-        factors_data.to_csv(factors_path, index=True, header=True, float_format="%.3f")
-        covar_data.to_csv(covar_data_path, index=True, header=True, float_format="%.3f")
+        all_synthetic_data.with_row_index("index").write_csv(features_path, float_precision=3)
+        clinical_data.with_row_index("index").write_csv(clinical_path, float_precision=3)
+        factors_data.with_row_index("index").write_csv(factors_path, float_precision=3)
+        covar_data.with_row_index("index").write_csv(covar_data_path, float_precision=3)
 
         # Write systems data to a .txt file exactly as it is
         with open(systems_path, "w") as f:
@@ -263,8 +267,10 @@ class SyntheticData:
                 with open(data_path, "r") as f:
                     self._data[data_type] = f.read()
             else:
-                # TODO: Maybe change to a faster format (parquet, feather, etc.), faster loading to compensate pandas import slowness.
-                self._data[data_type] = pd.read_csv(data_path, index_col=0)
+                df = pl.read_csv(data_path)
+                if df.columns and df.columns[0].lower() in {"index", "unnamed: 0", ""}:
+                    df = df.drop(df.columns[0])
+                self._data[data_type] = df
 
     def __getattr__(self, name):
         if name in self._data.keys():

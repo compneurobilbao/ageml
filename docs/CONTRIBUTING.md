@@ -52,7 +52,6 @@ ageml
 ├── .coverage                       # File to measure code coverage, percentage of tested code lines
 ├── README.md
 ├── pyproject.toml                  # Requirements for environment settings, packaging and so on
-├── poetry.lock                     # Dependency for building the system
 ├── noxfile.py                      # Defines the linting, coverage, pytest sessions
 ├── setup.cfg                       # Defines the linting rules
 ├── LICENSE                         # Apache 2.0 License file
@@ -68,18 +67,12 @@ Another section will be added in the future explaining how to setup a Docker con
 
 ### 1. Prepare and set up the package
 
-Poetry is our environment manager and build system. To install the required packages for creating the environment with poetry.
+uv is our environment and dependency manager.
 
 __Note__: If you are using Mac OS, make sure you are installing `pip` correctly, either by installing python3 via homebrew, or other tested methods.
 
 ```bash
-pip install poetry nox nox-poetry
-```
-
-If you want the virtual environment of the project to be located in the project root, run this line (make sure you have poetry installed running `poetry --version`):
-
-```bash
-poetry config virtualenvs.in-project true
+pip install uv nox
 ```
 
 ### 2. Clone the git repository
@@ -90,24 +83,18 @@ Run in your terminal:
 git clone https://github.com/compneurobilbao/ageml.git && cd ageml
 ```
 
-Once inside the cloned folder (where the _pyproject.toml_ file is located), Poetry will install in the virtual environment (in developer mode) when running:
+Once inside the cloned folder (where the _pyproject.toml_ file is located), create and sync the environment with:
 
 ```bash
-poetry install
+uv sync --group dev
 ```
 
-Refer to the [poetry documentation](https://python-poetry.org/docs/) for more information.
+Refer to the [uv documentation](https://docs.astral.sh/uv/) for more information.
 
 ### 3. Activate the environment
 
-At this point, a virtual environment should have been created automatically with all the required dependencies.
-If this is something that could be launched somehow, activate the poetry shell:
-
-```(bash)
-poetry shell
-```
-
-Or you can also run:
+At this point, a virtual environment should have been created automatically with all required dependencies.
+You can activate it manually:
 
 ```(bash)
 . <path_to_your_virtual_env>/bin/activate

@@ -11,29 +11,16 @@ Classifier - classifier of class labels based on deltas.
 import copy
 
 import numpy as np
-from xgboost import XGBRegressor
 
 # Sklearn and Scipy do not automatically load submodules (avoids overheads)
-from scipy import stats
 from sklearn import linear_model
-from sklearn import svm
-from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 from sklearn import model_selection
 from sklearn import pipeline
 from sklearn import preprocessing
-from sklearn.preprocessing import (
-    MaxAbsScaler,
-    MinMaxScaler,
-    Normalizer,
-    PowerTransformer,
-    QuantileTransformer,
-    RobustScaler,
-    StandardScaler,
-)
-from hpsklearn import HyperoptEstimator, any_regressor, any_preprocessing
-from hyperopt import tpe
+from sklearn.preprocessing import StandardScaler
 
+from ageml.registries import MetricRegistry, ModelRegistry, ScalerRegistry
 from ageml.utils import verbose_wrapper
 from ageml.processing import RegressionFoldMetrics, ClassificationFoldMetrics, CVMetricsHandler
 
@@ -75,96 +62,6 @@ class AgeML:
     predict_age(self, X): Predict age with fitted model.
     """
 
-    # Scaler dictionary
-    scaler_dict = {
-        "maxabs": MaxAbsScaler,
-        "minmax": MinMaxScaler,
-        "normalizer": Normalizer,
-        "power": PowerTransformer,
-        "quantile": QuantileTransformer,
-        "robust": RobustScaler,
-        "standard": StandardScaler,
-    }
-    scaler_hyperparameters = {
-        "maxabs": {},
-        "minmax": {},
-        "normalizer": {},
-        "power": {"method": ["yeo-johnson", "box-cox"]},
-        "quantile": {
-            "n_quantiles": [10, 1000],
-            "output_distribution": ["normal", "uniform"],
-        },
-        "robust": {},
-        "standard": {},
-    }
-
-    # Model dictionary
-    model_dict = {
-        "linear_reg": linear_model.LinearRegression,
-        "ridge": linear_model.Ridge,
-        "lasso": linear_model.Lasso,
-        "linear_svr": svm.SVR,
-        "xgboost": XGBRegressor,  # XGBoost
-        "rf": RandomForestRegressor,
-        "hyperopt": HyperoptEstimator,
-    }
-    model_hyperparameter_ranges = {
-        "ridge": {"alpha": [-3, 3]},
-        "lasso": {"alpha": [-3, 3]},
-        "linear_svr": {"C": [-3, 3], "epsilon": [-3, 3]},
-        "xgboost": {
-            "eta": [-3, 3],
-            "gamma": [-3, 3],
-            "max_depth": [0, 100],
-            "min_child_weight": [0, 100],
-            "max_delta_step": [0, 100],
-            "subsample": [-3, 3],
-            "colsample_bytree": [0.001, 1],
-            "colsample_bylevel": [0.001, 1],
-            "colsample_bynode": [0.001, 1],
-            "lambda": [-3, 3],
-            "alpha": [-3, 3],
-        },
-        "rf": {
-            "n_estimators": [1, 100],
-            "max_depth": [1, 100],
-            "min_samples_split": [1, 100],
-            "min_samples_leaf": [1, 100],
-            "max_features": [1, 100],
-            "min_impurity_decrease": [0, 1],
-            "max_leaf_nodes": [1, 100],
-            "min_weight_fraction_leaf": [-3, 3],
-        },
-    }
-
-    model_hyperparameter_types = {
-        "ridge": {"alpha": "log"},
-        "lasso": {"alpha": "log"},
-        "linear_svr": {"C": "log", "epsilon": "log"},
-        "xgboost": {
-            "eta": "float",
-            "gamma": "float",
-            "max_depth": "int",
-            "min_child_weight": "int",
-            "max_delta_step": "int",
-            "subsample": "float",
-            "colsample_bytree": "float",
-            "colsample_bylevel": "float",
-            "colsample_bynode": "float",
-            "lambda": "log",
-            "alpha": "log",
-        },
-        "rf": {
-            "n_estimators": "int",
-            "max_depth": "int",
-            "min_samples_split": "int",
-            "min_samples_leaf": "int",
-            "max_features": "int",
-            "min_impurity_decrease": "log",
-            "max_leaf_nodes": "int",
-        },
-    }
-
     def __init__(
         self,
         scaler_type,
@@ -180,13 +77,9 @@ class AgeML:
     ):
         """Initialise variables."""
 
-        # Scaler dictionary
+        # Scaler and model types
         self.scaler_type = scaler_type
-        self.scaler_dict = AgeML.scaler_dict
-
-        # Model dictionary
         self.model_type = model_type
-        self.model_dict = AgeML.model_dict
 
         # Hyperparameters and feature extension
         self.hyperparameter_tuning = hyperparameter_tuning
@@ -215,14 +108,13 @@ class AgeML:
             dict: dictionary with the hyperparameter grid
         """
         param_grid = {}
+        model_info = ModelRegistry.get(self.model_type)
         conditions = [
-            self.model_type in AgeML.model_dict.keys(),
             self.hyperparameter_tuning > 0,
-            self.model_type != "hyperopt",
             self.model_type != "linear_reg",
         ]
         if all(conditions):
-            hyperparam_types = AgeML.model_hyperparameter_types[self.model_type]
+            hyperparam_types = model_info['hyperparameter_types']
             invalid_hyperparams = [param for param in self.hyperparameter_params.keys() if param not in hyperparam_types.keys()]
             if len(invalid_hyperparams) > 0:
                 raise ValueError(f"Hyperparameter(s) {invalid_hyperparams} not available for the selected model '{self.model_type}'.")
@@ -247,12 +139,11 @@ class AgeML:
         **kwargs: to input to sklearn scaler object"""
 
         # Mean centered and unit variance
-        if norm in ["no", "None"] or self.model_type == "hyperopt":
+        if norm in ["no", "None"]:
             self.scaler = None
-        elif norm not in self.scaler_dict.keys():
-            raise ValueError(f"Must select an available scaler type. Available: {list(self.scaler_dict.keys())}")
         else:
-            self.scaler = self.scaler_dict[norm](**kwargs)
+            scaler_info = ScalerRegistry.get(norm)
+            self.scaler = scaler_info['class'](**kwargs)
 
     def set_model(self, model_type, **kwargs):
         """Sets the model to use in the pipeline.
@@ -262,17 +153,8 @@ class AgeML:
         model_type: type of model to use
         **kwargs: to input to sklearn model object"""
 
-        # Linear Regression
-        if model_type not in self.model_dict.keys():
-            raise ValueError(f"Must select an available model type. Available: {list(self.model_dict.keys())}")
-        elif model_type == "hyperopt":
-            self.model = HyperoptEstimator(
-                regressor=any_regressor("age_regressor"),
-                preprocessing=any_preprocessing("age_preprocessing"),
-                algo=tpe.suggest,
-            )
-        else:
-            self.model = self.model_dict[model_type](**kwargs)
+        model_info = ModelRegistry.get(model_type)
+        self.model = model_info['class'](**kwargs)
 
         self.model_type = model_type
 
@@ -284,17 +166,14 @@ class AgeML:
             raise ValueError("Must set a valid model before setting pipeline.")
 
         # Scaler and whether it has to be optimized
-        if self.scaler is not None and self.model_type != "hyperopt":
+        if self.scaler is not None:
             pipe.append(("scaler", self.scaler))
         # Feature extension
-        if self.feature_extension != 0 and self.model_type != "hyperopt":
+        if self.feature_extension != 0:
             pipe.append(("feature_extension", preprocessing.PolynomialFeatures(degree=self.feature_extension)))
         # Model
-        if self.model_type != "hyperopt":
-            pipe.append(("model", self.model))
-            self.pipeline = pipeline.Pipeline(pipe)
-        else:
-            self.pipeline = None
+        pipe.append(("model", self.model))
+        self.pipeline = pipeline.Pipeline(pipe)
 
     def set_CV_params(self, CV_split, seed=None):
         """Set the parameters of the Cross Validation Scheme.
@@ -315,11 +194,7 @@ class AgeML:
         y_true: 1D-Array with true ages; shape=n
         y_pred: 1D-Array with predicted ages; shape=n"""
 
-        mae = metrics.mean_absolute_error(y_true, y_pred)
-        rmse = metrics.mean_squared_error(y_true, y_pred, squared=False)
-        r2 = metrics.r2_score(y_true, y_pred)
-        p, _ = stats.pearsonr(y_true, y_pred)
-        return mae, rmse, r2, p
+        return MetricRegistry.get("regression_metrics")(y_true, y_pred)
 
     def fit_age_bias(self, y_true, y_pred):
         """Fit a linear age bias correction model.
@@ -361,155 +236,111 @@ class AgeML:
         y: 1D-Array with age; shape=n"""
 
         # Check that pipeline has been properly constructed
-        if self.pipeline is None and self.model_type != "hyperopt":
+        if self.pipeline is None:
             raise TypeError("Must set a valid pipeline before running fit.")
 
-        if self.model_type != "hyperopt":
-            # Optimize hyperparameters if required
-            if self.hyperparameter_tuning > 1:
-                print(self.hyperparameter_tuning)
-                print("Running Hyperparameter optimization...")
-            else:
-                print("No hyperparameter optimization will be done.")
-            # Generate the hyperparameter grid. If {}, default values are used
-            hyperparameter_grid = model_selection.ParameterGrid(self.hyperparameter_grid)
-            pipelines = []
-            # Generate pipelines with different hyperparameters from the grid
-            for grid_point in hyperparameter_grid:
-                original_pipeline = copy.deepcopy(self.pipeline)
-                point_pipeline = original_pipeline.set_params(**grid_point)
-                pipelines.append(point_pipeline)
-            # Variables of interest
-            pred_age = np.zeros(y.shape[0])
-            corrected_age = np.zeros(y.shape[0])
-            best_split_mae = 1e10
-            mae_means_test = []
-            # Loop through the pipelines, and then loop through the CV splits
-            for cv_pipeline in pipelines:
-                print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
-                temp_pred_age = np.zeros(y.shape[0])
-                temp_corr_age = np.zeros(y.shape[0])
-                split_metrics = CVMetricsHandler(task_type="regression")
-                kf_hyperopt = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
-                for i, (train, test) in enumerate(kf_hyperopt.split(X)):
-                    X_train, X_test = X[train], X[test]
-                    y_train, y_test = y[train], y[test]
+        # Optimize hyperparameters if required
+        if self.hyperparameter_tuning > 1:
+            print(self.hyperparameter_tuning)
+            print("Running Hyperparameter optimization...")
+        else:
+            print("No hyperparameter optimization will be done.")
+        # Generate the hyperparameter grid. If {}, default values are used
+        hyperparameter_grid = model_selection.ParameterGrid(self.hyperparameter_grid)
+        pipelines = []
+        # Generate pipelines with different hyperparameters from the grid
+        for grid_point in hyperparameter_grid:
+            original_pipeline = copy.deepcopy(self.pipeline)
+            point_pipeline = original_pipeline.set_params(**grid_point)
+            pipelines.append(point_pipeline)
 
-                    # Train model with the hyperparameters
-                    cv_pipeline.fit(X_train, y_train)
+        # Variables of interest
+        pred_age = np.zeros(y.shape[0])
+        corrected_age = np.zeros(y.shape[0])
+        best_split_mae = 1e10
+        mae_means_test = []
+        # Loop through the pipelines, and then loop through the CV splits
+        for cv_pipeline in pipelines:
+            print(f"\nRunning CV splits with pipeline:\n{cv_pipeline}")
+            temp_pred_age = np.zeros(y.shape[0])
+            temp_corr_age = np.zeros(y.shape[0])
+            split_metrics = CVMetricsHandler(task_type="regression")
+            kf_cv = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
+            for i, (train, test) in enumerate(kf_cv.split(X)):
+                X_train, X_test = X[train], X[test]
+                y_train, y_test = y[train], y[test]
 
-                    # Predictions on train and test set
-                    y_pred_train = cv_pipeline.predict(X_train)
-                    y_pred_test = cv_pipeline.predict(X_test)
+                # Train model with the hyperparameters
+                cv_pipeline.fit(X_train, y_train)
 
-                    # Metrics in Train and Test sets
-                    mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
-                    train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
-                    mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
-                    test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
-                    split_metrics.add_fold_metrics(train_fold, test_fold)
+                # Predictions on train and test set
+                y_pred_train = cv_pipeline.predict(X_train)
+                y_pred_test = cv_pipeline.predict(X_test)
 
-                    # Fit and apply age-bias correction
-                    self.fit_age_bias(y_train, y_pred_train)
-                    y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
+                # Metrics in Train and Test sets
+                mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
+                train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
+                mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
+                test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
+                split_metrics.add_fold_metrics(train_fold, test_fold)
 
-                    # Save results of hold out
-                    temp_pred_age[test] = y_pred_test
-                    temp_corr_age[test] = y_pred_test_no_bias
+                # Fit and apply age-bias correction
+                self.fit_age_bias(y_train, y_pred_train)
+                y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
 
-                # Compute the mean of scores over all CV splits
-                split_summary = split_metrics.get_summary()
-                mean_score_test = split_summary["test"]["mae"]["mean"]
-                mae_means_test.append(mean_score_test)
+                # Save results of hold out
+                temp_pred_age[test] = y_pred_test
+                temp_corr_age[test] = y_pred_test_no_bias
 
-                # If the mean MAE is better than the previous best, save the results
-                if mean_score_test < best_split_mae:
-                    best_split_mae = mean_score_test
-                    pred_age = copy.deepcopy(temp_pred_age)
-                    corrected_age = copy.deepcopy(temp_corr_age)
-                    self.metrics = copy.deepcopy(split_metrics)
+            # Compute the mean of scores over all CV splits
+            split_summary = split_metrics.get_summary()
+            mean_score_test = split_summary["test"]["mae"]["mean"]
+            mae_means_test.append(mean_score_test)
 
-            # Select the best pipeline based on the mean scores
-            best_hyperparam_index = np.argmin(mae_means_test)
-            self.pipeline = pipelines[best_hyperparam_index]
+            # If the mean MAE is better than the previous best, save the results
+            if mean_score_test < best_split_mae:
+                best_split_mae = mean_score_test
+                pred_age = copy.deepcopy(temp_pred_age)
+                corrected_age = copy.deepcopy(temp_corr_age)
+                self.metrics = copy.deepcopy(split_metrics)
 
-            if self.hyperparameter_tuning > 0:
-                print(f"\nHyperoptimization best parameters: {hyperparameter_grid[best_hyperparam_index]}")
-                print(f"Best pipeline:\n{self.pipeline}")
+        # Select the best pipeline based on the mean scores
+        best_hyperparam_index = np.argmin(mae_means_test)
+        self.pipeline = pipelines[best_hyperparam_index]
 
-            # Calculate metrics over all splits
-            summary_dict = self.metrics.get_summary()
-            print("Summary metrics over all CV splits")
-            print(
-                "Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
-                % (
-                    summary_dict["train"]["mae"]["mean"],
-                    summary_dict["train"]["mae"]["std"],
-                    summary_dict["train"]["rmse"]["mean"],
-                    summary_dict["train"]["rmse"]["std"],
-                    summary_dict["train"]["r2"]["mean"],
-                    summary_dict["train"]["r2"]["std"],
-                    summary_dict["train"]["p"]["mean"],
-                    summary_dict["train"]["p"]["std"],
-                )
+        if self.hyperparameter_tuning > 0:
+            print(f"\nHyperoptimization best parameters: {hyperparameter_grid[best_hyperparam_index]}")
+            print(f"Best pipeline:\n{self.pipeline}")
+
+        # Calculate metrics over all splits
+        summary_dict = self.metrics.get_summary()
+        print("Summary metrics over all CV splits")
+        print(
+            "Train: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+            % (
+                summary_dict["train"]["mae"]["mean"],
+                summary_dict["train"]["mae"]["std"],
+                summary_dict["train"]["rmse"]["mean"],
+                summary_dict["train"]["rmse"]["std"],
+                summary_dict["train"]["r2"]["mean"],
+                summary_dict["train"]["r2"]["std"],
+                summary_dict["train"]["p"]["mean"],
+                summary_dict["train"]["p"]["std"],
             )
-            print(
-                "Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
-                % (
-                    summary_dict["test"]["mae"]["mean"],
-                    summary_dict["test"]["mae"]["std"],
-                    summary_dict["test"]["rmse"]["mean"],
-                    summary_dict["test"]["rmse"]["std"],
-                    summary_dict["test"]["r2"]["mean"],
-                    summary_dict["test"]["r2"]["std"],
-                    summary_dict["test"]["p"]["mean"],
-                    summary_dict["test"]["p"]["std"],
-                )
+        )
+        print(
+            "Test: MAE %.2f ± %.2f, RMSE %.2f ± %.2f, R2 %.3f ± %.3f, p %.3f ± %.3f"
+            % (
+                summary_dict["test"]["mae"]["mean"],
+                summary_dict["test"]["mae"]["std"],
+                summary_dict["test"]["rmse"]["mean"],
+                summary_dict["test"]["rmse"]["std"],
+                summary_dict["test"]["r2"]["mean"],
+                summary_dict["test"]["r2"]["std"],
+                summary_dict["test"]["p"]["mean"],
+                summary_dict["test"]["p"]["std"],
             )
-
-        elif self.model_type == "hyperopt":
-            print("Running Hyperparameter optimization with 'hyperopt' model option...")
-
-            # Variables of interest
-            pred_age = np.zeros(y.shape)
-            corrected_age = np.zeros(y.shape)
-
-            # Get the data split
-            X_train = X[self.train_indices,]
-            y_train = y[self.train_indices]
-            X_test = X[self.test_indices,]
-            y_test = y[self.test_indices]
-
-            # Fit the hyperopt model and compute loss
-            self.model.fit(X_train, y_train)
-            y_pred_train = self.model.predict(X_train)
-            y_pred_test = self.model.predict(X_test)
-            mae_train, rmse_train, r2_train, p_train = self.calculate_metrics(y_train, y_pred_train)
-            train_fold = RegressionFoldMetrics(mae_train, rmse_train, r2_train, p_train)
-            mae_test, rmse_test, r2_test, p_test = self.calculate_metrics(y_test, y_pred_test)
-            test_fold = RegressionFoldMetrics(mae_test, rmse_test, r2_test, p_test)
-            self.metrics.add_fold_metrics(train_fold, test_fold)
-            best_model = self.model.best_model()["learner"]
-            best_preprocessing = self.model.best_model()["preprocs"]
-            # Evaluate on test set
-            pipe = [(f"preproc_{i}", preproc) for i, preproc in enumerate(best_preprocessing)]
-            pipe.append(("model", best_model))
-
-            self.pipeline = pipeline.Pipeline(pipe)
-            print(f"Train: MAE {mae_train:.2f}, RMSE {rmse_train:.2f}, R2 {r2_train:.3f}, p {p_train:.3f}")
-            print(f"Test: MAE {mae_test:.2f}, RMSE {rmse_test:.2f}, R2 {r2_test:.3f}, p {p_test:.3f}")
-            print(
-                "Hyperoptimization best parameters:\n"
-                f"\t- Best preprocessing:\n\t\t{best_preprocessing}\n"
-                f"\t- Best model:\n\t\t{best_model}"
-            )
-
-            # Fit and apply age-bias correction
-            self.fit_age_bias(y_train, y_pred_train)
-            y_pred_test_no_bias = self.predict_age_bias(y_test, y_pred_test)
-            # Save results of hold out
-            pred_age[self.test_indices] = y_pred_test
-            corrected_age[self.test_indices] = y_pred_test_no_bias
+        )
 
         # Print comparison with mean age as only predictor to have a reference of a dummy regressor
         dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
@@ -538,7 +369,7 @@ class AgeML:
 
         # Check that model has previously been fit
         if not self.pipelineFit:
-            raise ValueError("Must fit the pipline before calling predict.")
+            raise ValueError("Must fit the pipeline before calling predict.")
         if y is not None and not self.age_biasFit:
             raise ValueError("Must fit the age bias before calling predict with bias correction.")
 

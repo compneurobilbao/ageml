@@ -5,6 +5,9 @@ import os
 import sys
 
 
+AGEML_VERSION = "0.3.0"
+
+
 def insert_newlines(text, nwords):
     """Function to insert a new line every n words."""
     if nwords == 0:
@@ -45,11 +48,17 @@ def feature_extractor(df):
 
     Parameters:
     -----------
-    df: pandas dataframe with features and target variable"""
+    df: polars/pandas dataframe with features and target variable"""
 
-    feature_names = [name for name in df.columns if name != "age"]
-    X = df[feature_names].to_numpy()
-    y = df["age"].to_numpy()
+    feature_names = [name for name in df.columns if name not in {"id", "age"}]
+    if hasattr(df, "select"):
+        # Polars path
+        X = df.select(feature_names).to_numpy()
+        y = df.select("age").to_numpy().ravel()
+    else:
+        # Pandas path
+        X = df[feature_names].to_numpy()
+        y = df["age"].to_numpy()
 
     return X, y, feature_names
 

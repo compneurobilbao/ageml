@@ -1,7 +1,7 @@
 """Define processing functions for AgeML package"""
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -211,7 +211,7 @@ class CVMetricsHandler:
             'test': self._calculate_summary(self.test_metrics)
         }
     
-    def get_summary_dataframe(self) -> pd.DataFrame:
+    def get_summary_dataframe(self) -> pl.DataFrame:
         summary = self.get_summary()
         data = []
         
@@ -222,6 +222,8 @@ class CVMetricsHandler:
         for split in ['train', 'test']:
             for metric in metrics:
                 for stat, value in summary[split][metric].items():
+                    if stat == '95ci' and isinstance(value, tuple):
+                        value = str(value)
                     data.append({
                         'split': split,
                         'metric': metric,
@@ -229,4 +231,4 @@ class CVMetricsHandler:
                         'value': value
                     })
         
-        return pd.DataFrame(data)
+        return pl.DataFrame(data)

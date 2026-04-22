@@ -509,7 +509,10 @@ class Visualizer:
         plt.figure(figsize=(10, 5))
         ngroups = len(labels)
         clevels = np.linspace(0, 1, ngroups)
-        boxes = plt.boxplot(deltas, labels=labels, patch_artist=True, showfliers=False)
+        try:
+            boxes = plt.boxplot(deltas, tick_labels=labels, patch_artist=True, showfliers=False)
+        except TypeError:
+            boxes = plt.boxplot(deltas, labels=labels, patch_artist=True, showfliers=False)
         # Plot patches
         for box, clevel in zip(boxes["boxes"], clevels):
             box.set_facecolor(self.cmap(clevel))
