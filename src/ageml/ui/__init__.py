@@ -660,10 +660,12 @@ class Interface:
                             median_diff = np.median(ages[i]) - np.median(ages[j])
                             # Hodges-Lehmann estimator for effect size
                             h_l = np.median(ages[i][:, np.newaxis] - ages[j])
-                            warn_message = (f"Age distributions {labels[i]} and {labels[j]} ",
-                                            f"are not similar: U-{u_stat:.2f} (p={p_val:.2g})\n"
-                                            f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
-                                            f"Hodges-Lehmann estimator: {h_l:.2f}")
+                            warn_message = (
+                                f"Age distributions {labels[i]} and {labels[j]} "
+                                f"are not similar: U-{u_stat:.2f} (p={p_val:.2g})\n"
+                                f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                f"Hodges-Lehmann estimator: {h_l:.2f}"
+                                            )
                             print(warn_message)
                             warnings.warn(warn_message, category=UserWarning)
                     else:
@@ -673,10 +675,12 @@ class Interface:
                             median_diff = np.median(ages[i]) - np.median(ages[j])
                             # Hodges-Lehmann estimator for effect size
                             h_l = np.median(ages[i][:, np.newaxis] - ages[j])
-                            warn_message = (f"Age distributions {labels[i]} and {labels[j]} ",
-                                            f"are not similar: t={t_stat:.2f} (p={p_val:.2g})\n"
-                                            f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
-                                            f"Hodges-Lehmann estimator: {h_l:.2f}")
+                            warn_message = (
+                                f"Age distributions {labels[i]} and {labels[j]} "
+                                f"are not similar: t={t_stat:.2f} (p={p_val:.2g})\n"
+                                f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                f"Hodges-Lehmann estimator: {h_l:.2f}"
+                                            )
                             print(warn_message)
                             warnings.warn(warn_message, category=UserWarning)
 
