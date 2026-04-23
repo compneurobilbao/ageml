@@ -649,11 +649,36 @@ class Interface:
             print("If p_value > 0.05 distributions are considered similar and not displayed...")
             for i in range(len(labels)):
                 for j in range(i + 1, len(labels)):
-                    t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
-                    if p_val < 0.05:
-                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (labels[i], labels[j], t_stat, p_val)
-                        print(warn_message)
-                        warnings.warn(warn_message, category=UserWarning)
+                    # Perform normality test to decide whether to use t-test or Mann-Whitney U test
+                    _, p_val_normality_i = stats.normaltest(ages[i])
+                    _, p_val_normality_j = stats.normaltest(ages[j])
+                    if p_val_normality_i < 0.05 or p_val_normality_j < 0.05:
+                        # If either distribution is not normal, use Mann-Whitney U test
+                        print(f"At least one of the distributions in {p_val_normality_i} and {p_val_normality_j} is not normal, using Mann-Whitney U test.")
+                        u_stat, p_val = stats.mannwhitneyu(ages[i], ages[j], alternative="two-sided")
+                        if p_val < 0.05:
+                            median_diff = np.median(ages[i]) - np.median(ages[j])
+                            # Hodges-Lehmann estimator for effect size
+                            h_l = np.median(ages[i][:, np.newaxis] - ages[j])
+                            warn_message = (f"Age distributions {labels[i]} and {labels[j]} ",
+                                            f"are not similar: U-{u_stat:.2f} (p={p_val:.2g})\n"
+                                            f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                            f"Hodges-Lehmann estimator: {h_l:.2f}")
+                            print(warn_message)
+                            warnings.warn(warn_message, category=UserWarning)
+                    else:
+                        # If both distributions are normal, use t-test
+                        t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
+                        if p_val < 0.05:
+                            median_diff = np.median(ages[i]) - np.median(ages[j])
+                            # Hodges-Lehmann estimator for effect size
+                            h_l = np.median(ages[i][:, np.newaxis] - ages[j])
+                            warn_message = (f"Age distributions {labels[i]} and {labels[j]} ",
+                                            f"are not similar: t={t_stat:.2f} (p={p_val:.2g})\n"
+                                            f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                            f"Hodges-Lehmann estimator: {h_l:.2f}")
+                            print(warn_message)
+                            warnings.warn(warn_message, category=UserWarning)
 
         # Use visualiser
         self.visualizer.age_distribution(ages, labels, name)
