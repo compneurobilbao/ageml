@@ -702,40 +702,53 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Make lists to store covariate info for each dataframe
-        X_list, y_list, corr_list, order_list, significance_list = [], [], [], [], []
-        for label, df in features_dict.items():
-            print("Covariate %s" % label)
-            # Extract features
-            X, y, feature_names = feature_extractor(df)
-            # Covariate correction
-            if self.flags["covariates"] and not self.flags["covarname"]:
-                print("Covariate effects will be subtracted from features.")
-                X, _ = covariate_correction(X, self._covariates_for(df))
-            # Calculate correlation between features and age
-            corr, order, p_values = find_correlations(X, y)
-            # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
-            significant = significant_markers(reject_bon, reject_fdr)
-            # Print results
-            for idx, order_element in enumerate(order):
-                print(
-                    "%d.%s %s %s: %.2f (%.2g)"
-                    % (
-                        idx + 1,
-                        label,
-                        significant[order_element],
-                        feature_names[order_element],
-                        corr[order_element],
-                        p_values[order_element],
+        X_list, y_list, corr_list, order_list, significance_list = {}, {}, {}, {}, {}
+        for relation in ["linear", "quadratic"]:
+            print(f"Exploring #{relation}# relationship between features and age...")
+            X_list[relation], y_list[relation], corr_list[relation], order_list[relation], significance_list[relation] = [], [], [], [], []
+            for label, df in features_dict.items():
+                print("Covariate %s" % label)
+                # Extract features
+                X, y, feature_names = feature_extractor(df)
+                if relation == "quadratic":
+                    X = X**2
+                # Covariate correction
+                if self.flags["covariates"] and not self.flags["covarname"]:
+                    print("Covariate effects will be subtracted from features.")
+                    X, _ = covariate_correction(X, self._covariates_for(df))
+                # Calculate correlation between features and age
+                corr, order, p_values = find_correlations(X, y)
+                # Reject null hypothesis of no correlation
+                reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+                reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
+                significant = significant_markers(reject_bon, reject_fdr)
+                # Print results
+                for idx, order_element in enumerate(order):
+                    print(
+                        "%d.%s %s %s: %.2f (%.2g)"
+                        % (
+                            idx + 1,
+                            label,
+                            significant[order_element],
+                            feature_names[order_element],
+                            corr[order_element],
+                            p_values[order_element],
+                        )
                     )
-                )
-            # Append all the values
-            X_list.append(X), y_list.append(y), corr_list.append(corr), order_list.append(order), significance_list.append(significant)
+                # Append all the values
+                X_list[relation].append(X), y_list[relation].append(y), corr_list[relation].append(corr), order_list[relation].append(order), significance_list[relation].append(significant)
 
         # Use visualizer to show results
         self.visualizer.features_vs_age(
-            X_list, y_list, corr_list, order_list, significance_list, feature_names, tag, list(features_dict.keys())
+            X_list["linear"], y_list["linear"], corr_list["linear"], order_list["linear"], significance_list["linear"],
+            feature_names, tag, list(features_dict.keys())
+        )
+        # Do the same but for the quadratic features to explore non-linear relationships
+        filename = f"quadratic_features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
+
+        self.visualizer.features_vs_age(
+            X_list["quadratic"], y_list["quadratic"], corr_list["quadratic"], order_list["quadratic"], significance_list["quadratic"],
+            feature_names, tag, list(features_dict.keys()), filename
         )
 
     def feature_ordering(self, tag):

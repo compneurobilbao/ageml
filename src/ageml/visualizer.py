@@ -98,7 +98,9 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers, feature_names, tag: NameTag = None, labels: list = None):
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list,
+                        markers, feature_names, tag: NameTag = None,
+                        labels: list = None, filename: str = None):
         """Plot correlation between features and age.
 
         Parameters
@@ -147,7 +149,8 @@ class Visualizer:
         plt.tight_layout()
 
         # Save file
-        filename = f"features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
+        if filename is None:
+            filename = f"features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
