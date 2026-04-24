@@ -290,6 +290,51 @@ def test_model_age_feature_extension_wires_into_pipeline():
     assert args.feature_extension == 2
     assert model.pipeline.named_steps["feature_extension"].degree == 2
 
+
+def test_model_age_null_model_permutations_wires_into_model():
+    """Test that model_age forwards null-model permutations to AgeML."""
+
+    cmd = ModelAge.__new__(ModelAge)
+    cmd.parser = argparse.ArgumentParser()
+    cmd.configure_parser()
+
+    args = cmd.parser.parse_args([
+        "-o",
+        "/tmp/out",
+        "-f",
+        "/tmp/features.csv",
+        "--null_model_permutations",
+        "7",
+    ])
+    args = cmd.configure_args(args)
+
+    model = build_model_from_args(args)
+
+    assert args.null_model_permutations == 7
+    assert model.null_model_permutations == 7
+
+
+def test_model_age_null_model_permutations_rejects_negative():
+    """Negative permutation counts should be rejected by configure_args."""
+
+    cmd = ModelAge.__new__(ModelAge)
+    cmd.parser = argparse.ArgumentParser()
+    cmd.configure_parser()
+
+    args = cmd.parser.parse_args([
+        "-o",
+        "/tmp/out",
+        "-f",
+        "/tmp/features.csv",
+        "--null_model_permutations",
+        "-1",
+    ])
+
+    with pytest.raises(ValueError) as exc_info:
+        cmd.configure_args(args)
+
+    assert str(exc_info.value) == "null_model_permutations must be a non negative integer."
+
 def test_model_feature_influence(temp_dir, features, clinical):
     """Test model_feature_influence function."""
 

@@ -115,6 +115,11 @@ hyperparameter_grid_description = (
     "https://github.com/compneurobilbao/ageml/tree/main/docs/available_models.md#model-hyperparameters"
 )
 
+null_model_permutations_description = (
+    "Number of age-label permutations used to build a null MAE distribution.\n"
+    "Set to 0 to disable (default). Use >= 1 to enable (e.g. --null_model_permutations 100)."
+)
+
 thr_long_description = "Threshold for classification. Default: 0.5 \n" "The threshold is used for assingning hard labels. (e.g. --thr 0.5)"
 
 ci_long_description = "Confidence interval for classification metrics. Default: 0.95 \n"

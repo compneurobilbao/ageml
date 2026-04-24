@@ -105,6 +105,13 @@ class ModelAge(Interface):
             default=["0"],
             help=messages.hyperparameter_grid_description,
         )
+        self.parser.add_argument(
+            "--null_model_permutations",
+            nargs=1,
+            type=int,
+            default=[0],
+            help=messages.null_model_permutations_description,
+        )
 
         # Optional arguments
         self.parser.add_argument("--covariates", metavar="FILE", help=messages.covar_long_description)
@@ -177,6 +184,11 @@ class ModelAge(Interface):
         else:
             args.feature_extension = args.feature_extension[0]
             args.feature_extension = int(convert(args.feature_extension))
+
+        # Set permutation-based null model repetitions
+        if len(args.null_model_permutations) != 1 or args.null_model_permutations[0] < 0:
+            raise ValueError("null_model_permutations must be a non negative integer.")
+        args.null_model_permutations = args.null_model_permutations[0]
         return args
 
 
@@ -269,6 +281,13 @@ class ModelFeatureInfluence(Interface):
             nargs="+",
             default=["0"],
             help=messages.hyperparameter_grid_description,
+        )
+        self.parser.add_argument(
+            "--null_model_permutations",
+            nargs=1,
+            type=int,
+            default=[0],
+            help=messages.null_model_permutations_description,
         )
         self.parser.add_argument(
             "--thr",
@@ -387,6 +406,11 @@ class ModelFeatureInfluence(Interface):
         else:
             args.feature_extension = args.feature_extension[0]
             args.feature_extension = int(convert(args.feature_extension))
+
+        # Set permutation-based null model repetitions
+        if len(args.null_model_permutations) != 1 or args.null_model_permutations[0] < 0:
+            raise ValueError("null_model_permutations must be a non negative integer.")
+        args.null_model_permutations = args.null_model_permutations[0]
 
         # Set threshold
         args.classifier_thr = args.thr[0]

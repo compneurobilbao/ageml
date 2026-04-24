@@ -48,6 +48,7 @@ def build_model_from_args(args, verbose=False):
         args.hyperparameter_tuning,
         args.hyperparameter_params,
         args.feature_extension,
+        getattr(args, "null_model_permutations", 0),
         verbose=verbose,
     )
 
