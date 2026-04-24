@@ -51,7 +51,9 @@ class Visualizer:
 
     auc_vs_num_features(self, aucs, aucs_std, title): Plot AUCs with standard deviation against the number of features used for each model.
 
-    factors_vs_deltas(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
+    factors_and_deltas_barplot(self, corrs, groups, labels, markers): Plot bar graph for correlation between factors and deltas.
+
+    factors_vs_delta(self, X, Y, corr, order, markers, factor_names): Plot scatterplots of factors against deltas.
 
     deltas_by_groups(self, deltas, labels): Plot box plot for deltas in each group.
 
@@ -98,7 +100,9 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
-    def features_vs_age(self, X: list, Y: list, corr: list, order: list, markers, feature_names, tag: NameTag = None, labels: list = None):
+    def features_vs_age(self, X: list, Y: list, corr: list, order: list,
+                        markers, feature_names, tag: NameTag = None,
+                        labels: list = None, filename: str = None):
         """Plot correlation between features and age.
 
         Parameters
@@ -147,7 +151,8 @@ class Visualizer:
         plt.tight_layout()
 
         # Save file
-        filename = f"features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
+        if filename is None:
+            filename = f"features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
 
@@ -444,7 +449,7 @@ class Visualizer:
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()         
 
-    def factors_vs_deltas(self, corrs, groups, labels, markers, tag: NameTag):
+    def factors_and_deltas_barplot(self, corrs, groups, labels, markers, tag: NameTag):
         """Plot bar graph for correlation between factors and deltas.
 
         Parameters
@@ -492,10 +497,80 @@ class Visualizer:
         # Save figure
         fig.set_size_inches(10, 5 * len(corrs))
         fig.suptitle(f"Correlation of factors with age deltas of {tag.group}", y=0.99)
-        filename = f"factors_vs_deltas{'_' + tag.group if tag.group != '' else ''}.png"
+        filename = f"factors_deltas_correlations{'_' + tag.group if tag.group != '' else ''}.png"
         plt.tight_layout()
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
+
+    def factors_vs_delta(
+        self,
+        X: list,
+        Y: list,
+        corr: list,
+        order: list,
+        markers,
+        factor_names,
+        tag: NameTag = None,
+        labels: list = None,
+        filename: str = None,
+    ):
+        """Plot correlation between factors and age deltas.
+
+        Parameters
+        ----------
+        X: list of 2D-arrays with factors; each item shape=(n, m)
+        Y: list of 1D-arrays with deltas; each item shape=(n,)
+        corr: list of 1D-arrays with correlation coefficients; each item shape=(m,)
+        order: list of 1D-arrays with factor ordering; each item shape=(m,)
+        markers: list of lists with significance markers; each item shape=(m,)
+        factor_names: list of factor names; shape=(m,)
+        labels: list of labels for each system; shape=(n_systems,)
+        """
+        if len(Y) == 0 or len(X) == 0:
+            raise TypeError("X and Y must be non-empty lists")
+
+        if labels is None:
+            labels = [f"system_{idx + 1}" for idx in range(len(Y))]
+
+        if not (len(X) == len(Y) == len(corr) == len(order) == len(markers) == len(labels)):
+            raise ValueError("X, Y, corr, order, markers, and labels must have the same length")
+
+        n_systems = len(Y)
+        n_factors = len(factor_names)
+        fig, axs = plt.subplots(nrows=n_systems, ncols=n_factors, figsize=(6 * n_factors, 5 * n_systems), squeeze=False)
+
+        factor_colors = [self.cmap(color_level) for color_level in np.linspace(0, 1, n_factors)]
+
+        for system_idx in range(n_systems):
+            ordered_factors = order[system_idx]
+            # One panel per factor for each system; panels are ordered by correlation strength.
+            for panel_idx, factor_idx in enumerate(ordered_factors):
+                ax = axs[system_idx, panel_idx]
+                ax.scatter(
+                    X[system_idx][:, factor_idx],
+                    Y[system_idx],
+                    s=20,
+                    c=[factor_colors[factor_idx]],
+                    alpha=0.5,
+                )
+                ax.axhline(y=0, color="k", linestyle="--", linewidth=0.8, alpha=0.7)
+                ax.set_xlabel(insert_newlines(factor_names[factor_idx], 4))
+                ax.set_ylabel("Delta")
+                ax.set_title(f"{labels[system_idx]} | {markers[system_idx][factor_idx]}$\\rho$={corr[system_idx][factor_idx]:.2f}")
+
+            # Hide any unused axes if a system has fewer ordered entries than factors.
+            for panel_idx in range(len(ordered_factors), n_factors):
+                axs[system_idx, panel_idx].axis("off")
+
+        group_title = "" if tag is None else tag.group
+        plt.suptitle(f"Factors vs. Deltas\n{group_title}", y=0.995)
+        plt.tight_layout()
+
+        if filename is None:
+            filename = f"factors_vs_deltas{'_' + tag.group if tag is not None and tag.group != '' else ''}.png"
+        plt.savefig(os.path.join(self.path_for_fig, filename))
+        plt.close()
+
 
     def deltas_by_groups(self, deltas, labels, tag: NameTag):
         """Plot box plot for deltas in each group.
@@ -531,6 +606,7 @@ class Visualizer:
         plt.suptitle(f"Age Delta by clinical group. System: {tag.system}", y=0.99)
         plt.savefig(os.path.join(self.path_for_fig, filename))
         plt.close()
+
 
     def classification_auc(self, y, y_pred, groups, tag: NameTag):
         """Plot ROC curve.

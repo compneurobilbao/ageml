@@ -73,6 +73,7 @@ class AgeML:
         hyperparameter_tuning: int = 0,
         hyperparameter_params: dict = {},
         feature_extension: int = 0,
+        null_model_permutations: int = 0,
         verbose: bool = False,
     ):
         """Initialise variables."""
@@ -85,6 +86,9 @@ class AgeML:
         self.hyperparameter_tuning = hyperparameter_tuning
         self.hyperparameter_params = hyperparameter_params
         self.feature_extension = feature_extension
+        self.null_model_permutations = int(null_model_permutations)
+        if self.null_model_permutations < 0:
+            raise ValueError("null_model_permutations must be >= 0")
 
         # Set required modelling parts
         self.set_scaler(scaler_type, **scaler_params)
@@ -100,6 +104,33 @@ class AgeML:
 
         # Initialize metrics storage
         self.metrics = CVMetricsHandler(task_type="regression")
+        self.null_model_scores = np.array([])
+        self.null_model_p_value = None
+
+    def _compute_permutation_null_mae(self, X, y):
+        """Compute a null MAE distribution by permuting target ages.
+
+        This keeps the feature matrix unchanged while breaking the relationship
+        between features and age labels.
+        """
+        if self.null_model_permutations == 0:
+            return np.array([])
+
+        null_maes = np.zeros(self.null_model_permutations, dtype=float)
+        rng = np.random.default_rng(self.seed)
+        for permutation_idx in range(self.null_model_permutations):
+            y_perm = rng.permutation(y)
+            fold_maes = []
+            kf_cv = model_selection.KFold(n_splits=self.CV_split, random_state=self.seed, shuffle=True)
+            for train, test in kf_cv.split(X):
+                null_pipeline = copy.deepcopy(self.pipeline)
+                null_pipeline.fit(X[train], y_perm[train])
+                y_pred_test = null_pipeline.predict(X[test])
+                mae_test, _, _, _ = self.calculate_metrics(y_perm[test], y_pred_test)
+                fold_maes.append(mae_test)
+            null_maes[permutation_idx] = np.mean(fold_maes)
+
+        return null_maes
 
     def set_hyperparameter_grid(self):
         """Build the hyperparameter grid of the selected model upon AgeML object initialization
@@ -342,12 +373,33 @@ class AgeML:
             )
         )
 
-        # Print comparison with mean age as only predictor to have a reference of a dummy regressor
+        # Mean-value baseline for quick interpretability.
         dummy_rmse = np.sqrt(np.mean((y - np.mean(y)) ** 2))
         dummy_mae = np.mean(np.abs(y - np.mean(y)))
         print(
-            "\nWhen using mean of ages as predictor for each subject (dummy regressor):\n" "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse)
+            "\nWhen using mean age as predictor for each subject (dummy regressor):\n"
+            "MAE: %.2f, RMSE: %.2f" % (dummy_mae, dummy_rmse)
         )
+
+        # Permutation-based null distribution for MAE (smaller is better).
+        observed_mae = summary_dict["test"]["mae"]["mean"]
+        self.null_model_scores = self._compute_permutation_null_mae(X, y)
+        if self.null_model_scores.size > 0:
+            self.null_model_p_value = (1 + np.sum(self.null_model_scores <= observed_mae)) / (self.null_model_scores.size + 1)
+            print("\nPermutation-based null model (%d permutations):" % self.null_model_permutations)
+            print(
+                "Null MAE: %.2f ± %.2f | observed MAE: %.2f | empirical p-value: %.4f"
+                % (
+                    np.mean(self.null_model_scores),
+                    np.std(self.null_model_scores),
+                    observed_mae,
+                    self.null_model_p_value,
+                )
+            )
+        else:
+            self.null_model_p_value = None
+            print("\nPermutation-based null model disabled (set null_model_permutations > 0 to enable).")
+
         print("Age range: %.2f" % (np.max(y) - np.min(y)))
 
         # Fit model on all data

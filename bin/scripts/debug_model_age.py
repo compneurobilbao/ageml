@@ -1,4 +1,4 @@
-import ageml.commands as commands
+from ageml.commands import ModelAge
 
 if __name__ == "__main__":
-    commands.ModelAge()
+    ModelAge()

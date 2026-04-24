@@ -649,11 +649,40 @@ class Interface:
             print("If p_value > 0.05 distributions are considered similar and not displayed...")
             for i in range(len(labels)):
                 for j in range(i + 1, len(labels)):
-                    t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
-                    if p_val < 0.05:
-                        warn_message = "Age distributions %s and %s are not similar: %.2f (%.2g) " % (labels[i], labels[j], t_stat, p_val)
-                        print(warn_message)
-                        warnings.warn(warn_message, category=UserWarning)
+                    # Perform normality test to decide whether to use t-test or Mann-Whitney U test
+                    _, p_val_normality_i = stats.normaltest(ages[i])
+                    _, p_val_normality_j = stats.normaltest(ages[j])
+                    if p_val_normality_i < 0.05 or p_val_normality_j < 0.05:
+                        # If either distribution is not normal, use Mann-Whitney U test
+                        print(f"At least one of the distributions in {p_val_normality_i} and {p_val_normality_j} is not normal, using Mann-Whitney U test.")
+                        u_stat, p_val = stats.mannwhitneyu(ages[i], ages[j], alternative="two-sided")
+                        if p_val < 0.05:
+                            median_diff = np.median(ages[i]) - np.median(ages[j])
+                            # Hodges-Lehmann estimator for effect size
+                            h_l = np.median(ages[i][:, np.newaxis] - ages[j])
+                            warn_message = (
+                                f"Age distributions {labels[i]} and {labels[j]} "
+                                f"are not similar: U-{u_stat:.2f} (p={p_val:.2g})\n"
+                                f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                f"Hodges-Lehmann estimator: {h_l:.2f}"
+                                            )
+                            print(warn_message)
+                            warnings.warn(warn_message, category=UserWarning)
+                    else:
+                        # If both distributions are normal, use t-test
+                        t_stat, p_val = stats.ttest_ind(ages[i], ages[j])
+                        if p_val < 0.05:
+                            median_diff = np.median(ages[i]) - np.median(ages[j])
+                            # Hodges-Lehmann estimator for effect size
+                            h_l = np.median(ages[i][:, np.newaxis] - ages[j])
+                            warn_message = (
+                                f"Age distributions {labels[i]} and {labels[j]} "
+                                f"are not similar: t={t_stat:.2f} (p={p_val:.2g})\n"
+                                f"Median difference [median({labels[i]}) - median({labels[j]})]: {median_diff:.2f}\n"
+                                f"Hodges-Lehmann estimator: {h_l:.2f}"
+                                            )
+                            print(warn_message)
+                            warnings.warn(warn_message, category=UserWarning)
 
         # Use visualiser
         self.visualizer.age_distribution(ages, labels, name)
@@ -677,40 +706,53 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Make lists to store covariate info for each dataframe
-        X_list, y_list, corr_list, order_list, significance_list = [], [], [], [], []
-        for label, df in features_dict.items():
-            print("Covariate %s" % label)
-            # Extract features
-            X, y, feature_names = feature_extractor(df)
-            # Covariate correction
-            if self.flags["covariates"] and not self.flags["covarname"]:
-                print("Covariate effects will be subtracted from features.")
-                X, _ = covariate_correction(X, self._covariates_for(df))
-            # Calculate correlation between features and age
-            corr, order, p_values = find_correlations(X, y)
-            # Reject null hypothesis of no correlation
-            reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
-            reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
-            significant = significant_markers(reject_bon, reject_fdr)
-            # Print results
-            for idx, order_element in enumerate(order):
-                print(
-                    "%d.%s %s %s: %.2f (%.2g)"
-                    % (
-                        idx + 1,
-                        label,
-                        significant[order_element],
-                        feature_names[order_element],
-                        corr[order_element],
-                        p_values[order_element],
+        X_list, y_list, corr_list, order_list, significance_list = {}, {}, {}, {}, {}
+        for relation in ["linear", "quadratic"]:
+            print(f"Exploring #{relation}# relationship between features and age...")
+            X_list[relation], y_list[relation], corr_list[relation], order_list[relation], significance_list[relation] = [], [], [], [], []
+            for label, df in features_dict.items():
+                print("Covariate %s" % label)
+                # Extract features
+                X, y, feature_names = feature_extractor(df)
+                if relation == "quadratic":
+                    X = X**2
+                # Covariate correction
+                if self.flags["covariates"] and not self.flags["covarname"]:
+                    print("Covariate effects will be subtracted from features.")
+                    X, _ = covariate_correction(X, self._covariates_for(df))
+                # Calculate correlation between features and age
+                corr, order, p_values = find_correlations(X, y)
+                # Reject null hypothesis of no correlation
+                reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
+                reject_fdr, _, _, _ = multipletests(p_values, alpha=significance, method="fdr_bh")
+                significant = significant_markers(reject_bon, reject_fdr)
+                # Print results
+                for idx, order_element in enumerate(order):
+                    print(
+                        "%d.%s %s %s: %.2f (%.2g)"
+                        % (
+                            idx + 1,
+                            label,
+                            significant[order_element],
+                            feature_names[order_element],
+                            corr[order_element],
+                            p_values[order_element],
+                        )
                     )
-                )
-            # Append all the values
-            X_list.append(X), y_list.append(y), corr_list.append(corr), order_list.append(order), significance_list.append(significant)
+                # Append all the values
+                X_list[relation].append(X), y_list[relation].append(y), corr_list[relation].append(corr), order_list[relation].append(order), significance_list[relation].append(significant)
 
         # Use visualizer to show results
         self.visualizer.features_vs_age(
-            X_list, y_list, corr_list, order_list, significance_list, feature_names, tag, list(features_dict.keys())
+            X_list["linear"], y_list["linear"], corr_list["linear"], order_list["linear"], significance_list["linear"],
+            feature_names, tag, list(features_dict.keys())
+        )
+        # Do the same but for the quadratic features to explore non-linear relationships
+        filename = f"quadratic_features_vs_age_controls{'_'+tag.system if tag.system != '' else ''}.png"
+
+        self.visualizer.features_vs_age(
+            X_list["quadratic"], y_list["quadratic"], corr_list["quadratic"], order_list["quadratic"], significance_list["quadratic"],
+            feature_names, tag, list(features_dict.keys()), filename
         )
 
     def feature_ordering(self, tag):
@@ -1155,7 +1197,7 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Iterate over systems
-        corrs, significants = [], []
+        corrs, orders, significants, deltas_list = [], [], [], []
 
         # Factor information
         factor_names = [col for col in df_factors.columns if col != "id"]
@@ -1170,10 +1212,12 @@ class Interface:
 
             # Select data to visualize
             deltas = df[f"delta_{system}"].to_numpy()
+            deltas_list.append(deltas)
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
             corrs.append(corr)
+            orders.append(order)
 
             # Reject null hypothesis of no correlation
             reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
@@ -1185,8 +1229,24 @@ class Interface:
             for i, o in enumerate(order):
                 print("%d. %s %s: %.2f (%.2g)" % (i + 1, significant[o], factor_names[o], corr[o], p_values[o]))
 
+        # Use visualizer to show scatterplots for factor vs delta relationships.
+        factor_list = [factors] * len(deltas_list)
+        self.visualizer.factors_vs_delta(
+            factor_list,
+            deltas_list,
+            corrs,
+            orders,
+            significants,
+            factor_names,
+            tag,
+            labels=list(dict_ages.keys()),
+        )
+
         # Use visualizer to show bar graph
-        self.visualizer.factors_vs_deltas(corrs, list(dict_ages.keys()), factor_names, significants, tag)
+        self.visualizer.factors_and_deltas_barplot(corrs, list(dict_ages.keys()), factor_names, significants, tag)
+        # self.visualizer.features_vs_age(factors, deltas, corrs, order_list, significants, factor_names, tag,
+        #                                 labels=["all"], suptitle_str=f"Factors vs. Delta\n[{tag.group} | {tag.system}]"
+        #                                 filename=f"factors_vs_deltas_{tag.group}_{tag.system}.png")
 
     def deltas_by_group(self, dfs, tag, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.

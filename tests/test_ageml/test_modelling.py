@@ -143,3 +143,29 @@ def test_classifier_predict_scale(dummy_classifier):
     assert exc_info.type is ValueError
     error_message = "Must fit the model with scaling before calling predict with scaling."
     assert str(exc_info.value) == error_message
+
+
+def test_fit_age_permutation_null_model():
+    """Permutation null model should produce finite null MAEs and a valid p-value."""
+    rng = np.random.default_rng(42)
+    X = rng.normal(size=(40, 3))
+    y = 50 + 3 * X[:, 0] - 2 * X[:, 1] + rng.normal(scale=0.5, size=40)
+
+    age_ml = modelling.AgeML(
+        "standard",
+        {"with_mean": True},
+        "linear_reg",
+        {"fit_intercept": True},
+        CV_split=4,
+        seed=42,
+        null_model_permutations=5,
+    )
+
+    pred_age, corrected_age = age_ml.fit_age(X, y)
+
+    assert pred_age.shape == y.shape
+    assert corrected_age.shape == y.shape
+    assert age_ml.null_model_scores.shape == (5,)
+    assert np.isfinite(age_ml.null_model_scores).all()
+    assert age_ml.null_model_p_value is not None
+    assert 0.0 <= age_ml.null_model_p_value <= 1.0

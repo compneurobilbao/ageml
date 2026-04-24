@@ -128,16 +128,44 @@ def test_auc_vs_num_features(dummy_viz):
     shutil.rmtree(os.path.dirname(svg_path))
 
 
-def test_factors_vs_deltas(dummy_viz):
+def test_factors_and_deltas_barplot(dummy_viz):
     # Create dummy data
     corrs = [[0.5, 0.6, 0.7, 0.8, 0.9]]
     groups = ["Group 1"]
     labels = ["factor1", "factor2", "factor3", "factor4", "factor5"]
     markers = [["", "*", "", "*", "**"]]
     # Plot
-    dummy_viz.factors_vs_deltas(corrs, groups, labels, markers, tag=NameTag())
+    dummy_viz.factors_and_deltas_barplot(corrs, groups, labels, markers, tag=NameTag())
     # Check file existence
-    svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas.png")
+    svg_path = os.path.join(dummy_viz.dir, "figures/factors_deltas_correlations.png")
+    assert os.path.exists(svg_path)
+    # Cleanup
+    shutil.rmtree(os.path.dirname(svg_path))
+
+
+def test_factors_vs_delta(dummy_viz):
+    # Create dummy data
+    X = [
+        np.array(
+            [
+                [0.1, 1.0, 2.0],
+                [0.2, 1.1, 2.1],
+                [0.3, 1.2, 2.2],
+                [0.4, 1.3, 2.3],
+            ]
+        )
+    ]
+    Y = [np.array([-0.2, -0.1, 0.1, 0.3])]
+    corr = [np.array([0.9, 0.8, 0.7])]
+    order = [np.array([0, 1, 2])]
+    markers = [["**", "*", ""]]
+    factor_names = ["factor1", "factor2", "factor3"]
+
+    # Plot
+    dummy_viz.factors_vs_delta(X, Y, corr, order, markers, factor_names, tag=NameTag(group="cn"), labels=["all"])
+
+    # Check file existence
+    svg_path = os.path.join(dummy_viz.dir, "figures/factors_vs_deltas_cn.png")
     assert os.path.exists(svg_path)
     # Cleanup
     shutil.rmtree(os.path.dirname(svg_path))
