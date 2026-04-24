@@ -641,6 +641,7 @@ def test_run_age(dummy_interface, features):
         "age_bias_correction_all_all",
         "age_distribution_controls",
         "features_vs_age_controls_all",
+        "quadratic_features_vs_age_controls_all",
         "chronological_vs_pred_age_all_all",
     ]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -677,6 +678,7 @@ def test_run_age_clinical(dummy_interface, features, clinical):
         "age_bias_correction_all_all",
         "age_distribution_controls",
         "features_vs_age_controls_all",
+        "quadratic_features_vs_age_controls_all",
         "chronological_vs_pred_age_all_all",
     ]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -718,6 +720,7 @@ def test_run_age_cov(dummy_interface, features, covariates):
         "chronological_vs_pred_age_sex_1_all",
         "age_distribution_controls",
         "features_vs_age_controls_all",
+        "quadratic_features_vs_age_controls_all"
     ]
     # Print files in path
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
@@ -758,6 +761,7 @@ def test_run_age_cov_clinical(dummy_interface, features, covariates, clinical):
         "chronological_vs_pred_age_sex_1_all",
         "age_distribution_controls",
         "features_vs_age_controls_all",
+        "quadratic_features_vs_age_controls_all"
     ]
     svg_paths = [os.path.join(dummy_interface.dir_path, f"model_age/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])
@@ -991,7 +995,7 @@ def test_run_factor_correlation(dummy_interface, ages, factors, covariates):
         assert os.path.exists(dummy_interface.dir_path)
 
         # Check for the existence of the output figures
-        figs = ["factors_vs_deltas_cn"]
+        figs = ["factors_deltas_correlations_cn", "factors_vs_deltas_cn"]
         svg_paths = [os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs]
         assert all([os.path.exists(svg_path) for svg_path in svg_paths])
 
@@ -1013,6 +1017,7 @@ def test_run_factor_correlation_systems(dummy_interface, ages_multisystem, facto
 
     # Check for the existence of the output figures
     figs = []
+    figs.append("factors_deltas_correlations_cn")
     figs.append("factors_vs_deltas_cn")
     svg_paths = [os.path.join(dummy_interface.dir_path, f"factor_correlation/figures/{fig}.png") for fig in figs]
     assert all([os.path.exists(svg_path) for svg_path in svg_paths])

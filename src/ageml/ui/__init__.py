@@ -1197,7 +1197,7 @@ class Interface:
         print("significance: %.2g * -> FDR, ** -> bonferroni" % significance)
 
         # Iterate over systems
-        corrs, significants = [], []
+        corrs, orders, significants, deltas_list = [], [], [], []
 
         # Factor information
         factor_names = [col for col in df_factors.columns if col != "id"]
@@ -1212,10 +1212,12 @@ class Interface:
 
             # Select data to visualize
             deltas = df[f"delta_{system}"].to_numpy()
+            deltas_list.append(deltas)
 
             # Calculate correlation between features and age
             corr, order, p_values = find_correlations(factors, deltas)
             corrs.append(corr)
+            orders.append(order)
 
             # Reject null hypothesis of no correlation
             reject_bon, _, _, _ = multipletests(p_values, alpha=significance, method="bonferroni")
@@ -1227,8 +1229,24 @@ class Interface:
             for i, o in enumerate(order):
                 print("%d. %s %s: %.2f (%.2g)" % (i + 1, significant[o], factor_names[o], corr[o], p_values[o]))
 
+        # Use visualizer to show scatterplots for factor vs delta relationships.
+        factor_list = [factors] * len(deltas_list)
+        self.visualizer.factors_vs_delta(
+            factor_list,
+            deltas_list,
+            corrs,
+            orders,
+            significants,
+            factor_names,
+            tag,
+            labels=list(dict_ages.keys()),
+        )
+
         # Use visualizer to show bar graph
-        self.visualizer.factors_vs_deltas(corrs, list(dict_ages.keys()), factor_names, significants, tag)
+        self.visualizer.factors_and_deltas_barplot(corrs, list(dict_ages.keys()), factor_names, significants, tag)
+        # self.visualizer.features_vs_age(factors, deltas, corrs, order_list, significants, factor_names, tag,
+        #                                 labels=["all"], suptitle_str=f"Factors vs. Delta\n[{tag.group} | {tag.system}]"
+        #                                 filename=f"factors_vs_deltas_{tag.group}_{tag.system}.png")
 
     def deltas_by_group(self, dfs, tag, significance: float = 0.05):
         """Calculate summary metrics of deltas by group.
